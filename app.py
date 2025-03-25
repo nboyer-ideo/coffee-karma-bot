@@ -236,5 +236,8 @@ def handle_leaderboard_command(ack, body, client):
         text="The brave rise. Here's the Coffee Karma leaderboard."
     )
 
+import os
+
 if __name__ == "__main__":
-    flask_app.run(port=3000)
+    port = int(os.environ.get("PORT", 3000))
+    flask_app.run(host="0.0.0.0", port=port)
