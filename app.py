@@ -131,7 +131,7 @@ def handle_modal_submission(ack, body, client):
     points = get_karma(user_id)
     if points < karma_cost:
         client.chat_postEphemeral(
-            channel=body["view"]["private_metadata"] if "private_metadata" in body["view"] else "#coffee-karma-sf",
+            channel=user_id,
             user=user_id,
             text="🚫 You don't have enough Coffee Karma to place an order. Deliver drinks to earn more."
         )
