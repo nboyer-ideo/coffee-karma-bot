@@ -243,23 +243,6 @@ def handle_mark_delivered(ack, body, client):
 
     threading.Thread(target=do_work).start()
 
-    client.chat_postMessage(
-        channel=body["channel"]["id"],
-        text="📸 Time to flex that delivery.",
-        blocks=[
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": (
-                        "📸 *Flex the drop.*\n"
-                        "On mobile? Hit the *`+`* and share a shot of your delivery. Let's see the goods."
-                    )
-                }
-            }
-        ]
-    )
-
 @app.command("/karma")
 def handle_karma_command(ack, body, client):
     ack()
