@@ -176,15 +176,13 @@ def handle_modal_submission(ack, body, client):
                         "type": "button",
                         "text": {"type": "plain_text", "text": "CANCEL"},
                         "style": "danger",
-                        "value": "",  # Placeholder, will update below
+                        "value": f"cancel|{user_id}|{drink_value}",
                         "action_id": "cancel_order"
                     }
                 ]
             }
         ]
     )
-    cancel_button = posted["message"]["blocks"][3]["elements"][1]
-    cancel_button["value"] = posted["ts"]
 
     deduct_karma(user_id, karma_cost)
 
