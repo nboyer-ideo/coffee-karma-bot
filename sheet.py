@@ -2,11 +2,25 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # Connect to the Google Sheet
+import os
+import json
+from io import StringIO
+import gspread
+from google.oauth2.service_account import Credentials
+
 def get_sheet():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    creds = Credentials.from_service_account_file("coffee-karma-454723-c8fc1078d17e.json", scopes=scopes)
+    
+    # Load the service account JSON from an environment variable
+    creds_json = os.environ.get("GOOGLE_CREDS_JSON")
+    if not creds_json:
+        raise Exception("Missing GOOGLE_CREDS_JSON environment variable")
+    
+    creds_dict = json.loads(creds_json)
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    
     gc = gspread.authorize(creds)
-    return gc.open("Coffee Karma").sheet1  # Make sure the name matches your sheet
+    return gc.open("Coffee Karma").sheet1
 
 # Add or update points for a user
 def add_karma(user_id, points_to_add=1):
