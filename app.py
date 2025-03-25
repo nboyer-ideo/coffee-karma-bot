@@ -272,6 +272,11 @@ def handle_leaderboard_command(ack, body, client):
 
 import os
 
+@app.action("*")
+def catch_all_actions(ack, body):
+    ack()
+    print("⚠️ Caught an unhandled action:", body.get("actions", [{}])[0].get("action_id"))
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
     flask_app.run(host="0.0.0.0", port=port)
