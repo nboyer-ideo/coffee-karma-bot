@@ -148,49 +148,71 @@ def handle_claim_order(ack, body, client, say):
         text="You took the mission. Don't forget to hit 'MARK AS DELIVERED' once the goods are dropped."
     )
 
+import threading
+import copy
+
 @app.action("mark_delivered")
 def handle_mark_delivered(ack, body, client):
     ack()
     print("✅ mark_delivered button clicked")
-    try:
-        claimer_id = body["user"]["id"]
-        original_message = body["message"]
-        order_text = original_message["blocks"][0]["text"]["text"]
-        points = add_karma(claimer_id, 1)
-        print(f"☚️ +1 point for {claimer_id}. Total: {points}")
 
-        client.chat_update(
-            channel=body["channel"]["id"],
-            ts=original_message["ts"],
-            text=f"{order_text}\n\n✅ Claimed by <@{claimer_id}> and *delivered*. Respect earned.",
-            blocks=[
-                {
-                    "type": "section",
-                    "text": {"type": "mrkdwn", "text": f"{order_text}\n\n✅ *Delivered by <@{claimer_id}>* — Respect."}
-                }
-            ]
-        )
+    safe_body = copy.deepcopy(body)
+    safe_client = client
 
-        client.chat_postMessage(
-            channel=claimer_id,
-            text=f"Mission complete. +1 Coffee Karma. Balance: *{points}*. Stay sharp."
-        )
+    def do_work():
+        try:
+            claimer_id = safe_body["user"]["id"]
+            original_message = safe_body["message"]
+            order_text = original_message["blocks"][0]["text"]["text"]
 
-    except Exception as e:
-        print("🚨 Error in mark_delivered:", e)
+            points = add_karma(claimer_id, 1)
+            print(f"☚️ +1 point for {claimer_id}. Total: {points}")
 
-    celebration_gif = random.choice(CELEBRATION_GIFS)
-    client.chat_postMessage(
-        channel=claimer_id,
-        blocks=[
-            {"type": "image", "image_url": celebration_gif, "alt_text": "coffee celebration"},
-            {
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": f"Mission complete. +1 *Coffee Karma*. Total: *{points}* ☕"}
-            }
-        ],
-        text="Delivery complete."
-    )
+            safe_client.chat_update(
+                channel=safe_body["channel"]["id"],
+                ts=original_message["ts"],
+                text=f"{order_text}\n\n✅ Claimed by <@{claimer_id}> and *delivered*. Respect earned.",
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"{order_text}\n\n✅ *Delivered by <@{claimer_id}>* — Respect."
+                        }
+                    }
+                ]
+            )
+
+            safe_client.chat_postMessage(
+                channel=claimer_id,
+                text=f"Mission complete. +1 Coffee Karma. Balance: *{points}*. Stay sharp."
+            )
+
+            celebration_gif = random.choice(CELEBRATION_GIFS)
+
+            safe_client.chat_postMessage(
+                channel=claimer_id,
+                blocks=[
+                    {
+                        "type": "image",
+                        "image_url": celebration_gif,
+                        "alt_text": "coffee celebration"
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"Mission complete. +1 *Coffee Karma*. Total: *{points}* ☕"
+                        }
+                    }
+                ],
+                text="Delivery complete."
+            )
+
+        except Exception as e:
+            print("🚨 Error in mark_delivered thread:", e)
+
+    threading.Thread(target=do_work).start()
 
     client.chat_postMessage(
         channel=body["channel"]["id"],
