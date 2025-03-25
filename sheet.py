@@ -49,3 +49,9 @@ def get_leaderboard(top_n=5):
     data = sheet.get_all_records()
     sorted_users = sorted(data, key=lambda x: int(x["points"]), reverse=True)
     return sorted_users[:top_n]
+
+def reset_karma_sheet():
+    sheet = get_sheet()
+    data = sheet.get_all_records()
+    for i, row in enumerate(data):
+        sheet.update_cell(i + 2, 2, 0)
