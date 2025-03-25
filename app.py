@@ -156,21 +156,28 @@ def handle_mark_delivered(ack, body, client):
     ack()
     print("✅ mark_delivered button clicked")
 
-    safe_body = copy.deepcopy(body)
-    safe_client = client
+    try:
+        safe_body = copy.deepcopy(body)
+        safe_client = client
+    except Exception as e:
+        print("🚨 Error copying body/client:", repr(e))
+        return
 
     def do_work():
         try:
             print("📦 mark_delivered payload:", safe_body)
-            claimer_id = safe_body["user"]["id"]
-            original_message = safe_body["message"]
-            order_text = original_message["blocks"][0]["text"]["text"]
 
-            print("→ Adding karma")
+            claimer_id = safe_body.get("user", {}).get("id")
+            original_message = safe_body.get("message", {})
+            order_text = original_message.get("blocks", [{}])[0].get("text", {}).get("text", "??")
+
+            if not claimer_id:
+                print("🚨 No claimer_id found.")
+                return
+
             points = add_karma(claimer_id, 1)
             print(f"☚️ +1 point for {claimer_id}. Total: {points}")
 
-            print("→ Updating original message")
             safe_client.chat_update(
                 channel=safe_body["channel"]["id"],
                 ts=original_message["ts"],
@@ -186,13 +193,11 @@ def handle_mark_delivered(ack, body, client):
                 ]
             )
 
-            print("→ Sending DM to claimer")
             safe_client.chat_postMessage(
                 channel=claimer_id,
                 text=f"Mission complete. +1 Coffee Karma. Balance: *{points}*. Stay sharp."
             )
 
-            print("→ Sending GIF celebration")
             celebration_gif = random.choice(CELEBRATION_GIFS)
             safe_client.chat_postMessage(
                 channel=claimer_id,
@@ -213,30 +218,28 @@ def handle_mark_delivered(ack, body, client):
                 text="Delivery complete."
             )
 
-            print("✅ Finished do_work thread successfully")
+            # Now prompt for the pic — only if all went well
+            safe_client.chat_postMessage(
+                channel=safe_body["channel"]["id"],
+                text="📸 Wanna flex your drop?",
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": (
+                                "📸 *Flex the drop.*\n"
+                                "On mobile? Hit the *`+`* and share a shot of your delivery. Let's see the goods."
+                            )
+                        }
+                    }
+                ]
+            )
+
+            print("✅ All steps completed successfully")
 
         except Exception as e:
             print("🚨 Error in mark_delivered thread:", repr(e))
-            return  # Don't continue if there's an error
-
-        # Only run this if try block succeeds:
-        print("→ Prompting for delivery photo")
-        safe_client.chat_postMessage(
-            channel=safe_body["channel"]["id"],
-            text="📸 Wanna flex your drop?",
-            blocks=[
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": (
-                            "📸 *Flex the drop.*\n"
-                            "On mobile? Hit the *`+`* and share a shot of your delivery. Let's see the goods."
-                        )
-                    }
-                }
-            ]
-        )
 
     threading.Thread(target=do_work).start()
 
