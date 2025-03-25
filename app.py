@@ -33,12 +33,14 @@ from flask import jsonify
 
 @flask_app.route("/slack/events", methods=["POST"])
 def slack_events():
-    if request.is_json:
-        if "challenge" in request.json:
+    if request.headers.get("Content-Type") == "application/json":
+        if request.json and "challenge" in request.json:
             return jsonify({"challenge": request.json["challenge"]})
-        return handler.handle(request)
-    else:
-        return handler.handle(request)
+    
+    print("📩 Incoming Slack event")
+    response = handler.handle(request)
+    print("✅ Passed to Bolt handler")
+    return response
 
 @app.event("app_mention")
 def say_hello(event, say):
