@@ -161,6 +161,7 @@ def handle_mark_delivered(ack, body, client):
 
     def do_work():
         try:
+            print("📦 mark_delivered payload:", safe_body)
             claimer_id = safe_body["user"]["id"]
             original_message = safe_body["message"]
             order_text = original_message["blocks"][0]["text"]["text"]
