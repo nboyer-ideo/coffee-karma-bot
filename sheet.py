@@ -55,3 +55,14 @@ def reset_karma_sheet():
     data = sheet.get_all_records()
     for i, row in enumerate(data):
         sheet.update_cell(i + 2, 2, 0)
+
+def ensure_user(user_id):
+    sheet = get_sheet()
+    data = sheet.get_all_records()
+    for row in data:
+        if row["user_id"] == user_id:
+            return False  # Already exists
+
+    # Add new user with 3 starting points
+    sheet.append_row([user_id, 3])
+    return True
