@@ -15,8 +15,7 @@ CELEBRATION_GIFS = [
     "https://media.giphy.com/media/3o7TKu8RvQuomFfUUU/giphy.gif"
 ]
 
-from sheet import add_karma, get_karma, get_leaderboard
-from sheet import ensure_user
+from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma
 
 # Load secrets from .env
 from dotenv import load_dotenv
@@ -127,7 +126,7 @@ def handle_modal_submission(ack, body, client):
         gifted_id = None
     user_id = body["user"]["id"]
     
-    from sheet import deduct_karma
+    
 
     points = get_karma(user_id)
     if points < karma_cost:

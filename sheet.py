@@ -35,6 +35,17 @@ def add_karma(user_id, points_to_add=1):
     sheet.append_row([user_id, points_to_add])
     return points_to_add
 
+# Deduct points for a user
+def deduct_karma(user_id, points_to_deduct=1):
+    sheet = get_sheet()
+    data = sheet.get_all_records()
+    for i, row in enumerate(data):
+        if row["user_id"] == user_id:
+            new_total = max(0, int(row["points"]) - points_to_deduct)
+            sheet.update_cell(i + 2, 2, new_total)
+            return new_total
+    return 0
+
 # Get current balance
 def get_karma(user_id):
     sheet = get_sheet()
