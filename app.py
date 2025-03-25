@@ -156,6 +156,7 @@ def handle_mark_delivered(ack, body, client):
     ack()
     print("✅ mark_delivered button clicked")
 
+    # Deep copy for thread safety
     safe_body = copy.deepcopy(body)
     safe_client = client
 
@@ -165,9 +166,11 @@ def handle_mark_delivered(ack, body, client):
             original_message = safe_body["message"]
             order_text = original_message["blocks"][0]["text"]["text"]
 
+            # Add karma (Google Sheets)
             points = add_karma(claimer_id, 1)
             print(f"☚️ +1 point for {claimer_id}. Total: {points}")
 
+            # Update the original message
             safe_client.chat_update(
                 channel=safe_body["channel"]["id"],
                 ts=original_message["ts"],
@@ -183,13 +186,14 @@ def handle_mark_delivered(ack, body, client):
                 ]
             )
 
+            # Send a direct message to the claimer
             safe_client.chat_postMessage(
                 channel=claimer_id,
                 text=f"Mission complete. +1 Coffee Karma. Balance: *{points}*. Stay sharp."
             )
 
+            # Send celebration gif + DM summary
             celebration_gif = random.choice(CELEBRATION_GIFS)
-
             safe_client.chat_postMessage(
                 channel=claimer_id,
                 blocks=[
@@ -209,8 +213,28 @@ def handle_mark_delivered(ack, body, client):
                 text="Delivery complete."
             )
 
+            # Prompt public photo flex (only if everything else worked)
+            safe_client.chat_postMessage(
+                channel=safe_body["channel"]["id"],
+                text="📸 Wanna flex your drop?",
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": (
+                                "📸 *Flex the drop.*\n"
+                                "On mobile? Hit the *`+`* and share a shot of your delivery. Let's see the goods."
+                            )
+                        }
+                    }
+                ]
+            )
+
+            print("✅ Delivery message, DM, and photo prompt all sent")
+
         except Exception as e:
-            print("🚨 Error in mark_delivered thread:", e)
+            print("🚨 Error in mark_delivered thread:", repr(e))
 
     threading.Thread(target=do_work).start()
 
