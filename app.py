@@ -62,12 +62,12 @@ def handle_order(ack, body, client):
             "blocks": [
                 {
                     "type": "input",
-                    "block_id": "drink_type",
-                    "label": {"type": "plain_text", "text": "Select your drink"},
+                    "block_id": "drink_category",
+                    "label": {"type": "plain_text", "text": "Choose your drink category"},
                     "element": {
                         "type": "static_select",
                         "action_id": "input",
-                        "placeholder": {"type": "plain_text", "text": "Choose wisely"},
+                        "placeholder": {"type": "plain_text", "text": "Pick your poison"},
                         "options": [
                             {
                                 "text": {"type": "plain_text", "text": "Water (still/sparkling) — 1 Karma"},
@@ -86,9 +86,26 @@ def handle_order(ack, body, client):
                 },
                 {
                     "type": "input",
+                    "block_id": "drink_detail",
+                    "label": {"type": "plain_text", "text": "What exactly do you want?"},
+                    "element": {"type": "plain_text_input", "action_id": "input"}
+                },
+                {
+                    "type": "input",
                     "block_id": "location",
                     "label": {"type": "plain_text", "text": "Where’s it going?"},
                     "element": {"type": "plain_text_input", "action_id": "input"}
+                },
+                {
+                    "type": "input",
+                    "block_id": "gift_to",
+                    "optional": True,
+                    "label": { "type": "plain_text", "text": "Gift to (optional)" },
+                    "element": {
+                        "type": "users_select",
+                        "action_id": "input",
+                        "placeholder": { "type": "plain_text", "text": "Choose a coworker" }
+                    }
                 },
                 {
                     "type": "input",
@@ -105,25 +122,19 @@ def handle_order(ack, body, client):
 def handle_modal_submission(ack, body, client):
     ack()
     values = body["view"]["state"]["values"]
-    drink_value = values["drink_type"]["input"]["selected_option"]["value"]
+    drink_value = values["drink_category"]["input"]["selected_option"]["value"]
+    drink_detail = values["drink_detail"]["input"]["value"]
     drink_map = {
         "water": ("Water (still/sparkling)", 1),
         "drip": ("Drip Coffee / Tea", 2),
         "espresso": ("Espresso Drink", 3)
     }
     drink, karma_cost = drink_map[drink_value]
+    if drink_detail:
+        drink = f"{drink} - {drink_detail}"
     location = values["location"]["input"]["value"]
     notes = values["notes"]["input"]["value"] if "notes" in values else ""
-    gifted_user = values["gift_to"]["input"]["value"] if "gift_to" in values and "input" in values["gift_to"] else None
-    if gifted_user and gifted_user.startswith("@"):
-        gifted_user = gifted_user[1:]  # Remove '@'
-        try:
-            gifted_lookup = client.users_lookupByEmail(email=f"{gifted_user}@ideo.com")
-            gifted_id = gifted_lookup["user"]["id"]
-        except:
-            gifted_id = None
-    else:
-        gifted_id = None
+    gifted_id = values["gift_to"]["input"]["selected_user"] if "gift_to" in values and "input" in values["gift_to"] else None
     user_id = body["user"]["id"]
     
     
@@ -161,7 +172,7 @@ def handle_modal_submission(ack, body, client):
             },
             {
                 "type": "section",
-                "text": {"type": "mrkdwn", "text": f"☚️ *New drop from <@{gifted_id or user_id}>*\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n⏳ *Time left to claim:* 10 min"}
+                "text": {"type": "mrkdwn", "text": f"☚️ *New drop from <@{gifted_id or user_id}>*\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n⏳ *Time left to claim:* 10 min\n\n📸 *Flex the drop.* On mobile? Hit the *`+`* and share a shot of your delivery. Let the people see the brew."}
             },
             {
                 "type": "actions",
@@ -219,10 +230,40 @@ def handle_modal_submission(ack, body, client):
                 msg_text = current_message["messages"][0].get("text", "")
                 if "Claimed by" in msg_text or "Expired" in msg_text or "Canceled" in msg_text:
                     return  # Skip reminder if already handled
-            client.chat_postMessage(
-                channel=posted["channel"],
-                text=f"⚠️ This mission’s still unclaimed. Someone better step up before it expires… ⏳"
-            )
+
+                # Append the reminder directly to the original message text
+                if "⚠️ This mission’s still unclaimed." not in msg_text:
+                    updated_text = f"{msg_text}\n\n⚠️ This mission’s still unclaimed. Someone better step up before it expires… ⏳"
+                    
+                    client.chat_update(
+                        channel=posted["channel"],
+                        ts=posted["ts"],
+                        text=updated_text,
+                        blocks=[
+                            {
+                                "type": "section",
+                                "text": {"type": "mrkdwn", "text": updated_text}
+                            },
+                            {
+                                "type": "actions",
+                                "elements": [
+                                    {
+                                        "type": "button",
+                                        "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
+                                        "value": f"{user_id}|{drink}|{location}",
+                                        "action_id": "claim_order"
+                                    },
+                                    {
+                                        "type": "button",
+                                        "text": {"type": "plain_text", "text": "CANCEL"},
+                                        "style": "danger",
+                                        "value": f"cancel|{user_id}|{drink_value}",
+                                        "action_id": "cancel_order"
+                                    }
+                                ]
+                            }
+                        ]
+                    )
         except Exception as e:
             print("⚠️ Reminder ping failed:", e)
 
@@ -256,6 +297,13 @@ def handle_modal_submission(ack, body, client):
                                     "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
                                     "value": f"{user_id}|{drink}|{location}",
                                     "action_id": "claim_order"
+                                },
+                                {
+                                    "type": "button",
+                                    "text": {"type": "plain_text", "text": "CANCEL"},
+                                    "style": "danger",
+                                    "value": f"cancel|{user_id}|{drink_value}",
+                                    "action_id": "cancel_order"
                                 }
                             ]
                         }
@@ -268,7 +316,7 @@ def handle_modal_submission(ack, body, client):
     update_countdown(9)  # Start at 9 since initial message shows 10 min
 
     # Occasionally inject some visual spice
-    if random.randint(1, 4) == 1:  # 25% chance
+    if random.randint(1, 2) == 1:  # 50% chance
         extras = [
             {
                 "type": "image",
@@ -343,6 +391,11 @@ def handle_claim_order(ack, body, client, say):
     user_id = body["user"]["id"]
     original_message = body["message"]
     order_text = original_message["blocks"][0]["text"]["text"]
+    # Remove "Time left to claim" if it's still there
+    if "⏳ *Time left to claim:*" in order_text:
+        order_text = order_text.split("⏳ *Time left to claim:*")[0].strip()
+    if "⚠️ This mission’s still unclaimed." in order_text:
+        order_text = order_text.split("⚠️ This mission’s still unclaimed.")[0].strip()
 
     client.chat_update(
         channel=body["channel"]["id"],
@@ -423,23 +476,6 @@ def handle_mark_delivered(ack, body, client):
                 text=f"Mission complete. +1 Coffee Karma. Balance: *{points}*. Stay sharp."
             )
 
-            # Now prompt for the pic — only if all went well
-            safe_client.chat_postMessage(
-                channel=safe_body["channel"]["id"],
-                text="📸 Wanna flex your drop?",
-                blocks=[
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": (
-                                "📸 *Flex the drop.*\n"
-                                "On mobile? Hit the *`+`* and share a shot of your delivery. Let's see the goods."
-                            )
-                        }
-                    }
-                ]
-            )
 
             # Occasionally drop some visual grit after completion
             if random.randint(1, 4) == 1:  # 25% chance
