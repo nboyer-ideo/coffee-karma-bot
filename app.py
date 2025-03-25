@@ -5,14 +5,14 @@ import os
 import random
 
 CELEBRATION_GIFS = [
-    "https://media.giphy.com/media/3o6ZtpxSZbQRRnwCKQ/giphy.gif",
-    "https://media.giphy.com/media/111ebonMs90YLu/giphy.gif",
-    "https://media.giphy.com/media/1Ai5Yzm5FCOgM/giphy.gif",
-    "https://media.giphy.com/media/3o6Zt8MgUuvSbkZYWc/giphy.gif",
-    "https://media.giphy.com/media/3o7abldj0b3rxrZUxW/giphy.gif",
-    "https://media.giphy.com/media/5xaOcLGvzHxDKjufnLW/giphy.gif",
-    "https://media.giphy.com/media/l0MYEqEzwMWFCg8rm/giphy.gif",
-    "https://media.giphy.com/media/3o7TKu8RvQuomFfUUU/giphy.gif"
+    "https://media.giphy.com/media/l0HlMWkOM0xXyN0TC/giphy.gif",  # slow clap
+    "https://media.giphy.com/media/3og0INyCmHlNylks9O/giphy.gif",  # punk guitar
+    "https://media.giphy.com/media/3oEduSbSGpGaRX2Vri/giphy.gif",  # smoking skeleton
+    "https://media.giphy.com/media/xT0xeJpnrWC4XWblEk/giphy.gif",  # sarcastic thumbs up
+    "https://media.giphy.com/media/xT9IgvZzFwYp8n2zzy/giphy.gif",  # goth girl clapping
+    "https://media.giphy.com/media/l41lTzR2bBbcO7Hr6/giphy.gif",  # dramatic head nod
+    "https://media.giphy.com/media/3o6Mb8Xoe5AiG9o7q0/giphy.gif",  # rebel clapping
+    "https://media.giphy.com/media/3o6Zt7A5oAgP2lM5xC/giphy.gif"   # heavy metal
 ]
 
 from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma
@@ -392,10 +392,11 @@ def handle_claim_order(ack, body, client, say):
     original_message = body["message"]
     order_text = original_message["blocks"][0]["text"]["text"]
     # Remove "Time left to claim" if it's still there
-    if "⏳ *Time left to claim:*" in order_text:
-        order_text = order_text.split("⏳ *Time left to claim:*")[0].strip()
-    if "⚠️ This mission’s still unclaimed." in order_text:
-        order_text = order_text.split("⚠️ This mission’s still unclaimed.")[0].strip()
+    # Remove countdown and unclaimed warnings from order text
+    countdown_phrases = ["⏳ *Time left to claim:*", "⚠️ This mission’s still unclaimed."]
+    for phrase in countdown_phrases:
+        if phrase in order_text:
+            order_text = order_text.split(phrase)[0].strip()
 
     client.chat_update(
         channel=body["channel"]["id"],
@@ -456,16 +457,21 @@ def handle_mark_delivered(ack, body, client):
             points = add_karma(claimer_id, 1)
             print(f"☚️ +1 point for {claimer_id}. Total: {points}")
 
+            new_text = (
+                f"{order_text}\n\n✅ *Delivered by <@{claimer_id}>* — Respect.\n"
+                f"☕️ +1 Karma for <@{claimer_id}>. New total: *{points}*."
+            )
+
             safe_client.chat_update(
                 channel=safe_body["channel"]["id"],
                 ts=original_message["ts"],
-                text=f"{order_text}\n\n✅ Claimed by <@{claimer_id}> and *delivered*. Respect earned.",
+                text=new_text,
                 blocks=[
                     {
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": f"{order_text}\n\n✅ *Delivered by <@{claimer_id}>* — Respect."
+                            "text": new_text
                         }
                     }
                 ]
