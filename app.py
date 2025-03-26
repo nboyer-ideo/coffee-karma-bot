@@ -5,6 +5,8 @@ import os
 import random
 import requests
 
+order_extras = {}
+
 CELEBRATION_GIFS = [
     "https://media.giphy.com/media/l0HlMWkOM0xXyN0TC/giphy.gif",  # slow clap
     "https://media.giphy.com/media/3og0INyCmHlNylks9O/giphy.gif",  # punk guitar
@@ -174,14 +176,14 @@ def handle_modal_submission(ack, body, client):
         "*// Brewed + Brutal //*",
         "*Wake. Rage. Repeat.* ☕"
     ])
-
+    
     full_text = (
+        f"{context_line}\n"
         f"☚️ *New drop from <@{gifted_id or user_id}>*\n"
         f"• *Drink:* {drink}\n"
         f"• *Drop Spot:* {location}\n"
         f"• *Notes:* {notes or 'None'}\n"
-        f"Cost: {karma_cost} Karma. Reward: +{karma_cost} Karma to the delivery punk.\n"
-        f"{context_line}\n"
+        f"Reward: +{karma_cost} Karma to the delivery punk.\n"
         f"⏳ *Time left to claim:* 10 min"
     )
 
@@ -217,6 +219,28 @@ def handle_modal_submission(ack, body, client):
     order_ts = posted["ts"]
     order_channel = posted["channel"]
  
+    # Post punk GIF and track its timestamp
+    gif_ts = None
+    try:
+        gif_message = client.chat_postMessage(
+            channel=order_channel,
+            blocks=[{
+                "type": "image",
+                "image_url": get_punk_gif(),
+                "alt_text": "coffee gif"
+            }],
+            text="Grit drop"
+        )
+        gif_ts = gif_message["ts"]
+    except Exception as e:
+        print("⚠️ Failed to post gif:", e)
+ 
+    if order_ts and gif_ts:
+        if "order_extras" not in globals():
+            global order_extras
+            order_extras = {}
+        order_extras[order_ts] = [gif_ts]
+ 
     deduct_karma(user_id, karma_cost)
 
     if gifted_id:
@@ -232,8 +256,8 @@ def handle_modal_submission(ack, body, client):
             current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
             if current_message["messages"]:
                 current_text = current_message["messages"][0].get("text", "")
-                if "Canceled" in current_text or "Claimed" in current_text:
-                    return
+                if any(phrase in current_text for phrase in ["Canceled", "Claimed", "Order canceled by", "❌ Order canceled"]):
+                    return  # Skip if canceled or claimed
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
@@ -259,7 +283,7 @@ def handle_modal_submission(ack, body, client):
             current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
             if current_message["messages"]:
                 msg_text = current_message["messages"][0].get("text", "")
-                if "Claimed by" in msg_text or "Expired" in msg_text or "Canceled" in msg_text:
+                if any(phrase in msg_text for phrase in ["Claimed by", "Expired", "Canceled", "Order canceled by"]):
                     return  # Skip reminder if already handled
 
                 # Append the reminder directly to the original message text
@@ -315,7 +339,7 @@ def handle_modal_submission(ack, body, client):
                     f"• *Drink:* {drink}\n"
                     f"• *Drop Spot:* {location}\n"
                     f"• *Notes:* {notes or 'None'}\n"
-                    f"Cost: {karma_cost} Karma. Reward: +{karma_cost} Karma to the delivery punk.\n"
+                    f"Reward: +{karma_cost} Karma to the delivery punk.\n"
                     f"⏳ *Time left to claim:* {remaining} min"
                 )
                 client.chat_update(
@@ -353,34 +377,6 @@ def handle_modal_submission(ack, body, client):
 
     update_countdown(9)  # Start at 9 since initial message shows 10 min
 
-    # Always inject some visual spice
-    extras = [
-        {
-            "type": "image",
-            "image_url": get_punk_gif(),
-            "alt_text": "coffee chaos"
-        },
-        {
-            "type": "context",
-            "elements": [
-                {
-                    "type": "mrkdwn",
-                    "text": random.choice([
-                        "*☕ Caffeine + Chaos* — IDE☕O forever.",
-                        "*╯°□°）╯︵ ┻━┻* — Brew rebellion.",
-                        "*// Brewed + Brutal //*",
-                        "*Wake. Rage. Repeat.* ☕"
-                    ])
-                }
-            ]
-        }
-    ]
-    for block in extras:
-        client.chat_postMessage(
-            channel="#coffee-karma-sf",
-            blocks=[block],
-            text="Coffee chaos drop"
-        )
 
 @app.action("cancel_order")
 def handle_cancel_order(ack, body, client):
@@ -410,9 +406,17 @@ def handle_cancel_order(ack, body, client):
         )
         return
 
+    # Clean up any extras like GIFs or context
+    order_ts = message["ts"]
+    if order_ts in order_extras:
+        for extra_ts in order_extras[order_ts]:
+            client.chat_delete(channel=body["channel"]["id"], ts=extra_ts)
+        del order_extras[order_ts]
+
+    # Stop any further scheduled updates by overwriting the original message with only cancellation info.
     client.chat_update(
         channel=body["channel"]["id"],
-        ts=message["ts"],
+        ts=order_ts,
         text=f"❌ Order canceled by <@{user_id}>.",
         blocks=[
             {
@@ -421,23 +425,6 @@ def handle_cancel_order(ack, body, client):
             }
         ]
     )
-    # Stop any further scheduled updates by overwriting the original message with only cancellation info.
-    client.chat_update(
-        channel=body["channel"]["id"],
-        ts=message["ts"],
-        blocks=[
-            {
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": f"❌ *Order canceled by <@{user_id}>.*"}
-            }
-        ]
-    )
-    # Clean up any extras like GIFs or context
-    order_ts = message["ts"]
-    if order_ts in order_extras:
-        for extra_ts in order_extras[order_ts]:
-            client.chat_delete(channel=body["channel"]["id"], ts=extra_ts)
-        del order_extras[order_ts]
     return
 
 @app.action("claim_order")
@@ -551,34 +538,6 @@ def handle_mark_delivered(ack, body, client):
             )
 
 
-            # Occasionally drop some visual grit after completion
-            if random.randint(1, 4) == 1:  # 25% chance
-                extras = [
-                    {
-                        "type": "image",
-                        "image_url": get_punk_gif(),
-                        "alt_text": "gritty coffee punk"
-                    },
-                    {
-                        "type": "context",
-                        "elements": [
-                            {
-                                "type": "mrkdwn",
-                                "text": random.choice([
-                                    "```\n☠️ Job done. Brew dropped.\n```",
-                                    "```\n+1 Karma. No mercy.\n```",
-                                    "> *Finished like a legend.*"
-                                ])
-                            }
-                        ]
-                    }
-                ]
-                for block in extras:
-                    safe_client.chat_postMessage(
-                        channel=safe_body["channel"]["id"],
-                        blocks=[block],
-                        text="Post-delivery drop"
-                    )
 
             print("✅ All steps completed successfully")
 
