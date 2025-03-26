@@ -337,7 +337,7 @@ def handle_modal_submission(ack, body, client):
                 context_line = order_extras.get(order_ts, {}).get("context_line", "")
                 updated_text = (
                     f"{context_line}\n"
-                    f"☚️ *New drop from <@{gifted_id or user_id}>*\n"
+                f"☚️ *New drop {'for <@' + gifted_id + '> from <@' + user_id + '>' if gifted_id else 'from <@' + user_id + '>'}*\n"
                     f"• *Drink:* {drink}\n"
                     f"• *Drop Spot:* {location}\n"
                     f"• *Notes:* {notes or 'None'}\n"
@@ -394,12 +394,14 @@ def handle_cancel_order(ack, body, client):
             if original_text:
                 break
 
-    # Allow original orderer to cancel even if it's a gift
+    # Extract the original_user_id from the cancel button's value
     original_user_id = None
-    import re
-    match = re.search(r"<@([A-Z0-9]+)>", original_text)
-    if match:
-        original_user_id = match.group(1)
+    for action in body.get("actions", []):
+        if action.get("action_id") == "cancel_order":
+            value_parts = action.get("value", "").split("|")
+            if len(value_parts) >= 2:
+                original_user_id = value_parts[1]
+                break
 
     if user_id != original_user_id:
         client.chat_postEphemeral(
@@ -464,6 +466,7 @@ def handle_claim_order(ack, body, client, say):
         ts=body["message"]["ts"],
         text=f"{order_text}\n\n☚️ *Claimed by <@{user_id}>* — don't let us down.",
         blocks=[
+            {"type": "divider"},
             {
                 "type": "section",
                 "text": {"type": "mrkdwn", "text": f"{order_text}\n\n☚️ *Claimed by <@{user_id}>*"}
@@ -598,6 +601,7 @@ def catch_all_actions(ack, body):
 
 @app.event("member_joined_channel")
 def welcome_new_user(event, client):
+    print("👀 member_joined_channel triggered:", event)
     user_id = event.get("user")
     channel_id = event.get("channel")
 
@@ -611,6 +615,7 @@ def welcome_new_user(event, client):
                 channel=channel_id,
                 text=f"👋 <@{user_id}> just entered the Coffee Karma zone. Show no mercy. ☕️"
             )
+            print("✅ Sent public welcome message to channel")
 
             # DM the new user with instructions
             client.chat_postMessage(
@@ -625,6 +630,7 @@ def welcome_new_user(event, client):
                     "Let the chaos begin. ⚡️"
                 )
             )
+            print("✅ Sent private DM to new user")
     except Exception as e:
         print("⚠️ Failed to welcome new user:", e)
 
