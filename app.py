@@ -660,6 +660,10 @@ def handle_team_join(event, client):
     except Exception as e:
         print("⚠️ Failed to initialize user on team_join:", e)
 
+@app.event("*")
+def catch_all_events(event):
+    print("🌀 CATCH-ALL EVENT:", event)
+
 import datetime
 import schedule
 import time
