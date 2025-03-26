@@ -602,10 +602,12 @@ def catch_all_actions(ack, body):
 @app.event("member_joined_channel")
 def welcome_new_user(event, client):
     print("👀 member_joined_channel triggered:", event)
+    print(f"👀 Detected member_joined_channel event: {event}")
     user_id = event.get("user")
     channel_id = event.get("channel")
 
     try:
+        print(f"👤 Welcoming user {user_id} to channel {channel_id}")
         # Ensure user has starting karma if new
         was_new = ensure_user(user_id)
 
