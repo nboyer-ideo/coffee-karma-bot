@@ -683,8 +683,9 @@ def handle_member_joined_channel_events(event, client):
             print("⚠️ Failed to send welcome messages:", e)
 
 @app.event("*")
-def catch_all_events(event):
-    print("🌀 CATCH-ALL EVENT:", event)
+def catch_all_events(event, logger, next):
+    logger.info(f"🌀 CATCH-ALL EVENT: {event}")
+    next()  # Allow other event handlers to continue processing
 
 import datetime
 import schedule
