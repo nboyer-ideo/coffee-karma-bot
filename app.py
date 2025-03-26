@@ -651,6 +651,37 @@ def handle_team_join(event, client):
     except Exception as e:
         print("⚠️ Failed to initialize user on team_join:", e)
 
+@app.event("member_joined_channel")
+def handle_member_joined_channel_events(event, client):
+    user_id = event.get("user")
+    channel_id = event.get("channel")
+
+    print(f"👋 Detected member_joined_channel: {user_id} joined {channel_id}")
+
+    from sheet import ensure_user
+    was_new = ensure_user(user_id)
+
+    if was_new:
+        try:
+            client.chat_postMessage(
+                channel=channel_id,
+                text=f"👋 <@{user_id}> just entered the Coffee Karma zone. Show no mercy. ☕️"
+            )
+            client.chat_postMessage(
+                channel=user_id,
+                text=(
+                    "Welcome to *Coffee Karma* ☕️💀\n\n"
+                    "Here’s how it works:\n"
+                    "• `/order` — Request a drink (costs Karma).\n"
+                    "• `/karma` — Check your Karma.\n"
+                    "• `/leaderboard` — See the legends.\n\n"
+                    "You’ve got *3 Karma points* to start. Spend wisely. Earn more by delivering orders.\n"
+                    "Let the chaos begin. ⚡️"
+                )
+            )
+        except Exception as e:
+            print("⚠️ Failed to send welcome messages:", e)
+
 @app.event("*")
 def catch_all_events(event):
     print("🌀 CATCH-ALL EVENT:", event)
