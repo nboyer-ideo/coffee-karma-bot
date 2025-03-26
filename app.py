@@ -599,27 +599,21 @@ def catch_all_actions(ack, body):
     ack()
     print("⚠️ Caught an unhandled action:", body.get("actions", [{}])[0].get("action_id"))
 
-@app.event("member_joined_channel")
-def welcome_new_user(event, client):
-    print("👀 member_joined_channel triggered:", event)
-    print(f"👀 Detected member_joined_channel event: {event}")
-    user_id = event.get("user")
-    channel_id = event.get("channel")
+@app.event("message")
+def handle_join_message_events(body, say, client, event):
+    subtype = event.get("subtype")
+    
+    if subtype == "channel_join":
+        user_id = event.get("user")
+        channel_id = event.get("channel")
 
-    try:
-        print(f"👤 Welcoming user {user_id} to channel {channel_id}")
-        # Ensure user has starting karma if new
+        print(f"👋 Detected join via channel_join: {user_id} joined {channel_id}")
+
+        from sheet import ensure_user
         was_new = ensure_user(user_id)
 
         if was_new:
-            # Public welcome shoutout
-            client.chat_postMessage(
-                channel=channel_id,
-                text=f"👋 <@{user_id}> just entered the Coffee Karma zone. Show no mercy. ☕️"
-            )
-            print("✅ Sent public welcome message to channel")
-
-            # DM the new user with instructions
+            say(f"👋 <@{user_id}> just entered the Coffee Karma zone. Show no mercy. ☕️")
             client.chat_postMessage(
                 channel=user_id,
                 text=(
@@ -632,9 +626,6 @@ def welcome_new_user(event, client):
                     "Let the chaos begin. ⚡️"
                 )
             )
-            print("✅ Sent private DM to new user")
-    except Exception as e:
-        print("⚠️ Failed to welcome new user:", e)
 
 @app.event("team_join")
 def handle_team_join(event, client):
