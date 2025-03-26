@@ -136,6 +136,13 @@ def handle_modal_submission(ack, body, client):
     notes = values["notes"]["input"]["value"] if "notes" in values else ""
     gifted_id = values["gift_to"]["input"]["selected_user"] if "gift_to" in values and "input" in values["gift_to"] else None
     user_id = body["user"]["id"]
+    context_text = random.choice([
+        "⚡ Another one in the queue...",
+        "💀 A fresh order just dropped.",
+        "☕ New round. Who’s got the grind?",
+        "🔥 Brew alert. Who’s stepping up?",
+        "🚨 Another caffeine cry for help."
+    ])
     
     
 
@@ -152,22 +159,11 @@ def handle_modal_submission(ack, body, client):
         channel="#coffee-karma-sf",
         text=f"☚️ New drop from <@{gifted_id or user_id}>\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n\nCost: {karma_cost} Karma. Claim it. Make it. Deliver it.\n⏳ *Time left to claim:* 10 min",
         blocks=[
-            {
-                "type": "divider"
-            },
+            {"type": "divider"},
             {
                 "type": "context",
                 "elements": [
-                    {
-                        "type": "mrkdwn",
-                        "text": random.choice([
-                            "⚡ Another one in the queue...",
-                            "💀 A fresh order just dropped.",
-                            "☕ New round. Who’s got the grind?",
-                            "🔥 Brew alert. Who’s stepping up?",
-                            "🚨 Another caffeine cry for help."
-                        ])
-                    }
+                    {"type": "mrkdwn", "text": context_text}
                 ]
             },
             {
@@ -194,7 +190,9 @@ def handle_modal_submission(ack, body, client):
             }
         ]
     )
-
+    order_ts = posted["ts"]
+    order_channel = posted["channel"]
+ 
     deduct_karma(user_id, karma_cost)
 
     if gifted_id:
@@ -208,9 +206,9 @@ def handle_modal_submission(ack, body, client):
     def cancel_unclaimed_order():
         try:
             client.chat_update(
-                channel=posted["channel"],
-                ts=posted["ts"],
-                text=f"{posted['text']}\n\n❌ This order expired. No one claimed it in time.",
+                channel=order_channel,
+                ts=order_ts,
+                text="❌ This order expired. No one claimed it in time.",
                 blocks=[
                     {
                         "type": "section",
@@ -236,8 +234,8 @@ def handle_modal_submission(ack, body, client):
                     updated_text = f"{msg_text}\n\n⚠️ This mission’s still unclaimed. Someone better step up before it expires… ⏳"
                     
                     client.chat_update(
-                        channel=posted["channel"],
-                        ts=posted["ts"],
+                        channel=order_channel,
+                        ts=order_ts,
                         text=updated_text,
                         blocks=[
                             {
@@ -276,18 +274,24 @@ def handle_modal_submission(ack, body, client):
             current_message = client.conversations_history(channel=posted["channel"], latest=posted["ts"], inclusive=True, limit=1)
             if current_message["messages"]:
                 msg_text = current_message["messages"][0].get("text", "")
-                if "Claimed by" in msg_text or "Expired" in msg_text:
+            if "Claimed by" in msg_text or "Expired" in msg_text or "Canceled" in msg_text:
                     return  # Order no longer actionable
             if remaining > 0:
                 updated_text = f"☚️ New drop from <@{gifted_id or user_id}>\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n⏳ *Time left to claim:* {remaining} min"
                 client.chat_update(
-                    channel=posted["channel"],
-                    ts=posted["ts"],
+                    channel=order_channel,
+                    ts=order_ts,
                     text=updated_text,
                     blocks=[
                         {
                             "type": "section",
                             "text": {"type": "mrkdwn", "text": updated_text}
+                        },
+                        {
+                            "type": "context",
+                            "elements": [
+                                {"type": "mrkdwn", "text": context_text}
+                            ]
                         },
                         {
                             "type": "actions",
@@ -376,14 +380,15 @@ def handle_cancel_order(ack, body, client):
     client.chat_update(
         channel=body["channel"]["id"],
         ts=message["ts"],
-        text=f"{original_text}\n\n❌ Order canceled by <@{user_id}>.",
+        text=f"❌ Order canceled by <@{user_id}>.",
         blocks=[
             {
                 "type": "section",
-                "text": {"type": "mrkdwn", "text": f"{original_text}\n\n❌ *Canceled by <@{user_id}>.*"}
+                "text": {"type": "mrkdwn", "text": f"❌ *Order canceled by <@{user_id}>.*"}
             }
         ]
     )
+    return
 
 @app.action("claim_order")
 def handle_claim_order(ack, body, client, say):
@@ -393,7 +398,7 @@ def handle_claim_order(ack, body, client, say):
     order_text = original_message["blocks"][0]["text"]["text"]
     # Remove "Time left to claim" if it's still there
     # Remove countdown and unclaimed warnings from order text
-    countdown_phrases = ["⏳ *Time left to claim:*", "⚠️ This mission’s still unclaimed."]
+    countdown_phrases = ["⏳ *Time left to claim:*", "⚠️ This mission’s still unclaimed.", "📸 *Flex the drop.*"]
     for phrase in countdown_phrases:
         if phrase in order_text:
             order_text = order_text.split(phrase)[0].strip()
@@ -454,12 +459,15 @@ def handle_mark_delivered(ack, body, client):
                 print("🚨 No claimer_id found.")
                 return
 
-            points = add_karma(claimer_id, 1)
-            print(f"☚️ +1 point for {claimer_id}. Total: {points}")
+            bonus_multiplier = 1
+            if random.randint(1, 5) == 1:  # 20% chance
+                bonus_multiplier = random.choice([2, 3])
+            points = add_karma(claimer_id, bonus_multiplier)
+            print(f"☚️ +{bonus_multiplier} point(s) for {claimer_id}. Total: {points}")
 
             new_text = (
                 f"{order_text}\n\n✅ *Delivered by <@{claimer_id}>* — Respect.\n"
-                f"☕️ +1 Karma for <@{claimer_id}>. New total: *{points}*."
+                f"☕️ +{bonus_multiplier} Karma for <@{claimer_id}>. New total: *{points}*."
             )
 
             safe_client.chat_update(
@@ -476,6 +484,11 @@ def handle_mark_delivered(ack, body, client):
                     }
                 ]
             )
+            if bonus_multiplier > 1:
+                safe_client.chat_postMessage(
+                    channel=safe_body["channel"]["id"],
+                    text=f"🎉 *Bonus Karma!* <@{claimer_id}> earned *{bonus_multiplier}x* points for this drop. 🔥"
+                )
 
             safe_client.chat_postMessage(
                 channel=claimer_id,
@@ -562,29 +575,56 @@ def welcome_new_user(event, client):
     user_id = event.get("user")
     channel_id = event.get("channel")
 
-    # Give them their 3 starter points (only if new)
-    was_new = ensure_user(user_id)
+    try:
+        # Ensure user has starting karma if new
+        was_new = ensure_user(user_id)
 
-    if was_new:
-        # Public welcome shoutout
-        client.chat_postMessage(
-            channel=channel_id,
-            text=f"👋 <@{user_id}> just entered the Coffee Karma zone. Show no mercy. ☕️"
-        )
-
-        # DM the new user with instructions
-        client.chat_postMessage(
-            channel=user_id,
-            text=(
-                "Welcome to *Coffee Karma* ☕️💀\n\n"
-                "Here’s how it works:\n"
-                "• `/order` — Request a drink (costs Karma).\n"
-                "• `/karma` — Check your Karma.\n"
-                "• `/leaderboard` — See the legends.\n\n"
-                "You’ve got *3 Karma points* to start. Spend wisely. Earn more by delivering orders.\n"
-                "Let the chaos begin. ⚡️"
+        if was_new:
+            # Public welcome shoutout
+            client.chat_postMessage(
+                channel=channel_id,
+                text=f"👋 <@{user_id}> just entered the Coffee Karma zone. Show no mercy. ☕️"
             )
-        )
+
+            # DM the new user with instructions
+            client.chat_postMessage(
+                channel=user_id,
+                text=(
+                    "Welcome to *Coffee Karma* ☕️💀\n\n"
+                    "Here’s how it works:\n"
+                    "• `/order` — Request a drink (costs Karma).\n"
+                    "• `/karma` — Check your Karma.\n"
+                    "• `/leaderboard` — See the legends.\n\n"
+                    "You’ve got *3 Karma points* to start. Spend wisely. Earn more by delivering orders.\n"
+                    "Let the chaos begin. ⚡️"
+                )
+            )
+    except Exception as e:
+        print("⚠️ Failed to welcome new user:", e)
+
+@app.event("team_join")
+def handle_team_join(event, client):
+    user_id = event.get("user", {}).get("id")
+    if not user_id:
+        return
+
+    try:
+        was_new = ensure_user(user_id)
+        if was_new:
+            client.chat_postMessage(
+                channel=user_id,
+                text=(
+                    "Welcome to *Coffee Karma* ☕️💀\n\n"
+                    "Here’s how it works:\n"
+                    "• `/order` — Request a drink (costs Karma).\n"
+                    "• `/karma` — Check your Karma.\n"
+                    "• `/leaderboard` — See the legends.\n\n"
+                    "You’ve got *3 Karma points* to start. Spend wisely. Earn more by delivering orders.\n"
+                    "Let the chaos begin. ⚡️"
+                )
+            )
+    except Exception as e:
+        print("⚠️ Failed to initialize user on team_join:", e)
 
 import datetime
 import schedule
