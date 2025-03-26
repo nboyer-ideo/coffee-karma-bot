@@ -179,7 +179,7 @@ def handle_modal_submission(ack, body, client):
     
     full_text = (
         f"{context_line}\n"
-        f"☚️ *New drop from <@{gifted_id or user_id}>*\n"
+        f"☚️ *New drop {'for <@' + gifted_id + '> from <@' + user_id + '>' if gifted_id else 'from <@' + user_id + '>'}*\n"
         f"• *Drink:* {drink}\n"
         f"• *Drop Spot:* {location}\n"
         f"• *Notes:* {notes or 'None'}\n"
@@ -239,7 +239,7 @@ def handle_modal_submission(ack, body, client):
         if "order_extras" not in globals():
             global order_extras
             order_extras = {}
-        order_extras[order_ts] = [gif_ts]
+        order_extras[order_ts] = {"gif_ts": gif_ts, "context_line": context_line}
  
     deduct_karma(user_id, karma_cost)
 
@@ -334,7 +334,9 @@ def handle_modal_submission(ack, body, client):
             if "Claimed by" in msg_text or "Expired" in msg_text or "Canceled" in msg_text:
                     return  # Order no longer actionable
             if remaining > 0:
+                context_line = order_extras.get(order_ts, {}).get("context_line", "")
                 updated_text = (
+                    f"{context_line}\n"
                     f"☚️ *New drop from <@{gifted_id or user_id}>*\n"
                     f"• *Drink:* {drink}\n"
                     f"• *Drop Spot:* {location}\n"
@@ -372,6 +374,8 @@ def handle_modal_submission(ack, body, client):
                         }
                     ]
                 )
+                if remaining > 1:
+                    threading.Timer(60, update_countdown, args=(remaining - 1,)).start()
         except Exception as e:
             print("⚠️ Countdown update failed:", e)
 
@@ -390,7 +394,14 @@ def handle_cancel_order(ack, body, client):
             if original_text:
                 break
 
-    if f"<@{user_id}>" not in original_text:
+    # Allow original orderer to cancel even if it's a gift
+    original_user_id = None
+    import re
+    match = re.search(r"<@([A-Z0-9]+)>", original_text)
+    if match:
+        original_user_id = match.group(1)
+
+    if user_id != original_user_id:
         client.chat_postEphemeral(
             channel=body["channel"]["id"],
             user=user_id,
@@ -509,7 +520,7 @@ def handle_mark_delivered(ack, body, client):
             new_text = (
                 f"{order_text}\n\n✅ *Delivered by <@{claimer_id}>* — Respect.\n"
                 f"☕️ +{bonus_multiplier} Karma for <@{claimer_id}>. New total: *{points}*."
-                "\n📸 *Flex the drop.* On mobile? Hit the *`+`* and share a shot of your delivery. Let the people see the brew."
+                "\n\n📸 *Flex the drop.* On mobile? Hit the *`+`* and share a shot of your delivery. Let the people see the brew."
             )
 
             safe_client.chat_update(
