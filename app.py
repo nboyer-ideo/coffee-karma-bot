@@ -420,8 +420,12 @@ def handle_cancel_order(ack, body, client):
     # Clean up any extras like GIFs or context
     order_ts = message["ts"]
     if order_ts in order_extras:
-        for extra_ts in order_extras[order_ts]:
-            client.chat_delete(channel=body["channel"]["id"], ts=extra_ts)
+        gif_ts = order_extras[order_ts].get("gif_ts")
+        if gif_ts:
+            try:
+                client.chat_delete(channel=body["channel"]["id"], ts=gif_ts)
+            except Exception as e:
+                print("⚠️ Failed to delete gif message:", e)
         del order_extras[order_ts]
 
     # Stop any further scheduled updates by overwriting the original message with only cancellation info.
@@ -518,7 +522,7 @@ def handle_mark_delivered(ack, body, client):
             print(f"☚️ +{bonus_multiplier} point(s) for {claimer_id}. Total: {points}")
 
             new_text = (
-                f"{order_text}\n\n✅ *Delivered by <@{claimer_id}>* — Respect.\n"
+                f"{order_text}\n\n✅ *Delivered.* Respect.\n"
                 f"☕️ +{bonus_multiplier} Karma for <@{claimer_id}>. New total: *{points}*."
                 "\n\n📸 *Flex the drop.* On mobile? Hit the *`+`* and share a shot of your delivery. Let the people see the brew."
             )
@@ -528,6 +532,7 @@ def handle_mark_delivered(ack, body, client):
                 ts=original_message["ts"],
                 text=new_text,
                 blocks=[
+                    {"type": "divider"},
                     {
                         "type": "section",
                         "text": {
