@@ -3,6 +3,7 @@ from slack_bolt.adapter.flask import SlackRequestHandler
 from flask import Flask, request
 import os
 import random
+import requests
 
 CELEBRATION_GIFS = [
     "https://media.giphy.com/media/l0HlMWkOM0xXyN0TC/giphy.gif",  # slow clap
@@ -14,6 +15,25 @@ CELEBRATION_GIFS = [
     "https://media.giphy.com/media/3o6Mb8Xoe5AiG9o7q0/giphy.gif",  # rebel clapping
     "https://media.giphy.com/media/3o6Zt7A5oAgP2lM5xC/giphy.gif"   # heavy metal
 ]
+
+def get_punk_gif():
+    api_key = os.environ.get("GIPHY_API_KEY")  # You’ll need to get one from Giphy
+    if not api_key:
+        return "https://media.giphy.com/media/3o6Zt7A5oAgP2lM5xC/giphy.gif"  # fallback
+
+    query = random.choice(["punk", "sarcastic", "grunge", "rebel", "dark humor", "eyeroll", "anarchy"])
+    url = f"https://api.giphy.com/v1/gifs/search?api_key={api_key}&q={query}&limit=20&offset=0&rating=pg-13&lang=en"
+
+    try:
+        response = requests.get(url)
+        data = response.json()
+        if data["data"]:
+            gif_url = random.choice(data["data"])["images"]["downsized"]["url"]
+            return gif_url
+    except Exception as e:
+        print("⚠️ Giphy API error:", e)
+
+    return "https://media.giphy.com/media/3o6Zt7A5oAgP2lM5xC/giphy.gif"  # fallback
 
 from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma
 
@@ -136,13 +156,6 @@ def handle_modal_submission(ack, body, client):
     notes = values["notes"]["input"]["value"] if "notes" in values else ""
     gifted_id = values["gift_to"]["input"]["selected_user"] if "gift_to" in values and "input" in values["gift_to"] else None
     user_id = body["user"]["id"]
-    context_text = random.choice([
-        "⚡ Another one in the queue...",
-        "💀 A fresh order just dropped.",
-        "☕ New round. Who’s got the grind?",
-        "🔥 Brew alert. Who’s stepping up?",
-        "🚨 Another caffeine cry for help."
-    ])
     
     
 
@@ -157,18 +170,12 @@ def handle_modal_submission(ack, body, client):
 
     posted = client.chat_postMessage(
         channel="#coffee-karma-sf",
-        text=f"☚️ New drop from <@{gifted_id or user_id}>\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n\nCost: {karma_cost} Karma. Claim it. Make it. Deliver it.\n⏳ *Time left to claim:* 10 min",
+        text=f"☚️ New drop from <@{gifted_id or user_id}>\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n\nCost: {karma_cost} Karma. Reward: +{karma_cost} Karma to the delivery punk.\nClaim it. Make it. Deliver it.\n⏳ *Time left to claim:* 10 min",
         blocks=[
             {"type": "divider"},
             {
-                "type": "context",
-                "elements": [
-                    {"type": "mrkdwn", "text": context_text}
-                ]
-            },
-            {
                 "type": "section",
-                "text": {"type": "mrkdwn", "text": f"☚️ *New drop from <@{gifted_id or user_id}>*\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n⏳ *Time left to claim:* 10 min\n\n📸 *Flex the drop.* On mobile? Hit the *`+`* and share a shot of your delivery. Let the people see the brew."}
+                "text": {"type": "mrkdwn", "text": f"☚️ *New drop from <@{gifted_id or user_id}>*\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\nCost: {karma_cost} Karma. Reward: +{karma_cost} Karma to the delivery punk.\n⏳ *Time left to claim:* 10 min"}
             },
             {
                 "type": "actions",
@@ -286,34 +293,9 @@ def handle_modal_submission(ack, body, client):
                         {
                             "type": "section",
                             "text": {"type": "mrkdwn", "text": updated_text}
-                        },
-                        {
-                            "type": "context",
-                            "elements": [
-                                {"type": "mrkdwn", "text": context_text}
-                            ]
-                        },
-                        {
-                            "type": "actions",
-                            "elements": [
-                                {
-                                    "type": "button",
-                                    "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
-                                    "value": f"{user_id}|{drink}|{location}",
-                                    "action_id": "claim_order"
-                                },
-                                {
-                                    "type": "button",
-                                    "text": {"type": "plain_text", "text": "CANCEL"},
-                                    "style": "danger",
-                                    "value": f"cancel|{user_id}|{drink_value}",
-                                    "action_id": "cancel_order"
-                                }
-                            ]
                         }
                     ]
                 )
-                threading.Timer(60, update_countdown, args=(remaining - 1,)).start()
         except Exception as e:
             print("⚠️ Countdown update failed:", e)
 
@@ -324,12 +306,7 @@ def handle_modal_submission(ack, body, client):
         extras = [
             {
                 "type": "image",
-                "image_url": random.choice([
-                    "https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif",
-                    "https://media.giphy.com/media/3o7qE1YN7aBOFPRw8E/giphy.gif",
-                    "https://media.giphy.com/media/l0MYEqEzwMWFCg8rm/giphy.gif",
-                    "https://media.giphy.com/media/xT0GqeSlGSRQut4C2Q/giphy.gif"
-                ]),
+                "image_url": get_punk_gif(),
                 "alt_text": "coffee chaos"
             },
             {
@@ -341,7 +318,6 @@ def handle_modal_submission(ack, body, client):
                             "```\n  ☕\n (╯°□°）╯︵ ┻━┻\n```",
                             "```\n  //\\ ☠️ \n c''☕️\n```",
                             "```\nIDE☕O forever.\n// brewed + brutal //\n```",
-                            "> *Drink deep, punk. Coffee waits for no one.*"
                         ])
                     }
                 ]
@@ -381,6 +357,17 @@ def handle_cancel_order(ack, body, client):
         channel=body["channel"]["id"],
         ts=message["ts"],
         text=f"❌ Order canceled by <@{user_id}>.",
+        blocks=[
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": f"❌ *Order canceled by <@{user_id}>.*"}
+            }
+        ]
+    )
+    # Stop any further scheduled updates by overwriting the original message with only cancellation info.
+    client.chat_update(
+        channel=body["channel"]["id"],
+        ts=message["ts"],
         blocks=[
             {
                 "type": "section",
@@ -468,6 +455,7 @@ def handle_mark_delivered(ack, body, client):
             new_text = (
                 f"{order_text}\n\n✅ *Delivered by <@{claimer_id}>* — Respect.\n"
                 f"☕️ +{bonus_multiplier} Karma for <@{claimer_id}>. New total: *{points}*."
+                "\n📸 *Flex the drop.* On mobile? Hit the *`+`* and share a shot of your delivery. Let the people see the brew."
             )
 
             safe_client.chat_update(
@@ -501,11 +489,7 @@ def handle_mark_delivered(ack, body, client):
                 extras = [
                     {
                         "type": "image",
-                        "image_url": random.choice([
-                            "https://media.giphy.com/media/xT0GqeSlGSRQut4C2Q/giphy.gif",
-                            "https://media.giphy.com/media/3o7qE1YN7aBOFPRw8E/giphy.gif",
-                            "https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif"
-                        ]),
+                        "image_url": get_punk_gif(),
                         "alt_text": "gritty coffee punk"
                     },
                     {
