@@ -212,14 +212,19 @@ def handle_modal_submission(ack, body, client):
     import threading
     def cancel_unclaimed_order():
         try:
+            current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+            if current_message["messages"]:
+                current_text = current_message["messages"][0].get("text", "")
+                if "Canceled" in current_text or "Claimed" in current_text:
+                    return
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
-                text="❌ This order expired. No one claimed it in time.",
+                text="❌ *Expired.* No one stepped up.",
                 blocks=[
                     {
                         "type": "section",
-                        "text": {"type": "mrkdwn", "text": f"{posted['text']}\n\n❌ *Expired.* No one stepped up."}
+                        "text": {"type": "mrkdwn", "text": "❌ *Expired.* No one stepped up."}
                     }
                 ]
             )
@@ -230,7 +235,7 @@ def handle_modal_submission(ack, body, client):
     # Reminder ping halfway through if still unclaimed
     def reminder_ping():
         try:
-            current_message = client.conversations_history(channel=posted["channel"], latest=posted["ts"], inclusive=True, limit=1)
+            current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
             if current_message["messages"]:
                 msg_text = current_message["messages"][0].get("text", "")
                 if "Claimed by" in msg_text or "Expired" in msg_text or "Canceled" in msg_text:
@@ -278,21 +283,47 @@ def handle_modal_submission(ack, body, client):
     def update_countdown(remaining):
         try:
             # Check if order is still active by inspecting the current message text
-            current_message = client.conversations_history(channel=posted["channel"], latest=posted["ts"], inclusive=True, limit=1)
+            current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
             if current_message["messages"]:
                 msg_text = current_message["messages"][0].get("text", "")
             if "Claimed by" in msg_text or "Expired" in msg_text or "Canceled" in msg_text:
                     return  # Order no longer actionable
             if remaining > 0:
-                updated_text = f"☚️ New drop from <@{gifted_id or user_id}>\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n⏳ *Time left to claim:* {remaining} min"
+                updated_text = (
+                    f"☚️ *New drop from <@{gifted_id or user_id}>*\n"
+                    f"• *Drink:* {drink}\n"
+                    f"• *Drop Spot:* {location}\n"
+                    f"• *Notes:* {notes or 'None'}\n"
+                    f"Cost: {karma_cost} Karma. Reward: +{karma_cost} Karma to the delivery punk.\n"
+                    f"⏳ *Time left to claim:* {remaining} min"
+                )
                 client.chat_update(
                     channel=order_channel,
                     ts=order_ts,
                     text=updated_text,
                     blocks=[
+                        {"type": "divider"},
                         {
                             "type": "section",
                             "text": {"type": "mrkdwn", "text": updated_text}
+                        },
+                        {
+                            "type": "actions",
+                            "elements": [
+                                {
+                                    "type": "button",
+                                    "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
+                                    "value": f"{user_id}|{drink}|{location}",
+                                    "action_id": "claim_order"
+                                },
+                                {
+                                    "type": "button",
+                                    "text": {"type": "plain_text", "text": "CANCEL"},
+                                    "style": "danger",
+                                    "value": f"cancel|{user_id}|{drink_value}",
+                                    "action_id": "cancel_order"
+                                }
+                            ]
                         }
                     ]
                 )
@@ -301,34 +332,34 @@ def handle_modal_submission(ack, body, client):
 
     update_countdown(9)  # Start at 9 since initial message shows 10 min
 
-    # Occasionally inject some visual spice
-    if random.randint(1, 2) == 1:  # 50% chance
-        extras = [
-            {
-                "type": "image",
-                "image_url": get_punk_gif(),
-                "alt_text": "coffee chaos"
-            },
-            {
-                "type": "context",
-                "elements": [
-                    {
-                        "type": "mrkdwn",
-                        "text": random.choice([
-                            "```\n  ☕\n (╯°□°）╯︵ ┻━┻\n```",
-                            "```\n  //\\ ☠️ \n c''☕️\n```",
-                            "```\nIDE☕O forever.\n// brewed + brutal //\n```",
-                        ])
-                    }
-                ]
-            }
-        ]
-        for block in extras:
-            client.chat_postMessage(
-                channel="#coffee-karma-sf",
-                blocks=[block],
-                text="Coffee chaos drop"
-            )
+    # Always inject some visual spice
+    extras = [
+        {
+            "type": "image",
+            "image_url": get_punk_gif(),
+            "alt_text": "coffee chaos"
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": random.choice([
+                        "*☕ Caffeine + Chaos* — IDE☕O forever.",
+                        "*╯°□°）╯︵ ┻━┻* — Brew rebellion.",
+                        "*// Brewed + Brutal //*",
+                        "*Wake. Rage. Repeat.* ☕"
+                    ])
+                }
+            ]
+        }
+    ]
+    for block in extras:
+        client.chat_postMessage(
+            channel="#coffee-karma-sf",
+            blocks=[block],
+            text="Coffee chaos drop"
+        )
 
 @app.action("cancel_order")
 def handle_cancel_order(ack, body, client):
@@ -375,6 +406,12 @@ def handle_cancel_order(ack, body, client):
             }
         ]
     )
+    # Clean up any extras like GIFs or context
+    order_ts = message["ts"]
+    if order_ts in order_extras:
+        for extra_ts in order_extras[order_ts]:
+            client.chat_delete(channel=body["channel"]["id"], ts=extra_ts)
+        del order_extras[order_ts]
     return
 
 @app.action("claim_order")
