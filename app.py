@@ -168,14 +168,31 @@ def handle_modal_submission(ack, body, client):
         )
         return
 
+    context_line = random.choice([
+        "*☕ Caffeine + Chaos* — IDE☕O forever.",
+        "*╯°□°）╯︵ ┻━┻* — Brew rebellion.",
+        "*// Brewed + Brutal //*",
+        "*Wake. Rage. Repeat.* ☕"
+    ])
+
+    full_text = (
+        f"☚️ *New drop from <@{gifted_id or user_id}>*\n"
+        f"• *Drink:* {drink}\n"
+        f"• *Drop Spot:* {location}\n"
+        f"• *Notes:* {notes or 'None'}\n"
+        f"Cost: {karma_cost} Karma. Reward: +{karma_cost} Karma to the delivery punk.\n"
+        f"{context_line}\n"
+        f"⏳ *Time left to claim:* 10 min"
+    )
+
     posted = client.chat_postMessage(
         channel="#coffee-karma-sf",
-        text=f"☚️ New drop from <@{gifted_id or user_id}>\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n\nCost: {karma_cost} Karma. Reward: +{karma_cost} Karma to the delivery punk.\nClaim it. Make it. Deliver it.\n⏳ *Time left to claim:* 10 min",
+        text=full_text,
         blocks=[
             {"type": "divider"},
             {
                 "type": "section",
-                "text": {"type": "mrkdwn", "text": f"☚️ *New drop from <@{gifted_id or user_id}>*\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\nCost: {karma_cost} Karma. Reward: +{karma_cost} Karma to the delivery punk.\n⏳ *Time left to claim:* 10 min"}
+                "text": {"type": "mrkdwn", "text": full_text}
             },
             {
                 "type": "actions",
@@ -228,6 +245,10 @@ def handle_modal_submission(ack, body, client):
                     }
                 ]
             )
+            if order_ts in order_extras:
+                for extra_ts in order_extras[order_ts]:
+                    client.chat_delete(channel=order_channel, ts=extra_ts)
+                del order_extras[order_ts]
         except Exception as e:
             print("⚠️ Failed to expire message:", e)
 
@@ -366,7 +387,12 @@ def handle_cancel_order(ack, body, client):
     ack()
     user_id = body["user"]["id"]
     message = body["message"]
-    original_text = message["blocks"][0]["text"]["text"] if message["blocks"] else ""
+    original_text = ""
+    for block in message.get("blocks", []):
+        if block.get("type") == "section" and isinstance(block.get("text"), dict):
+            original_text = block["text"].get("text", "")
+            if original_text:
+                break
 
     if f"<@{user_id}>" not in original_text:
         client.chat_postEphemeral(
@@ -419,7 +445,11 @@ def handle_claim_order(ack, body, client, say):
     ack()
     user_id = body["user"]["id"]
     original_message = body["message"]
-    order_text = original_message["blocks"][0]["text"]["text"]
+    order_text = ""
+    for block in original_message.get("blocks", []):
+        if block.get("type") == "section" and "text" in block:
+            order_text = block["text"].get("text", "")
+            break
     # Remove "Time left to claim" if it's still there
     # Remove countdown and unclaimed warnings from order text
     countdown_phrases = ["⏳ *Time left to claim:*", "⚠️ This mission’s still unclaimed.", "📸 *Flex the drop.*"]
