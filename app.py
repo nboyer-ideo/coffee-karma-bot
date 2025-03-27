@@ -654,6 +654,7 @@ def handle_team_join(event, client):
 @app.event("member_joined_channel")
 def handle_member_joined_channel_events(event, client):
     user_id = event.get("user")
+    print(f"👤 Detected user joined: {user_id}")
     channel_id = event.get("channel")
 
     print(f"👋 Detected member_joined_channel: {user_id} joined {channel_id}")
