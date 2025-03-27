@@ -652,12 +652,15 @@ def handle_team_join(event, client):
         print("⚠️ Failed to initialize user on team_join:", e)
 
 @app.event("member_joined_channel")
-def handle_member_joined_channel_events(event, client):
+def handle_member_joined_channel_events(event, client, logger):
+    logger.info("📥 Received member_joined_channel event: %s", event)
+
     user_id = event.get("user")
-    print(f"👤 Detected user joined: {user_id}")
     channel_id = event.get("channel")
 
-    print(f"👋 Detected member_joined_channel: {user_id} joined {channel_id}")
+    if not user_id or not channel_id:
+        logger.info("⚠️ Missing user or channel in member_joined_channel event")
+        return
 
     from sheet import ensure_user
     was_new = ensure_user(user_id)
@@ -681,7 +684,7 @@ def handle_member_joined_channel_events(event, client):
                 )
             )
         except Exception as e:
-            print("⚠️ Failed to send welcome messages:", e)
+            logger.error("⚠️ Failed to send welcome messages: %s", e)
 
 @app.event("*")
 def catch_all_events(event, logger, next):
