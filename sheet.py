@@ -74,6 +74,6 @@ def ensure_user(user_id):
         if row["user_id"] == user_id:
             return False  # Already exists
 
-    # Add new user with 3 starting points and mark as joined before
-    sheet.append_row([user_id, 3, "TRUE"])
+    # Add new user with 3 starting points
+    sheet.append_row([user_id, 3])
     return True

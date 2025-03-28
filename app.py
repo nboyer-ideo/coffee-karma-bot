@@ -663,28 +663,27 @@ def handle_member_joined_channel(event, client, logger):
         return
 
     from sheet import ensure_user
-    was_new = ensure_user(user_id)
+    ensure_user(user_id)  # Still make sure they’re initialized, but ignore return value
 
-    if was_new:
-        try:
-            client.chat_postMessage(
-                channel=channel_id,
-                text=f"👋 <@{user_id}> just entered the Coffee Karma zone. Show no mercy. ☕️"
+    try:
+        client.chat_postMessage(
+            channel=channel_id,
+            text=f"👋 <@{user_id}> just entered the Coffee Karma zone. Show no mercy. ☕️"
+        )
+        client.chat_postMessage(
+            channel=user_id,
+            text=(
+                "Welcome to *Coffee Karma* ☕️💀\n\n"
+                "Here’s how it works:\n"
+                "• `/order` — Request a drink (costs Karma).\n"
+                "• `/karma` — Check your Karma.\n"
+                "• `/leaderboard` — See the legends.\n\n"
+                "You’ve got *3 Karma points* to start. Spend wisely. Earn more by delivering orders.\n"
+                "Let the chaos begin. ⚡️"
             )
-            client.chat_postMessage(
-                channel=user_id,
-                text=(
-                    "Welcome to *Coffee Karma* ☕️💀\n\n"
-                    "Here’s how it works:\n"
-                    "• `/order` — Request a drink (costs Karma).\n"
-                    "• `/karma` — Check your Karma.\n"
-                    "• `/leaderboard` — See the legends.\n\n"
-                    "You’ve got *3 Karma points* to start. Spend wisely. Earn more by delivering orders.\n"
-                    "Let the chaos begin. ⚡️"
-                )
-            )
-        except Exception as e:
-            logger.error("⚠️ Failed to send welcome messages: %s", e)
+        )
+    except Exception as e:
+        logger.error("⚠️ Failed to send welcome messages: %s", e)
 
 @app.event("*")
 def catch_all_events(event, logger, next):
