@@ -373,37 +373,20 @@ def handle_modal_submission(ack, body, client):
                 ts=order_ts,
                 text=updated_text,
                 blocks=[
-                    {"type": "divider"},
                     {
                         "type": "section",
                         "text": {"type": "mrkdwn", "text": updated_text}
-                    },
-                    {
-                        "type": "actions",
-                        "elements": [
-                            {
-                                "type": "button",
-                                "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
-                                "value": f"{user_id}|{drink}|{location}",
-                                "action_id": "claim_order"
-                            },
-                            {
-                                "type": "button",
-                                "text": {"type": "plain_text", "text": "CANCEL"},
-                                "style": "danger",
-                                "value": f"cancel|{user_id}|{drink_value}",
-                                "action_id": "cancel_order"
-                            }
-                        ]
                     }
                 ]
             )
+    except Exception as e:
+        print("⚠️ Countdown update failed:", e)
+    finally:
+        if remaining > 0:
             print(f"⏳ Scheduling next countdown tick for: {remaining - 1}")
             threading.Timer(60, update_countdown, args=(remaining - 1,)).start()
-        except Exception as e:
-            print("⚠️ Countdown update failed:", e)
 
-    update_countdown(9)  # Start at 9 since initial message shows 10 min
+    threading.Thread(target=update_countdown, args=(9,)).start()  # Start at 9 since initial message shows 10 min
 
 
 @app.action("cancel_order")
@@ -828,4 +811,4 @@ if __name__ == "__main__":
             time.sleep(1)
     
     threading.Thread(target=run_schedule, daemon=True).start()
-    flask_app.run(host="0.0.0.0", port=port)
+    flask_app.run(host="0.0.0.0", port=port, threaded=True)
