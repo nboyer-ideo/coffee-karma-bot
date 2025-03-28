@@ -512,6 +512,8 @@ def handle_claim_order(ack, body, client):
             }
         ]
     )
+    order_ts = body["message"]["ts"]
+    order_extras[order_ts]["claimer_id"] = user_id
 
     client.chat_postMessage(
         channel=user_id,
