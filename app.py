@@ -237,11 +237,15 @@ def handle_modal_submission(ack, body, client):
             print("⚠️ Failed to post gif:", e)
  
     if order_ts and gif_ts:
-        if "order_extras" not in globals():
-            global order_extras
-            order_extras = {}
-        order_extras[order_ts] = {"gif_ts": gif_ts, "context_line": context_line}
-        order_extras[order_ts]["claimer_id"] = None
+        global order_extras
+        if order_ts not in order_extras:
+            order_extras[order_ts] = {}
+        order_extras[order_ts].update({
+            "gif_ts": gif_ts,
+            "context_line": context_line,
+            "claimer_id": None,
+            "active": True
+        })
  
     deduct_karma(user_id, karma_cost)
 
@@ -272,6 +276,7 @@ def handle_modal_submission(ack, body, client):
                 ]
             )
             if order_ts in order_extras:
+                order_extras[order_ts]["active"] = False
                 for extra_ts in order_extras[order_ts]:
                     client.chat_delete(channel=order_channel, ts=extra_ts)
                 del order_extras[order_ts]
@@ -331,8 +336,11 @@ def handle_modal_submission(ack, body, client):
     # Start live countdown updates for order expiration
     def update_countdown(remaining):
         try:
+            print(f"⏳ Countdown tick: {remaining} min left for order {order_ts}")
             # Check if order is still active by inspecting the current message text
             current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+            if not order_extras.get(order_ts, {}).get("active", True):
+                return
             if not current_message.get("messages"):
                 return
             msg_text = current_message["messages"][0].get("text", "")
@@ -355,6 +363,7 @@ def handle_modal_submission(ack, body, client):
                     f"⏳ *Time left to claim:* {remaining} min"
                     f"{reminder_text}"
                 )
+                print(f"⏳ Attempting to update message with remaining: {remaining}")
                 client.chat_update(
                     channel=order_channel,
                     ts=order_ts,
@@ -386,6 +395,7 @@ def handle_modal_submission(ack, body, client):
                     ]
                 )
                 if remaining > 1:
+                    print(f"⏳ Scheduling next countdown tick for: {remaining - 1}")
                     threading.Timer(60, update_countdown, args=(remaining - 1,)).start()
         except Exception as e:
             print("⚠️ Countdown update failed:", e)
@@ -514,6 +524,7 @@ def handle_claim_order(ack, body, client):
     )
     order_ts = body["message"]["ts"]
     order_extras[order_ts]["claimer_id"] = user_id
+    order_extras[order_ts]["active"] = False
 
     client.chat_postMessage(
         channel=user_id,
