@@ -368,16 +368,33 @@ def handle_modal_submission(ack, body, client):
                 f"{reminder_text}"
             )
             print("Attempting to update countdown message for order", order_ts)
+            actions_block = {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
+                        "value": f"{user_id}|{drink}|{location}",
+                        "action_id": "claim_order"
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "CANCEL"},
+                        "style": "danger",
+                        "value": f"cancel|{user_id}|{drink}",
+                        "action_id": "cancel_order"
+                    }
+                ]
+            }
+            blocks = [
+                {"type": "section", "text": {"type": "mrkdwn", "text": updated_text}},
+                actions_block
+            ]
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
                 text=updated_text,
-                blocks=[
-                    {
-                        "type": "section",
-                        "text": {"type": "mrkdwn", "text": updated_text}
-                    }
-                ]
+                blocks=blocks
             )
         except Exception as e:
             print("⚠️ Countdown update failed:", e)
@@ -572,6 +589,7 @@ def handle_mark_delivered(ack, body, client):
         return
 
     def do_work():
+        import re
         try:
             print("📦 mark_delivered payload:", safe_body)
             original_message = safe_body.get("message", {})
