@@ -5,8 +5,6 @@ from google.oauth2.service_account import Credentials
 import os
 import json
 from io import StringIO
-import gspread
-from google.oauth2.service_account import Credentials
 
 def get_sheet():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]

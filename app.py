@@ -1,27 +1,16 @@
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
 from flask import Flask, request
-import os
 import random
 import requests
 
 order_extras = {}
 
-CELEBRATION_GIFS = [
-    "https://media.giphy.com/media/l0HlMWkOM0xXyN0TC/giphy.gif",  # slow clap
-    "https://media.giphy.com/media/3og0INyCmHlNylks9O/giphy.gif",  # punk guitar
-    "https://media.giphy.com/media/3oEduSbSGpGaRX2Vri/giphy.gif",  # smoking skeleton
-    "https://media.giphy.com/media/xT0xeJpnrWC4XWblEk/giphy.gif",  # sarcastic thumbs up
-    "https://media.giphy.com/media/xT9IgvZzFwYp8n2zzy/giphy.gif",  # goth girl clapping
-    "https://media.giphy.com/media/l41lTzR2bBbcO7Hr6/giphy.gif",  # dramatic head nod
-    "https://media.giphy.com/media/3o6Mb8Xoe5AiG9o7q0/giphy.gif",  # rebel clapping
-    "https://media.giphy.com/media/3o6Zt7A5oAgP2lM5xC/giphy.gif"   # heavy metal
-]
 
 def get_punk_gif():
     api_key = os.environ.get("GIPHY_API_KEY")  # You’ll need to get one from Giphy
     if not api_key:
-        return "https://media.giphy.com/media/3o6Zt7A5oAgP2lM5xC/giphy.gif"  # fallback
+        return None
 
     query = random.choice(["punk", "sarcastic", "grunge", "rebel", "dark humor", "eyeroll", "anarchy"])
     url = f"https://api.giphy.com/v1/gifs/search?api_key={api_key}&q={query}&limit=20&offset=0&rating=pg-13&lang=en"
@@ -34,8 +23,9 @@ def get_punk_gif():
             return gif_url
     except Exception as e:
         print("⚠️ Giphy API error:", e)
+        return None
 
-    return "https://media.giphy.com/media/3o6Zt7A5oAgP2lM5xC/giphy.gif"  # fallback
+    return None
 
 from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma
 
@@ -229,19 +219,21 @@ def handle_modal_submission(ack, body, client):
  
     # Post punk GIF and track its timestamp
     gif_ts = None
-    try:
-        gif_message = client.chat_postMessage(
-            channel=order_channel,
-            blocks=[{
-                "type": "image",
-                "image_url": get_punk_gif(),
-                "alt_text": "coffee gif"
-            }],
-            text="Grit drop"
-        )
-        gif_ts = gif_message["ts"]
-    except Exception as e:
-        print("⚠️ Failed to post gif:", e)
+    gif_url = get_punk_gif()
+    if gif_url:
+        try:
+            gif_message = client.chat_postMessage(
+                channel=order_channel,
+                blocks=[{
+                    "type": "image",
+                    "image_url": gif_url,
+                    "alt_text": "coffee gif"
+                }],
+                text="Grit drop"
+            )
+            gif_ts = gif_message["ts"]
+        except Exception as e:
+            print("⚠️ Failed to post gif:", e)
  
     if order_ts and gif_ts:
         if "order_extras" not in globals():
@@ -465,7 +457,7 @@ def handle_cancel_order(ack, body, client):
     return
 
 @app.action("claim_order")
-def handle_claim_order(ack, body, client, say):
+def handle_claim_order(ack, body, client):
     ack()
     user_id = body["user"]["id"]
     original_message = body["message"]
@@ -510,7 +502,6 @@ def handle_claim_order(ack, body, client, say):
     )
 
 import threading
-import copy
 
 @app.action("mark_delivered")
 def handle_mark_delivered(ack, body, client):
@@ -543,6 +534,15 @@ def handle_mark_delivered(ack, body, client):
                         if match:
                             recipient_id = match.group(1)
                         break
+            # Treat sender as recipient if no gift recipient was included
+            if not recipient_id:
+                for block in text_blocks:
+                    if block.get("type") == "section":
+                        text = block.get("text", {}).get("text", "")
+                        match = re.search(r"New drop from <@([A-Z0-9]+)>", text)
+                        if match:
+                            recipient_id = match.group(1)
+                            break
 
             if not claimer_id or (deliverer_id != claimer_id and deliverer_id != recipient_id):
                 safe_client.chat_postEphemeral(
@@ -752,21 +752,6 @@ def catch_all_events(event, logger, next):
     next()  # Allow other event handlers to continue processing
 
 import datetime
-import schedule
-import time
-
-def reset_leaderboard():
-    from sheet import reset_karma_sheet
-    print("🔁 Resetting leaderboard...")
-    reset_karma_sheet()
-
-def start_scheduler():
-    schedule.every().monday.at("07:00").do(reset_leaderboard)
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
-
-threading.Thread(target=start_scheduler, daemon=True).start()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
