@@ -3,6 +3,7 @@ from slack_bolt.adapter.flask import SlackRequestHandler
 from flask import Flask, request
 import random
 import requests
+import os
 
 order_extras = {}
 
@@ -637,7 +638,6 @@ def handle_leaderboard_command(ack, body, client):
     text="The brave rise. Here's the Koffee Karma leaderboard."
     )
 
-import os
 
 @app.action("*")
 def catch_all_actions(ack, body):
