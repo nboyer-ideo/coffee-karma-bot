@@ -332,12 +332,13 @@ def handle_modal_submission(ack, body, client):
         try:
             # Check if order is still active by inspecting the current message text
             current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
-            if current_message["messages"]:
-                msg_text = current_message["messages"][0].get("text", "")
+            if not current_message.get("messages"):
+                return
+            msg_text = current_message["messages"][0].get("text", "")
             if any(keyword in msg_text for keyword in [
                 "Claimed by", "Expired", "Order canceled by", "❌ Order canceled"
             ]):
-                    return  # Skip countdown updates if order is no longer active
+                return  # Skip countdown updates if order is no longer active
             if remaining > 0:
                 context_line = order_extras.get(order_ts, {}).get("context_line", "")
                 reminder_text = ""
