@@ -338,7 +338,7 @@ def handle_modal_submission(ack, body, client):
     threading.Timer(300, reminder_ping).start()  # 5-minute reminder
 
     # Start live countdown updates for order expiration
-    def update_countdown(remaining):
+    def update_countdown(remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
         try:
             print(f"⏳ Countdown tick: {remaining} min left for order {order_ts}")
             print("🔍 order_extras:", order_extras.get(order_ts))
@@ -386,7 +386,7 @@ def handle_modal_submission(ack, body, client):
                 print(f"⏳ Scheduling next countdown tick for: {remaining - 1}")
                 threading.Timer(60, update_countdown, args=(remaining - 1,)).start()
 
-    threading.Thread(target=update_countdown, args=(9,)).start()  # Start at 9 since initial message shows 10 min
+    threading.Thread(target=update_countdown, args=(9, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost)).start()  # Start at 9 since initial message shows 10 min
 
 
 @app.action("cancel_order")
@@ -539,10 +539,15 @@ def handle_claim_order(ack, body, client):
         if block.get("type") == "section":
             text = block.get("text", {}).get("text", "")
             import re
+            print("🔍 Trying to extract requester_id from text:", text)
             match = re.search(r"New drop (?:for <@.+?> from <@([A-Z0-9]+)>|from <@([A-Z0-9]+)>)", text)
             if match:
                 requester_id = match.group(1) or match.group(2)
                 break
+
+    if not requester_id:
+        requester_id = original_message.get("user")
+        print("⚠️ Fallback: using message['user'] as requester_id:", requester_id)
 
     if requester_id and requester_id != user_id:
         client.chat_postMessage(
@@ -555,6 +560,8 @@ import threading
 @app.action("mark_delivered")
 def handle_mark_delivered(ack, body, client):
     ack()
+    print("🛠️ handle_mark_delivered triggered")
+    print("🛠️ Payload:", body)
     print("✅ mark_delivered button clicked")
 
     try:
@@ -570,6 +577,8 @@ def handle_mark_delivered(ack, body, client):
             original_message = safe_body.get("message", {})
             order_ts = original_message.get("ts")
             claimer_id = order_extras.get(order_ts, {}).get("claimer_id")
+            if not claimer_id:
+                print("⚠️ claimer_id missing for order_ts", order_ts)
 
             deliverer_id = safe_body.get("user", {}).get("id")
             recipient_id = None
