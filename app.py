@@ -379,12 +379,12 @@ def handle_modal_submission(ack, body, client):
                     }
                 ]
             )
-    except Exception as e:
-        print("⚠️ Countdown update failed:", e)
-    finally:
-        if remaining > 0:
-            print(f"⏳ Scheduling next countdown tick for: {remaining - 1}")
-            threading.Timer(60, update_countdown, args=(remaining - 1,)).start()
+        except Exception as e:
+            print("⚠️ Countdown update failed:", e)
+        finally:
+            if remaining > 0:
+                print(f"⏳ Scheduling next countdown tick for: {remaining - 1}")
+                threading.Timer(60, update_countdown, args=(remaining - 1,)).start()
 
     threading.Thread(target=update_countdown, args=(9,)).start()  # Start at 9 since initial message shows 10 min
 
