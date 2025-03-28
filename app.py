@@ -241,6 +241,7 @@ def handle_modal_submission(ack, body, client):
             global order_extras
             order_extras = {}
         order_extras[order_ts] = {"gif_ts": gif_ts, "context_line": context_line}
+        order_extras[order_ts]["claimer_id"] = None
  
     deduct_karma(user_id, karma_cost)
 
@@ -439,6 +440,20 @@ def handle_cancel_order(ack, body, client):
             except Exception as e:
                 print("⚠️ Failed to delete gif message:", e)
         del order_extras[order_ts]
+    
+    # Refund the karma cost to the original user
+    karma_cost = 1  # Default in case it can't be determined
+    if "Water" in original_text:
+        karma_cost = 1
+    elif "Drip" in original_text:
+        karma_cost = 2
+    elif "Espresso" in original_text:
+        karma_cost = 3
+    add_karma(user_id, karma_cost)
+    client.chat_postMessage(
+        channel=user_id,
+        text=f"🌀 Your order was canceled. {karma_cost} Karma refunded. Balance restored."
+    )
 
     # Stop any further scheduled updates by overwriting the original message with only cancellation info.
     import re
