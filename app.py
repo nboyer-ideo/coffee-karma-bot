@@ -340,10 +340,8 @@ def handle_modal_submission(ack, body, client):
 
     # Start live countdown updates for order expiration
     def update_countdown(remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
-    try:
-        print(f"✅ update_countdown called: remaining={remaining}, order_ts={order_ts}")
-        print(f"⏳ Countdown tick: {remaining} min left for order {order_ts}")
-        print("🔍 order_extras:", order_extras.get(order_ts))
+        try:
+            print(f"✅ update_countdown called: remaining={remaining}, order_ts={order_ts}")
             # Check if order is still active by inspecting the current message text
             current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
             if not order_extras.get(order_ts, {}).get("active", True):
@@ -370,7 +368,6 @@ def handle_modal_submission(ack, body, client):
                 f"{reminder_text}"
             )
             print("Attempting to update countdown message for order", order_ts)
-            print("✏️ About to update Slack message with:", updated_text)
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
@@ -382,16 +379,13 @@ def handle_modal_submission(ack, body, client):
                     }
                 ]
             )
-            print("✅ Slack message updated for order", order_ts)
         except Exception as e:
             print("⚠️ Countdown update failed:", e)
         finally:
             if remaining > 0:
-                print("🔁 Scheduling next countdown tick")
                 print(f"⏳ Scheduling next countdown tick for: {remaining - 1}")
                 threading.Timer(60, update_countdown, args=(remaining - 1, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost)).start()
 
-    print("🚀 Starting countdown with:", 9, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost)
     threading.Thread(target=update_countdown, args=(9, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost)).start()  # Start at 9 since initial message shows 10 min
 
 
@@ -556,12 +550,10 @@ def handle_claim_order(ack, body, client):
         print("⚠️ Fallback: using message['user'] as requester_id:", requester_id)
 
     if requester_id and requester_id != user_id:
-        print("📣 Sending notification to requester:", requester_id)
         client.chat_postMessage(
             channel=requester_id,
             text=f"☕️ Your order was claimed by <@{user_id}>. Hold tight — delivery is on the way."
         )
-        print("✅ Notification sent to requester:", requester_id)
 
 import threading
 
