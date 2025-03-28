@@ -652,8 +652,8 @@ def handle_team_join(event, client):
         print("⚠️ Failed to initialize user on team_join:", e)
 
 @app.event("member_joined_channel")
-def handle_member_joined_channel_events(event, client, logger):
-    logger.info("📥 Received member_joined_channel event: %s", event)
+def handle_member_joined_channel(event, client, logger):
+    logger.info(f"📥 Received member_joined_channel event: {event}")
 
     user_id = event.get("user")
     channel_id = event.get("channel")
