@@ -629,7 +629,7 @@ def handle_leaderboard_command(ack, body, client):
         {"type": "section", "text": {"type": "mrkdwn", "text": "*🏴 Coffee Karma Leaderboard* — The bold, the brewed, the brave."}}
     ]
     for i, row in enumerate(leaderboard, start=1):
-        user_line = f"{i}. <@{row['user_id']}> — *{row['points']}* pts"
+        user_line = f"{i}. <@{row['Slack ID']}> — *{row['Points']}* pts"
         blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": user_line}})
     client.chat_postMessage(
         channel=body["channel_id"],
