@@ -77,7 +77,7 @@ def handle_order(ack, body, client):
         trigger_id=body["trigger_id"],
         view={
             "type": "modal",
-            "callback_id": "coffee_request_modal",
+            "callback_id": "koffee_request_modal",
             "title": {"type": "plain_text", "text": "Place Your Order"},
             "submit": {"type": "plain_text", "text": "Drop It"},
             "close": {"type": "plain_text", "text": "Nevermind"},
@@ -140,7 +140,7 @@ def handle_order(ack, body, client):
         }
     )
 
-@app.view("coffee_request_modal")
+@app.view("koffee_request_modal")
 def handle_modal_submission(ack, body, client):
     ack()
     values = body["view"]["state"]["values"]
@@ -166,7 +166,7 @@ def handle_modal_submission(ack, body, client):
         client.chat_postEphemeral(
             channel=user_id,
             user=user_id,
-            text="🚫 You don't have enough Coffee Karma to place an order. Deliver drinks to earn more."
+            text="🚫 You don't have enough Koffee Karma to place this order. Deliver drinks to earn more."
         )
         return
 
@@ -196,7 +196,7 @@ def handle_modal_submission(ack, body, client):
     )
 
     posted = client.chat_postMessage(
-        channel="#coffee-karma-sf",
+        channel="#koffee-karma-sf",
         text=full_text,
         blocks=[
             {"type": "divider"},
@@ -254,7 +254,7 @@ def handle_modal_submission(ack, body, client):
     if gifted_id:
         client.chat_postMessage(
             channel=gifted_id,
-            text=f"🎁 You’ve been gifted a drink order by <@{user_id}>. Let the coffee flow."
+            text=f"🎁 You’ve been gifted a drink order by <@{user_id}>. Let the koffee flow."
         )
 
     # Start countdown timer for order expiration
@@ -598,7 +598,7 @@ def handle_mark_delivered(ack, body, client):
 
             safe_client.chat_postMessage(
                 channel=claimer_id,
-                text=f"Mission complete. +1 Coffee Karma. Balance: *{points}*. Stay sharp."
+                text=f"Mission complete. +1 Koffee Karma. Balance: *{points}*. Stay sharp."
             )
 
 
@@ -618,7 +618,7 @@ def handle_karma_command(ack, body, client):
     client.chat_postEphemeral(
         channel=body["channel_id"],
         user=user_id,
-        text=f"☚️ You've got *{points} Coffee Karma* — keep the chaos brewing."
+        text=f"☚️ You've got *{points} Koffee Karma* — keep the chaos brewing."
     )
 
 @app.command("/leaderboard")
@@ -626,15 +626,15 @@ def handle_leaderboard_command(ack, body, client):
     ack()
     leaderboard = get_leaderboard()
     blocks = [
-        {"type": "section", "text": {"type": "mrkdwn", "text": "*🏴 Coffee Karma Leaderboard* — The bold, the brewed, the brave."}}
+        {"type": "section", "text": {"type": "mrkdwn", "text": "*🏴 Koffee Karma Leaderboard* — The bold, the brewed, the brave."}}
     ]
     for i, row in enumerate(leaderboard, start=1):
-        user_line = f"{i}. <@{row['Slack ID']}> — *{row['Points']}* pts"
+        user_line = f"{i}. <@{row['Slack ID']}> — *{row['Karma']}* Koffee Karma"
         blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": user_line}})
     client.chat_postMessage(
         channel=body["channel_id"],
         blocks=blocks,
-        text="The brave rise. Here's the Coffee Karma leaderboard."
+    text="The brave rise. Here's the Koffee Karma leaderboard."
     )
 
 import os
@@ -658,11 +658,11 @@ def handle_join_message_events(body, say, client, event):
         was_new = ensure_user(user_id)
 
         if was_new:
-            say(f"👋 <@{user_id}> just entered the Coffee Karma zone. Show no mercy. ☕️")
+            say(f"👋 <@{user_id}> just entered the Koffee Karma zone. Show no mercy. ☕️")
             client.chat_postMessage(
                 channel=user_id,
                 text=(
-                    "Welcome to *Coffee Karma* ☕️💀\n\n"
+                "Welcome to *Koffee Karma* ☕️💀\n\n"
                     "Here’s how it works:\n"
                     "• `/order` — Request a drink (costs Karma).\n"
                     "• `/karma` — Check your Karma.\n"
@@ -682,7 +682,7 @@ def handle_team_join(event, client):
         was_new = ensure_user(user_id)
         if was_new:
             welcome_lines = [
-                f"👋 <@{user_id}> just entered the Coffee Karma zone. Show no mercy. ☕️",
+                f"👋 <@{user_id}> just entered the Koffee Karma zone. Show no mercy. ☕️",
                 f"☕️ <@{user_id}> just logged on to the brew grid.",
                 f"🔥 <@{user_id}> joined. Time to stir some espresso-fueled chaos.",
                 f"📦 <@{user_id}> has checked in. Deliveries won't deliver themselves.",
@@ -716,7 +716,7 @@ def handle_member_joined_channel(event, client, logger):
 
     try:
         welcome_lines = [
-            f"👋 <@{user_id}> just entered the Coffee Karma zone. Show no mercy. ☕️",
+            f"👋 <@{user_id}> just entered the Koffee Karma zone. Show no mercy. ☕️",
             f"☕️ <@{user_id}> just logged on to the brew grid.",
             f"🔥 <@{user_id}> joined. Time to stir some espresso-fueled chaos.",
             f"📦 <@{user_id}> has checked in. Deliveries won't deliver themselves.",
@@ -733,14 +733,14 @@ def handle_member_joined_channel(event, client, logger):
         )
         client.chat_postMessage(
             channel=user_id,
-            text=(
-                "Welcome to *Coffee Karma* ☕️💀\n\n"
-                "Here’s how it works:\n"
-                "• `/order` — Request a drink (costs Karma).\n"
-                "• `/karma` — Check your Karma.\n"
-                "• `/leaderboard` — See the legends.\n\n"
-                "You’ve got *3 Karma points* to start. Spend wisely. Earn more by delivering orders.\n"
-                "Let the chaos begin. ⚡️"
+                text=(
+                "Welcome to *Koffee Karma* ☕️💀\n\n"
+                    "Here’s how it works:\n"
+                    "• `/order` — Request a drink (costs Karma).\n"
+                    "• `/karma` — Check your Karma.\n"
+                    "• `/leaderboard` — See the legends.\n\n"
+                    "You’ve got *3 Koffee Karma* to start. Spend wisely. Earn more by delivering orders.\n"
+                    "Let the chaos begin. ⚡️"
             )
         )
     except Exception as e:

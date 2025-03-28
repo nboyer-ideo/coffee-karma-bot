@@ -1,6 +1,6 @@
 slack_bolt
-flask
-python-dotenv
+slack_sdk
+Flask
 gspread
-google-auth
-schedule
+oauth2client
+python-dotenv
