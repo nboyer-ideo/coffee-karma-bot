@@ -1,9 +1,10 @@
 services:
   - type: web
-    name: coffee-karma
+    name: koffee-karma
     env: python
     plan: free
-    buildCommand: ""
+    autoDeploy: true
+    buildCommand: "pip install -r requirements.txt"
     startCommand: python app.py
     envVars:
       - key: SLACK_BOT_TOKEN
