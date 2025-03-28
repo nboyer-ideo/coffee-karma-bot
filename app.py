@@ -331,8 +331,10 @@ def handle_modal_submission(ack, body, client):
             current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
             if current_message["messages"]:
                 msg_text = current_message["messages"][0].get("text", "")
-            if "Claimed by" in msg_text or "Expired" in msg_text or "Canceled" in msg_text:
-                    return  # Order no longer actionable
+            if any(keyword in msg_text for keyword in [
+                "Claimed by", "Expired", "Order canceled by", "❌ Order canceled"
+            ]):
+                    return  # Skip countdown updates if order is no longer active
             if remaining > 0:
                 context_line = order_extras.get(order_ts, {}).get("context_line", "")
                 updated_text = (
@@ -512,7 +514,11 @@ def handle_mark_delivered(ack, body, client):
 
             claimer_id = safe_body.get("user", {}).get("id")
             original_message = safe_body.get("message", {})
-            order_text = original_message.get("blocks", [{}])[0].get("text", {}).get("text", "??")
+            order_text = ""
+            for block in original_message.get("blocks", []):
+                if block.get("type") == "section" and "text" in block:
+                    order_text = block["text"].get("text", "")
+                    break
 
             if not claimer_id:
                 print("🚨 No claimer_id found.")
