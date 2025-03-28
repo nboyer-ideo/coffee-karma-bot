@@ -517,6 +517,39 @@ def handle_claim_order(ack, body, client):
         channel=user_id,
         text="You took the mission. Don't forget to hit 'MARK AS DELIVERED' once the goods are dropped."
     )
+    def send_completion_reminder():
+        try:
+            # Fetch the latest version of the message to check if it's already marked as delivered
+            current_message = client.conversations_history(channel=body["channel"]["id"], latest=body["message"]["ts"], inclusive=True, limit=1)
+            if current_message["messages"]:
+                msg_text = current_message["messages"][0].get("text", "")
+                if "Delivered." in msg_text:
+                    return  # Already completed
+            client.chat_postMessage(
+                channel=user_id,
+                text="⏰ Heads-up: Your claimed order is still marked as undelivered. Don’t forget to hit *MARK AS DELIVERED* once it’s done!"
+            )
+        except Exception as e:
+            print("⚠️ Failed to send completion reminder:", e)
+
+    import threading
+    threading.Timer(900, send_completion_reminder).start()  # 15 minutes
+    # Notify the requester that their drink was claimed
+    requester_id = None
+    for block in original_message.get("blocks", []):
+        if block.get("type") == "section":
+            text = block.get("text", {}).get("text", "")
+            import re
+            match = re.search(r"New drop (?:for <@.+?> from <@([A-Z0-9]+)>|from <@([A-Z0-9]+)>)", text)
+            if match:
+                requester_id = match.group(1) or match.group(2)
+                break
+
+    if requester_id and requester_id != user_id:
+        client.chat_postMessage(
+            channel=requester_id,
+            text=f"☕️ Your order was claimed by <@{user_id}>. Hold tight — delivery is on the way."
+        )
 
 import threading
 
