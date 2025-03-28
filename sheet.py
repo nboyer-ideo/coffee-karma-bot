@@ -58,7 +58,7 @@ def get_karma(user_id):
 def get_leaderboard(top_n=5):
     sheet = get_sheet()
     data = sheet.get_all_records()
-    sorted_users = sorted(data, key=lambda x: int(x["points"]), reverse=True)
+    sorted_users = sorted(data, key=lambda x: int(x["Points"]), reverse=True)
     return sorted_users[:top_n]
 
 def reset_karma_sheet():
