@@ -527,9 +527,30 @@ def handle_mark_delivered(ack, body, client):
     def do_work():
         try:
             print("📦 mark_delivered payload:", safe_body)
-
-            claimer_id = safe_body.get("user", {}).get("id")
             original_message = safe_body.get("message", {})
+            order_ts = original_message.get("ts")
+            claimer_id = order_extras.get(order_ts, {}).get("claimer_id")
+
+            deliverer_id = safe_body.get("user", {}).get("id")
+            recipient_id = None
+            text_blocks = original_message.get("blocks", [])
+            for block in text_blocks:
+                if block.get("type") == "section":
+                    text = block.get("text", {}).get("text", "")
+                    if "New drop for <@" in text:
+                        import re
+                        match = re.search(r"New drop for <@([A-Z0-9]+)>", text)
+                        if match:
+                            recipient_id = match.group(1)
+                        break
+
+            if not claimer_id or (deliverer_id != claimer_id and deliverer_id != recipient_id):
+                safe_client.chat_postEphemeral(
+                    channel=safe_body["channel"]["id"],
+                    user=deliverer_id,
+                    text="❌ Only the recipient or the delivery punk can mark this complete."
+                )
+                return
             order_text = ""
             for block in original_message.get("blocks", []):
                 if block.get("type") == "section" and "text" in block:
@@ -540,9 +561,7 @@ def handle_mark_delivered(ack, body, client):
             order_text = re.sub(r"\n*⚠️ This mission’s still unclaimed\..*", "", order_text)
             order_text = re.sub(r"\n*📸 \*Flex the drop\..*", "", order_text)
 
-            if not claimer_id:
-                print("🚨 No claimer_id found.")
-                return
+            # Removed redundant check since claimer_id is now validated above
 
             bonus_multiplier = 1
             if random.randint(1, 5) == 1:  # 20% chance

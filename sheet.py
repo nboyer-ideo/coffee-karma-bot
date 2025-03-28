@@ -27,12 +27,12 @@ def add_karma(user_id, points_to_add=1):
     sheet = get_sheet()
     data = sheet.get_all_records()
     for i, row in enumerate(data):
-        if row["user_id"] == user_id:
-            new_total = int(row["points"]) + points_to_add
+        if row["Slack ID"] == user_id:
+            new_total = int(row["Points"]) + points_to_add
             sheet.update_cell(i + 2, 2, new_total)
             return new_total
     # If user not found, add a new row
-    sheet.append_row([user_id, points_to_add])
+    sheet.append_row(["Unknown", points_to_add, user_id])
     return points_to_add
 
 # Deduct points for a user
@@ -40,8 +40,8 @@ def deduct_karma(user_id, points_to_deduct=1):
     sheet = get_sheet()
     data = sheet.get_all_records()
     for i, row in enumerate(data):
-        if row["user_id"] == user_id:
-            new_total = max(0, int(row["points"]) - points_to_deduct)
+        if row["Slack ID"] == user_id:
+            new_total = max(0, int(row["Points"]) - points_to_deduct)
             sheet.update_cell(i + 2, 2, new_total)
             return new_total
     return 0
@@ -51,8 +51,8 @@ def get_karma(user_id):
     sheet = get_sheet()
     data = sheet.get_all_records()
     for row in data:
-        if row["user_id"] == user_id:
-            return int(row["points"])
+        if row["Slack ID"] == user_id:
+            return int(row["Points"])
     return 0
 
 def get_leaderboard(top_n=5):
@@ -68,12 +68,17 @@ def reset_karma_sheet():
         sheet.update_cell(i + 2, 2, 0)
 
 def ensure_user(user_id):
+    from slack_sdk import WebClient
+    slack_token = os.environ.get("SLACK_BOT_TOKEN")
+    slack_client = WebClient(token=slack_token)
+
     sheet = get_sheet()
     data = sheet.get_all_records()
     for row in data:
-        if row["user_id"] == user_id:
+        if row.get("Slack ID") == user_id:
             return False  # Already exists
 
-    # Add new user with 3 starting points
-    sheet.append_row([user_id, 3])
+    user_info = slack_client.users_info(user=user_id)
+    real_name = user_info["user"]["real_name"]
+    sheet.append_row([real_name, 3, user_id])
     return True
