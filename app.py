@@ -174,7 +174,15 @@ def handle_modal_submission(ack, body, client):
         "*☕ Caffeine + Chaos* — IDE☕O forever.",
         "*╯°□°）╯︵ ┻━┻* — Brew rebellion.",
         "*// Brewed + Brutal //*",
-        "*Wake. Rage. Repeat.* ☕"
+        "*Wake. Rage. Repeat.* ☕",
+        "*（╯°益°）╯彡┻━┻* — Drink the pain away.",
+        "*☠️ No cream. No sugar. Just rage.*",
+        "*Deadlines & Drip* ☕",
+        "*⛓️ Serve or be served.*",
+        "*⚠️ Brew responsibly — or don’t.*",
+        "*👀 The grind sees all.*",
+        "*🥀 Steam. Spite. Salvation.*",
+        "*🖤 Emo espresso drop incoming.*"
     ])
     
     full_text = (
@@ -290,6 +298,8 @@ def handle_modal_submission(ack, body, client):
                 if "⚠️ This mission’s still unclaimed." not in msg_text:
                     updated_text = f"{msg_text}\n\n⚠️ This mission’s still unclaimed. Someone better step up before it expires… ⏳"
                     
+                    order_extras[order_ts]["reminder_added"] = True
+                    
                     client.chat_update(
                         channel=order_channel,
                         ts=order_ts,
@@ -337,6 +347,9 @@ def handle_modal_submission(ack, body, client):
                     return  # Skip countdown updates if order is no longer active
             if remaining > 0:
                 context_line = order_extras.get(order_ts, {}).get("context_line", "")
+                reminder_text = ""
+                if order_extras.get(order_ts, {}).get("reminder_added"):
+                    reminder_text = "\n\n⚠️ This mission’s still unclaimed. Someone better step up before it expires… ⏳"
                 updated_text = (
                     f"{context_line}\n"
                 f"☚️ *New drop {'for <@' + gifted_id + '> from <@' + user_id + '>' if gifted_id else 'from <@' + user_id + '>'}*\n"
@@ -345,6 +358,7 @@ def handle_modal_submission(ack, body, client):
                     f"• *Notes:* {notes or 'None'}\n"
                     f"Reward: +{karma_cost} Karma to the delivery punk.\n"
                     f"⏳ *Time left to claim:* {remaining} min"
+                    f"{reminder_text}"
                 )
                 client.chat_update(
                     channel=order_channel,
@@ -433,10 +447,14 @@ def handle_cancel_order(ack, body, client):
         del order_extras[order_ts]
 
     # Stop any further scheduled updates by overwriting the original message with only cancellation info.
+    import re
+    updated_text = re.sub(r"\n*⏳ \*Time left to claim:\*.*", "", original_text)
+    updated_text = re.sub(r"\n*⚠️ This mission’s still unclaimed\..*", "", updated_text)
+    updated_text = f"{updated_text}\n\n❌ Order canceled by <@{user_id}>."
     client.chat_update(
         channel=body["channel"]["id"],
         ts=order_ts,
-        text=f"❌ Order canceled by <@{user_id}>.",
+        text=updated_text,
         blocks=[
             {
                 "type": "section",
@@ -456,12 +474,10 @@ def handle_claim_order(ack, body, client, say):
         if block.get("type") == "section" and "text" in block:
             order_text = block["text"].get("text", "")
             break
-    # Remove "Time left to claim" if it's still there
-    # Remove countdown and unclaimed warnings from order text
-    countdown_phrases = ["⏳ *Time left to claim:*", "⚠️ This mission’s still unclaimed.", "📸 *Flex the drop.*"]
-    for phrase in countdown_phrases:
-        if phrase in order_text:
-            order_text = order_text.split(phrase)[0].strip()
+    import re
+    order_text = re.sub(r"\n*⏳ \*Time left to claim:\*.*", "", order_text)
+    order_text = re.sub(r"\n*⚠️ This mission’s still unclaimed\..*", "", order_text)
+    order_text = re.sub(r"\n*📸 \*Flex the drop\..*", "", order_text)
 
     client.chat_update(
         channel=body["channel"]["id"],
@@ -519,6 +535,10 @@ def handle_mark_delivered(ack, body, client):
                 if block.get("type") == "section" and "text" in block:
                     order_text = block["text"].get("text", "")
                     break
+            import re
+            order_text = re.sub(r"\n*⏳ \*Time left to claim:\*.*", "", order_text)
+            order_text = re.sub(r"\n*⚠️ This mission’s still unclaimed\..*", "", order_text)
+            order_text = re.sub(r"\n*📸 \*Flex the drop\..*", "", order_text)
 
             if not claimer_id:
                 print("🚨 No claimer_id found.")
@@ -642,17 +662,21 @@ def handle_team_join(event, client):
     try:
         was_new = ensure_user(user_id)
         if was_new:
+            welcome_lines = [
+                f"👋 <@{user_id}> just entered the Coffee Karma zone. Show no mercy. ☕️",
+                f"☕️ <@{user_id}> just logged on to the brew grid.",
+                f"🔥 <@{user_id}> joined. Time to stir some espresso-fueled chaos.",
+                f"📦 <@{user_id}> has checked in. Deliveries won't deliver themselves.",
+                f"💀 <@{user_id}> is here. Hope they're ready for the grind.",
+                f"⚡️ <@{user_id}> appeared. Let's get volatile.",
+                f"🥶 <@{user_id}> dropped in cold. Let’s heat things up.",
+                f"🚨 <@{user_id}> joined the rebellion. Brew responsibly.",
+                f"🌀 <@{user_id}> warped into the zone. Coffee protocol initiated.",
+                f"🧃 <@{user_id}> arrived thirsty. You know what to do."
+            ]
             client.chat_postMessage(
                 channel=user_id,
-                text=(
-                    "Welcome to *Coffee Karma* ☕️💀\n\n"
-                    "Here’s how it works:\n"
-                    "• `/order` — Request a drink (costs Karma).\n"
-                    "• `/karma` — Check your Karma.\n"
-                    "• `/leaderboard` — See the legends.\n\n"
-                    "You’ve got *3 Karma points* to start. Spend wisely. Earn more by delivering orders.\n"
-                    "Let the chaos begin. ⚡️"
-                )
+                text=random.choice(welcome_lines)
             )
     except Exception as e:
         print("⚠️ Failed to initialize user on team_join:", e)
@@ -672,9 +696,21 @@ def handle_member_joined_channel(event, client, logger):
     ensure_user(user_id)  # Still make sure they’re initialized, but ignore return value
 
     try:
+        welcome_lines = [
+            f"👋 <@{user_id}> just entered the Coffee Karma zone. Show no mercy. ☕️",
+            f"☕️ <@{user_id}> just logged on to the brew grid.",
+            f"🔥 <@{user_id}> joined. Time to stir some espresso-fueled chaos.",
+            f"📦 <@{user_id}> has checked in. Deliveries won't deliver themselves.",
+            f"💀 <@{user_id}> is here. Hope they're ready for the grind.",
+            f"⚡️ <@{user_id}> appeared. Let's get volatile.",
+            f"🥶 <@{user_id}> dropped in cold. Let’s heat things up.",
+            f"🚨 <@{user_id}> joined the rebellion. Brew responsibly.",
+            f"🌀 <@{user_id}> warped into the zone. Coffee protocol initiated.",
+            f"🧃 <@{user_id}> arrived thirsty. You know what to do."
+        ]
         client.chat_postMessage(
             channel=channel_id,
-            text=f"👋 <@{user_id}> just entered the Coffee Karma zone. Show no mercy. ☕️"
+            text=random.choice(welcome_lines)
         )
         client.chat_postMessage(
             channel=user_id,
