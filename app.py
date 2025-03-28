@@ -1,11 +1,15 @@
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
 from flask import Flask, request
+import schedule
+import time
 import random
 import requests
 import os
 
 order_extras = {}
+countdown_timers = {}  # order_ts -> remaining minutes
+countdown_timers = {}
 
 
 def get_punk_gif():
@@ -337,6 +341,7 @@ def handle_modal_submission(ack, body, client):
     def update_countdown(remaining):
         try:
             print(f"⏳ Countdown tick: {remaining} min left for order {order_ts}")
+            print("🔍 order_extras:", order_extras.get(order_ts))
             # Check if order is still active by inspecting the current message text
             current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
             if not order_extras.get(order_ts, {}).get("active", True):
@@ -348,55 +353,53 @@ def handle_modal_submission(ack, body, client):
                 "Claimed by", "Expired", "Order canceled by", "❌ Order canceled"
             ]):
                 return  # Skip countdown updates if order is no longer active
-            if remaining > 0:
-                context_line = order_extras.get(order_ts, {}).get("context_line", "")
-                reminder_text = ""
-                if order_extras.get(order_ts, {}).get("reminder_added"):
-                    reminder_text = "\n\n⚠️ This mission’s still unclaimed. Someone better step up before it expires… ⏳"
-                updated_text = (
-                    f"{context_line}\n"
+            context_line = order_extras.get(order_ts, {}).get("context_line", "")
+            reminder_text = ""
+            if order_extras.get(order_ts, {}).get("reminder_added"):
+                reminder_text = "\n\n⚠️ This mission’s still unclaimed. Someone better step up before it expires… ⏳"
+            updated_text = (
+                f"{context_line}\n"
                 f"☚️ *New drop {'for <@' + gifted_id + '> from <@' + user_id + '>' if gifted_id else 'from <@' + user_id + '>'}*\n"
-                    f"• *Drink:* {drink}\n"
-                    f"• *Drop Spot:* {location}\n"
-                    f"• *Notes:* {notes or 'None'}\n"
-                    f"Reward: +{karma_cost} Karma to the delivery punk.\n"
-                    f"⏳ *Time left to claim:* {remaining} min"
-                    f"{reminder_text}"
-                )
-                print(f"⏳ Attempting to update message with remaining: {remaining}")
-                client.chat_update(
-                    channel=order_channel,
-                    ts=order_ts,
-                    text=updated_text,
-                    blocks=[
-                        {"type": "divider"},
-                        {
-                            "type": "section",
-                            "text": {"type": "mrkdwn", "text": updated_text}
-                        },
-                        {
-                            "type": "actions",
-                            "elements": [
-                                {
-                                    "type": "button",
-                                    "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
-                                    "value": f"{user_id}|{drink}|{location}",
-                                    "action_id": "claim_order"
-                                },
-                                {
-                                    "type": "button",
-                                    "text": {"type": "plain_text", "text": "CANCEL"},
-                                    "style": "danger",
-                                    "value": f"cancel|{user_id}|{drink_value}",
-                                    "action_id": "cancel_order"
-                                }
-                            ]
-                        }
-                    ]
-                )
-                if remaining > 1:
-                    print(f"⏳ Scheduling next countdown tick for: {remaining - 1}")
-                    threading.Timer(60, update_countdown, args=(remaining - 1,)).start()
+                f"• *Drink:* {drink}\n"
+                f"• *Drop Spot:* {location}\n"
+                f"• *Notes:* {notes or 'None'}\n"
+                f"Reward: +{karma_cost} Karma to the delivery punk.\n"
+                f"⏳ *Time left to claim:* {remaining} min"
+                f"{reminder_text}"
+            )
+            print("Attempting to update countdown message for order", order_ts)
+            client.chat_update(
+                channel=order_channel,
+                ts=order_ts,
+                text=updated_text,
+                blocks=[
+                    {"type": "divider"},
+                    {
+                        "type": "section",
+                        "text": {"type": "mrkdwn", "text": updated_text}
+                    },
+                    {
+                        "type": "actions",
+                        "elements": [
+                            {
+                                "type": "button",
+                                "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
+                                "value": f"{user_id}|{drink}|{location}",
+                                "action_id": "claim_order"
+                            },
+                            {
+                                "type": "button",
+                                "text": {"type": "plain_text", "text": "CANCEL"},
+                                "style": "danger",
+                                "value": f"cancel|{user_id}|{drink_value}",
+                                "action_id": "cancel_order"
+                            }
+                        ]
+                    }
+                ]
+            )
+            print(f"⏳ Scheduling next countdown tick for: {remaining - 1}")
+            threading.Timer(60, update_countdown, args=(remaining - 1,)).start()
         except Exception as e:
             print("⚠️ Countdown update failed:", e)
 
@@ -817,4 +820,12 @@ import datetime
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
+    import threading
+    
+    def run_schedule():
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+    
+    threading.Thread(target=run_schedule, daemon=True).start()
     flask_app.run(host="0.0.0.0", port=port)
