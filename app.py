@@ -168,17 +168,25 @@ def handle_modal_submission(ack, body, client):
 
     context_line = random.choice([
         "*☕ Caffeine + Chaos* — IDE☕O forever.",
-        "*╯°□°）╯︵ ┻━┻* — Brew rebellion.",
+        "*🥤 Caffeinate and dominate.*",
         "*// Brewed + Brutal //*",
         "*Wake. Rage. Repeat.* ☕",
-        "*（╯°益°）╯彡┻━┻* — Drink the pain away.",
         "*☠️ No cream. No sugar. Just rage.*",
         "*Deadlines & Drip* ☕",
         "*⛓️ Serve or be served.*",
         "*⚠️ Brew responsibly — or don’t.*",
         "*👀 The grind sees all.*",
         "*🥀 Steam. Spite. Salvation.*",
-        "*🖤 Emo espresso drop incoming.*"
+        "*🖤 Emo espresso drop incoming.*",
+        "*🔥 Orders up. No mercy.*",
+        "*😤 Grind now. Cry later.*",
+        "*💀 Live by the brew. Die by the brew.*",
+        "*📦 Drop incoming — stay sharp.*",
+        "*😎 Zero chill. Full drip.*",
+        "*🥵 Brewed under pressure.*",
+        "*🚀 Boosted by beans.*",
+        "*💼 All business. All brew.*",
+        "*🎯 Hit the mark. Hit the café.*"
     ])
     
     full_text = (
@@ -527,6 +535,7 @@ def handle_claim_order(ack, body, client):
     )
     order_ts = body["message"]["ts"]
     order_extras[order_ts]["claimer_id"] = user_id
+    order_text = re.sub(r"\n*⏳ \*Time left to claim:\*.*", "", order_text)
     order_extras[order_ts]["active"] = False
 
     client.chat_postMessage(
@@ -566,7 +575,7 @@ def handle_claim_order(ack, body, client):
         requester_id = original_message.get("user")
         print("⚠️ Fallback: using message['user'] as requester_id:", requester_id)
 
-    if requester_id and requester_id != user_id:
+    if requester_id:
         client.chat_postMessage(
             channel=requester_id,
             text=f"☕️ Your order was claimed by <@{user_id}>. Hold tight — delivery is on the way."
@@ -639,9 +648,13 @@ def handle_mark_delivered(ack, body, client):
 
             # Removed redundant check since claimer_id is now validated above
 
-            bonus_multiplier = 1
-            if random.randint(1, 5) == 1:  # 20% chance
-                bonus_multiplier = random.choice([2, 3])
+            # Prevent bonus if claimer is also the original requester
+            if claimer_id == recipient_id:
+                bonus_multiplier = 1
+            else:
+                bonus_multiplier = 1
+                if random.randint(1, 5) == 1:  # 20% chance
+                    bonus_multiplier = random.choice([2, 3])
             points = add_karma(claimer_id, bonus_multiplier)
             print(f"☚️ +{bonus_multiplier} point(s) for {claimer_id}. Total: {points}")
 
