@@ -195,7 +195,7 @@ def handle_modal_submission(ack, body, client):
         f"• *Drink:* {drink}\n"
         f"• *Drop Spot:* {location}\n"
         f"• *Notes:* {notes or 'None'}\n"
-        f"Reward: +{karma_cost} Karma to the delivery punk.\n"
+        f"🎁 Reward: +{karma_cost} Karma\n"
         f"⏳ *Time left to claim:* 10 min"
     )
 
@@ -371,7 +371,7 @@ def handle_modal_submission(ack, body, client):
                 f"• *Drink:* {drink}\n"
                 f"• *Drop Spot:* {location}\n"
                 f"• *Notes:* {notes or 'None'}\n"
-                f"Reward: +{karma_cost} Karma to the delivery punk.\n"
+                f"🎁 Reward: +{karma_cost} Karma\n"
                 f"⏳ *Time left to claim:* {remaining} min"
                 f"{reminder_text}"
             )
@@ -505,10 +505,10 @@ def handle_claim_order(ack, body, client):
             order_text = block["text"].get("text", "")
             break
     import re
-    order_text = re.sub(r"\n*⏳ \*Time left to claim:\*.*", "", order_text)
     order_text = re.sub(r"\n*⚠️ This mission’s still unclaimed\..*", "", order_text)
     order_text = re.sub(r"\n*📸 \*Flex the drop\..*", "", order_text)
-
+    order_text = re.sub(r"\n*⏳ \*Time left to claim:\*.*", "", order_text)
+    
     client.chat_update(
         channel=body["channel"]["id"],
         ts=body["message"]["ts"],
@@ -535,7 +535,6 @@ def handle_claim_order(ack, body, client):
     )
     order_ts = body["message"]["ts"]
     order_extras[order_ts]["claimer_id"] = user_id
-    order_text = re.sub(r"\n*⏳ \*Time left to claim:\*.*", "", order_text)
     order_extras[order_ts]["active"] = False
 
     client.chat_postMessage(
@@ -715,10 +714,10 @@ def handle_leaderboard_command(ack, body, client):
     ack()
     leaderboard = get_leaderboard()
     blocks = [
-        {"type": "section", "text": {"type": "mrkdwn", "text": "*🏴 Koffee Karma Leaderboard* — The bold, the brewed, the brave."}}
+        {"type": "section", "text": {"type": "mrkdwn", "text": "*🏆 Koffee Karma Leaderboard* — The bold, the brewed, the brave."}}
     ]
     for i, row in enumerate(leaderboard, start=1):
-        user_line = f"{i}. <@{row['Slack ID']}> — *{row['Karma']}* Koffee Karma"
+        user_line = f"{i}. <@{row['Slack ID']}> — *{row['Karma']}* karma"
         blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": user_line}})
     client.chat_postMessage(
         channel=body["channel_id"],
