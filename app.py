@@ -143,13 +143,12 @@ def handle_modal_submission(ack, body, client):
     drink_value = values["drink_category"]["input"]["selected_option"]["value"]
     drink_detail = values["drink_detail"]["input"]["value"]
     drink_map = {
-        "water": ("Water (still/sparkling)", 1),
-        "drip": ("Drip Coffee / Tea", 2),
-        "espresso": ("Espresso Drink", 3)
+        "water": 1,
+        "drip": 2,
+        "espresso": 3
     }
-    drink, karma_cost = drink_map[drink_value]
-    if drink_detail:
-        drink = f"{drink} - {drink_detail}"
+    karma_cost = drink_map[drink_value]
+    drink = drink_detail
     location = values["location"]["input"]["value"]
     notes = values["notes"]["input"]["value"] if "notes" in values else ""
     gifted_id = values["gift_to"]["input"]["selected_user"] if "gift_to" in values and "input" in values["gift_to"] else None
@@ -347,7 +346,7 @@ def handle_modal_submission(ack, body, client):
     # Start live countdown updates for order expiration
     def update_countdown(remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
         try:
-        print(f"✅ update_countdown called: remaining={remaining}, order_ts={order_ts}")
+            print(f"✅ update_countdown called: remaining={remaining}, order_ts={order_ts}")
         if order_extras.get(order_ts, {}).get("claimed", False):
             return  # Don't run updates if order is already claimed
             # Check if order is still active by inspecting the current message text
