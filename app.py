@@ -191,7 +191,7 @@ def handle_modal_submission(ack, body, client):
     full_text = (
         f"{context_line}\n"
         f"☚️ *New drop {'for <@' + gifted_id + '> from <@' + user_id + '>' if gifted_id else 'from <@' + user_id + '>'}*\n"
-        f"\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n\n"
+        f"\n---\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n---\n"
         f"🎁 Reward: +{karma_cost} Karma\n"
         f"⏳ *Time left to claim:* 10 min"
     )
@@ -351,6 +351,7 @@ def handle_modal_submission(ack, body, client):
                 return  # Don't run updates if order is already claimed
             # Check if order is still active by inspecting the current message text
             current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+            print("🔍 Retrieved current_message:", current_message)
             if not order_extras.get(order_ts, {}).get("active", True):
                 return
             if not current_message.get("messages"):
@@ -368,7 +369,7 @@ def handle_modal_submission(ack, body, client):
             updated_text = (
                 f"{context_line}\n"
                 f"☚️ *New drop {'for <@' + gifted_id + '> from <@' + user_id + '>' if gifted_id else 'from <@' + user_id + '>'}*\n"
-                f"\n\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n\n\n"
+                f"\n---\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n---\n"
                 f"🎁 Reward: +{karma_cost} Karma\n"
                 f"⏳ *Time left to claim:* {remaining} min"
                 f"{reminder_text}"
@@ -396,6 +397,7 @@ def handle_modal_submission(ack, body, client):
                 {"type": "section", "text": {"type": "mrkdwn", "text": updated_text}},
                 actions_block
             ]
+            print("🔍 Final updated_text before countdown update:", repr(updated_text))
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
@@ -504,11 +506,12 @@ def handle_claim_order(ack, body, client):
             break
     import re
     print("🔍 Before removing time line:", order_text)
-    order_text = re.sub(r"\n*⏳ \*Time left to claim:\*.*", "", order_text, flags=re.MULTILINE)
+    order_text = re.sub(r"\n*⏳ \*Time left to claim:\*.*(?:\n)?", "", order_text, flags=re.MULTILINE)
     print("✅ After removing time line:", order_text)
     order_text = re.sub(r"\n*⚠️ This mission’s still unclaimed\..*", "", order_text, flags=re.MULTILINE)
     order_text = re.sub(r"\n*📸 \*Flex the drop\..*", "", order_text, flags=re.MULTILINE)
     
+    print("🔍 Order text before chat_update:", order_text)
     client.chat_update(
         channel=body["channel"]["id"],
         ts=body["message"]["ts"],
