@@ -287,10 +287,37 @@ def handle_modal_submission(ack, body, client):
                     }
                 ]
             )
+            import re
+            match = re.search(r"from <@([A-Z0-9]+)>", current_text)
+            if match:
+                user_id = match.group(1)
+            else:
+                user_id = None
+
+            # Refund Karma on expiration
+            if "Water" in current_text:
+                refund_amount = 1
+            elif "Drip" in current_text:
+                refund_amount = 2
+            elif "Espresso" in current_text:
+                refund_amount = 3
+            else:
+                refund_amount = 1  # Fallback
+
+            if user_id:
+                add_karma(user_id, refund_amount)
+                client.chat_postMessage(
+                    channel=user_id,
+                    text=f"🌀 Your order expired. {refund_amount} Karma refunded. Balance restored."
+                )
             if order_ts in order_extras:
                 order_extras[order_ts]["active"] = False
-                for extra_ts in order_extras[order_ts]:
-                    client.chat_delete(channel=order_channel, ts=extra_ts)
+                gif_ts = order_extras[order_ts].get("gif_ts")
+                if gif_ts:
+                    try:
+                        client.chat_delete(channel=order_channel, ts=gif_ts)
+                    except Exception as e:
+                        print("⚠️ Failed to delete gif message:", e)
                 del order_extras[order_ts]
         except Exception as e:
             print("⚠️ Failed to expire message:", e)
@@ -364,6 +391,8 @@ def handle_modal_submission(ack, body, client):
             ]):
                 order_extras[order_ts]["active"] = False
                 return  # Skip countdown updates if order is no longer active
+            if remaining == 0:
+                return  # Stop updating and let cancel_unclaimed_order handle final expiration
             context_line = order_extras.get(order_ts, {}).get("context_line", "")
             reminder_text = ""
             if order_extras.get(order_ts, {}).get("reminder_added"):
@@ -409,10 +438,11 @@ def handle_modal_submission(ack, body, client):
             )
         except Exception as e:
             print("⚠️ Countdown update failed:", e)
-        finally:
-            if remaining > 0:
-                print(f"⏳ Scheduling next countdown tick for: {remaining - 1}")
-                threading.Timer(60, update_countdown, args=(remaining - 1, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost)).start()
+    finally:
+        if remaining > 0:
+            print(f"⏳ Scheduling next countdown tick for: {remaining - 1}")
+            threading.Timer(60, update_countdown, args=(remaining - 1, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost)).start()
+            return
 
     threading.Thread(target=update_countdown, args=(9, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost)).start()  # Start at 9 since initial message shows 10 min
 
