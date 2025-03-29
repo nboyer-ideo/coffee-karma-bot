@@ -775,29 +775,30 @@ def catch_all_actions(ack, body):
 def handle_join_message_events(body, say, client, event):
     subtype = event.get("subtype")
     
-    if subtype == "channel_join":
-        user_id = event.get("user")
-        channel_id = event.get("channel")
-
-        print(f"👋 Detected join via channel_join: {user_id} joined {channel_id}")
-
-        from sheet import ensure_user
-        was_new = ensure_user(user_id)
-
-        if was_new:
-            say(f"👋 <@{user_id}> just entered the Koffee Karma zone. Show no mercy. ☕️")
-            client.chat_postMessage(
-                channel=user_id,
-                text=(
-                "Welcome to *Koffee Karma* ☕️💀\n\n"
-                    "Here’s how it works:\n"
-                    "• `/order` — Request a drink (costs Karma).\n"
-                    "• `/karma` — Check your Karma.\n"
-                    "• `/leaderboard` — See the legends.\n\n"
-                    "You’ve got *3 Karma points* to start. Spend wisely. Earn more by delivering orders.\n"
-                    "Let the chaos begin. ⚡️"
-                )
-            )
+    # Disabled to prevent duplicate welcome messages
+    # if subtype == "channel_join":
+    #     user_id = event.get("user")
+    #     channel_id = event.get("channel")
+    # 
+    #     print(f"👋 Detected join via channel_join: {user_id} joined {channel_id}")
+    # 
+    #     from sheet import ensure_user
+    #     was_new = ensure_user(user_id)
+    # 
+    #     if was_new:
+    #         say(f"👋 <@{user_id}> just entered the Koffee Karma zone. Show no mercy. ☕️")
+    #         client.chat_postMessage(
+    #             channel=user_id,
+    #             text=(
+    #             "Welcome to *Koffee Karma* ☕️💀\n\n"
+    #                 "Here’s how it works:\n"
+    #                 "• `/order` — Request a drink (costs Karma).\n"
+    #                 "• `/karma` — Check your Karma.\n"
+    #                 "• `/leaderboard` — See the legends.\n\n"
+    #                 "You’ve got *3 Karma points* to start. Spend wisely. Earn more by delivering orders.\n"
+    #                 "Let the chaos begin. ⚡️"
+    #             )
+    #         )
 
 @app.event("team_join")
 def handle_team_join(event, client):
