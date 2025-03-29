@@ -191,7 +191,9 @@ def handle_modal_submission(ack, body, client):
     full_text = (
         f"{context_line}\n"
         f"☚️ *New drop {'for <@' + gifted_id + '> from <@' + user_id + '>' if gifted_id else 'from <@' + user_id + '>'}*\n"
-        f"• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n"
+        f"---\n"
+        f"> *Drink:* {drink}\n> *Drop Spot:* {location}\n> *Notes:* {notes or 'None'}\n"
+        f"---\n"
         f"🎁 Reward: +{karma_cost} Karma\n"
         f"⏳ *Time left to claim:* 10 min"
     )
@@ -369,7 +371,7 @@ def handle_modal_submission(ack, body, client):
             updated_text = (
                 f"{context_line}\n"
                 f"☚️ *New drop {'for <@' + gifted_id + '> from <@' + user_id + '>' if gifted_id else 'from <@' + user_id + '>'}*\n"
-                f"---\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n---\n"
+                f"---\n> *Drink:* {drink}\n> *Drop Spot:* {location}\n> *Notes:* {notes or 'None'}\n---\n"
                 f"🎁 Reward: +{karma_cost} Karma\n"
                 f"⏳ *Time left to claim:* {remaining} min"
                 f"{reminder_text}"
