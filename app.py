@@ -192,7 +192,7 @@ def handle_modal_submission(ack, body, client):
         f"{context_line}\n"
         f"☚️ *New drop {'for <@' + gifted_id + '> from <@' + user_id + '>' if gifted_id else 'from <@' + user_id + '>'}*\n"
         f"---\n"
-        f"> *Drink:* {drink}\n> *Drop Spot:* {location}\n> *Notes:* {notes or 'None'}\n"
+        f"• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n"
         f"---\n"
         f"🎁 Reward: +{karma_cost} Karma\n"
         f"⏳ *Time left to claim:* 10 min"
@@ -400,7 +400,7 @@ def handle_modal_submission(ack, body, client):
             updated_text = (
                 f"{context_line}\n"
                 f"☚️ *New drop {'for <@' + gifted_id + '> from <@' + user_id + '>' if gifted_id else 'from <@' + user_id + '>'}*\n"
-                f"---\n> *Drink:* {drink}\n> *Drop Spot:* {location}\n> *Notes:* {notes or 'None'}\n---\n"
+                f"---\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n---\n"
                 f"🎁 Reward: +{karma_cost} Karma\n"
                 f"⏳ *Time left to claim:* {remaining} min"
                 f"{reminder_text}"
@@ -695,7 +695,6 @@ def handle_mark_delivered(ack, body, client):
             new_text = (
                 f"{order_text}\n\n✅ *Delivered.* Respect.\n"
                 f"☕️ +{bonus_multiplier} Karma for <@{claimer_id}>. New total: *{points}*."
-                "\n\n📸 *Flex the drop.* On mobile? Hit the *`+`* and share a shot of your delivery. Let the people see the brew."
             )
 
             safe_client.chat_update(
@@ -712,6 +711,11 @@ def handle_mark_delivered(ack, body, client):
                         }
                     }
                 ]
+            )
+            safe_client.chat_postMessage(
+                channel=safe_body["channel"]["id"],
+                thread_ts=original_message["ts"],
+                text=":camera_with_flash: Flex the drop. On mobile? Hit the *`+`* and share a shot of your delivery.\nDon’t forget to *check the box* to share it to #koffee-karma-sf. Let the people see what you dropped."
             )
             if bonus_multiplier > 1:
                 safe_client.chat_postMessage(
