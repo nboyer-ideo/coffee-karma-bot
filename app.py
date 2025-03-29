@@ -347,7 +347,9 @@ def handle_modal_submission(ack, body, client):
     # Start live countdown updates for order expiration
     def update_countdown(remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
         try:
-            print(f"✅ update_countdown called: remaining={remaining}, order_ts={order_ts}")
+        print(f"✅ update_countdown called: remaining={remaining}, order_ts={order_ts}")
+        if order_extras.get(order_ts, {}).get("claimed", False):
+            return  # Don't run updates if order is already claimed
             # Check if order is still active by inspecting the current message text
             current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
             if not order_extras.get(order_ts, {}).get("active", True):
@@ -535,6 +537,7 @@ def handle_claim_order(ack, body, client):
     order_ts = body["message"]["ts"]
     order_extras[order_ts]["claimer_id"] = user_id
     order_extras[order_ts]["active"] = False
+    order_extras[order_ts]["claimed"] = True
 
     client.chat_postMessage(
         channel=user_id,
