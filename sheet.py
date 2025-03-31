@@ -38,7 +38,7 @@ def deduct_karma(user_id, points_to_deduct=1):
     for i, row in enumerate(data):
         if row["Slack ID"] == user_id:
             new_total = max(0, int(row["Karma"]) - points_to_deduct)
-                worksheet.update_cell(i + 2, 2, new_total)
+            worksheet.update_cell(i + 2, 2, new_total)
             return new_total
     return 0
 
