@@ -14,7 +14,7 @@ def get_sheet():
     creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
     
     gc = gspread.authorize(creds)
-    return gc.open("Koffee Karma").worksheet("Leaderboard")
+    return gc.open("Koffee Karma")
 
 # Add or update Koffee Karma for a user
 def add_karma(user_id, points_to_add=1):
