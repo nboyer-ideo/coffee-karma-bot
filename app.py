@@ -765,6 +765,55 @@ def handle_leaderboard_command(ack, body, client):
     text="The brave rise. Here's the Koffee Karma leaderboard."
     )
 
+@app.command("/redeem")
+def handle_redeem_code(ack, body, client):
+    ack()
+    user_id = body["user_id"]
+    text = body.get("text", "").strip().upper()
+
+    if not text:
+        client.chat_postEphemeral(
+            channel=body["channel_id"],
+            user=user_id,
+            text="❗ Usage: `/redeem YOURCODE123`"
+        )
+        return
+
+    from sheet import mark_code_redeemed
+    success = mark_code_redeemed(text, user_id)
+
+    if isinstance(success, str) and success.startswith("success:"):
+        points = success.split(":")[1]
+        client.chat_postEphemeral(
+            channel=body["channel_id"],
+            user=user_id,
+            text=f"✅ Code `{text}` redeemed. +{points} Karma awarded."
+        )
+    elif success == "already_used":
+        client.chat_postEphemeral(
+            channel=body["channel_id"],
+            user=user_id,
+            text=f"🚫 You've already redeemed code `{text}`."
+        )
+    elif success == "expired":
+        client.chat_postEphemeral(
+            channel=body["channel_id"],
+            user=user_id,
+            text=f"⌛ Code `{text}` is expired and no longer valid."
+        )
+    elif success == "limit_reached":
+        client.chat_postEphemeral(
+            channel=body["channel_id"],
+            user=user_id,
+            text=f"🚫 Code `{text}` has reached its redemption limit."
+        )
+    else:
+        client.chat_postEphemeral(
+            channel=body["channel_id"],
+            user=user_id,
+            text=f"🚫 Invalid or unknown code: `{text}`"
+        )
+
 
 @app.action("*")
 def catch_all_actions(ack, body):

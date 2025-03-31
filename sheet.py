@@ -1,5 +1,6 @@
 import gspread
 from google.oauth2.service_account import Credentials
+import datetime
 
 # Connect to the Koffee Karma Google Sheet
 import os
@@ -13,7 +14,7 @@ def get_sheet():
     creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
     
     gc = gspread.authorize(creds)
-    return gc.open("Koffee Karma").sheet1
+    return gc.open("Koffee Karma").worksheet("Leaderboard")
 
 # Add or update Koffee Karma for a user
 def add_karma(user_id, points_to_add=1):
@@ -76,3 +77,53 @@ def ensure_user(user_id):
     real_name = user_info["user"]["real_name"]
     sheet.append_row([real_name, 3, user_id])
     return True
+
+def mark_code_redeemed(code, user_id):
+    sheet = get_sheet()
+    worksheet = get_sheet().worksheet("Redemption Codes")
+    data = worksheet.get_all_records(head=1)
+    for i, row in enumerate(data):
+        if row["Code"] == code:
+            # Check if the code is expired
+            if row.get("Expires"):
+                try:
+                    expiry_date = datetime.datetime.strptime(row["Expires"], "%Y-%m-%d")
+                    if expiry_date < datetime.datetime.now():
+                        return "expired"
+                except ValueError:
+                    pass  # ignore bad date formats
+ 
+            # Check how many people have already redeemed this code
+            used_ids = set()
+            for r in data:
+                if r["Code"] == code and r.get("Slack ID"):
+                    used_ids.add(r["Slack ID"])
+            if user_id in used_ids:
+                return "already_used"
+ 
+            max_redemptions = int(row.get("Redemptions", 1))
+            if len(used_ids) >= max_redemptions:
+                return "limit_reached"
+
+            from slack_sdk import WebClient
+            slack_token = os.environ.get("SLACK_BOT_TOKEN")
+            slack_client = WebClient(token=slack_token)
+            user_info = slack_client.users_info(user=user_id)
+            real_name = user_info["user"]["real_name"]
+
+            # Update row with redemption info
+            worksheet.update_cell(i + 2, 5, True)  # Redeemed
+            worksheet.update_cell(i + 2, 6, real_name)  # Redeemed By
+            worksheet.update_cell(i + 2, 7, user_id)  # Slack ID
+            worksheet.update_cell(i + 2, 8, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))  # Timestamp
+            worksheet.update_cell(i + 2, 3, redemptions_left - 1)  # Decrement redemptions
+
+            # Check for Value column to determine points to award (customizable per row)
+            try:
+                points = int(row.get("Value", 1))
+            except ValueError:
+                points = 1  # fallback if value is not a number
+
+            add_karma(user_id, points)
+            return f"success:{points}"
+    return False
