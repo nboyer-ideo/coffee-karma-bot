@@ -267,6 +267,30 @@ def handle_modal_submission(ack, body, client):
             text=f"🎁 You’ve been gifted a drink order by <@{user_id}>. Let the koffee flow."
         )
 
+    # Log order with "time_ordered" as the timestamp key
+    from sheet import log_order_to_sheet
+    import datetime
+    order_data = {
+        "order_id": order_ts,
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "requester_id": user_id,
+        "requester_real_name": "",
+        "claimer_id": "",
+        "claimer_real_name": "",
+        "recipient_id": gifted_id if gifted_id else user_id,
+        "recipient_real_name": "",
+        "drink": drink,
+        "location": location,
+        "notes": notes,
+        "karma_cost": karma_cost,
+        "status": "pending",
+        "bonus_multiplier": "",
+        "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "time_claimed": "",
+        "time_delivered": ""
+    }
+    log_order_to_sheet(order_data)
+
     # Start countdown timer for order expiration
     import threading
     def cancel_unclaimed_order():
@@ -485,6 +509,7 @@ def handle_cancel_order(ack, body, client):
 
     # Clean up any extras like GIFs or context
     order_ts = message["ts"]
+    order_id = order_extras.get(order_ts, {}).get("order_id", "UNKNOWN")
     if order_ts in order_extras:
         gif_ts = order_extras[order_ts].get("gif_ts")
         if gif_ts:
@@ -520,7 +545,7 @@ def handle_cancel_order(ack, body, client):
         blocks=[
             {
                 "type": "section",
-                "text": {"type": "mrkdwn", "text": f"❌ *Order canceled by <@{user_id}>.*"}
+                "text": {"type": "mrkdwn", "text": f"❌ *Order canceled by <@{user_id}>.*\n🆔 Order ID: `{order_id}`"}
             }
         ]
     )
