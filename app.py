@@ -66,6 +66,11 @@ def say_hello(event, say):
     user = event["user"]
     say(f"What do you want, <@{user}>? Orders in. Deliveries pending. Let’s move.")
 
+@app.event("app_home_opened")
+def handle_app_home_opened_events(body, logger):
+    # Silently ignore app_home_opened events to suppress 404 log messages
+    pass
+
 @app.command("/order")
 def handle_order(ack, body, client):
     ack()
