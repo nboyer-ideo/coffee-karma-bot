@@ -142,26 +142,32 @@ def mark_code_redeemed(code, user_id):
 def log_order_to_sheet(order_data):
     try:
         sheet = get_sheet()
+        print("📝 Logging order data:", order_data)
         worksheet = sheet.worksheet("Order Log")  # Headers: Order ID, Timestamp, Requester ID, Requester Name, Claimer ID, Claimer Name, Recipient ID, Recipient Name, Drink, Location, Notes, Karma Cost, Status, Bonus Multiplier, Ordered Time, Claimed Time, Delivered Time
-        worksheet.append_row([
-            order_data.get("order_id", ""),
-            order_data.get("timestamp", ""),
-            order_data.get("requester_id", ""),
-            order_data.get("requester_real_name", ""),
-            order_data.get("claimer_id", ""),
-            order_data.get("claimer_real_name", ""),
-            order_data.get("recipient_id", ""),
-            order_data.get("recipient_real_name", ""),
-            order_data.get("drink", ""),
-            order_data.get("location", ""),
-            order_data.get("notes", ""),
-            order_data.get("karma_cost", ""),
-            order_data.get("status", ""),
-            order_data.get("bonus_multiplier", ""),
-            order_data.get("time_ordered", ""),
-            order_data.get("time_claimed", ""),
-            order_data.get("time_delivered", "")
-        ])
+        print("✅ Accessed Order Log worksheet")
+        try:
+            worksheet.append_row([
+                order_data.get("order_id", ""),
+                order_data.get("timestamp", ""),
+                order_data.get("requester_id", ""),
+                order_data.get("requester_real_name", ""),
+                order_data.get("claimer_id", ""),
+                order_data.get("claimer_real_name", ""),
+                order_data.get("recipient_id", ""),
+                order_data.get("recipient_real_name", ""),
+                order_data.get("drink", ""),
+                order_data.get("location", ""),
+                order_data.get("notes", ""),
+                order_data.get("karma_cost", ""),
+                order_data.get("status", ""),
+                order_data.get("bonus_multiplier", ""),
+                order_data.get("time_ordered", ""),
+                order_data.get("time_claimed", ""),
+                order_data.get("time_delivered", "")
+            ])
+            print("✅ Order successfully appended to sheet")
+        except Exception as log_error:
+            print("🚨 Error appending order to sheet:", log_error)
     except Exception as e:
         print("⚠️ Failed to log order to sheet:", e)
 
