@@ -15,6 +15,8 @@ def get_sheet():
     
     gc = gspread.authorize(creds)
     return gc.open("Koffee Karma")
+    
+    # Verified: All calls to get_all_records() in this file are made on Worksheet objects.
 
 # Add or update Koffee Karma for a user
 def add_karma(user_id, points_to_add=1):
@@ -23,7 +25,7 @@ def add_karma(user_id, points_to_add=1):
     for i, row in enumerate(data):
         if row["Slack ID"] == user_id:
             new_total = int(row["Karma"]) + points_to_add
-                worksheet.update_cell(i + 2, 2, new_total)
+            worksheet.update_cell(i + 2, 2, new_total)
             return new_total
     # If user not found, add a new row
     worksheet.append_row(["Unknown", points_to_add, user_id])
@@ -67,15 +69,15 @@ def ensure_user(user_id):
     slack_token = os.environ.get("SLACK_BOT_TOKEN")
     slack_client = WebClient(token=slack_token)
 
-    sheet = get_sheet()
-    data = sheet.get_all_records()
+    worksheet = get_sheet().worksheet("Leaderboard")
+    data = worksheet.get_all_records()
     for row in data:
         if row.get("Slack ID") == user_id:
             return False  # Already exists
 
     user_info = slack_client.users_info(user=user_id)
     real_name = user_info["user"]["real_name"]
-    sheet.append_row([real_name, 3, user_id])
+    worksheet.append_row([real_name, 3, user_id])
     return True
 
 def mark_code_redeemed(code, user_id):
