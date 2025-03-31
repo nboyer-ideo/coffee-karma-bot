@@ -100,8 +100,8 @@ def handle_order(ack, body, client):
                                 "text": {"type": "plain_text", "text": "Drip Coffee / Tea — 2 Karma"},
                                 "value": "drip"
                             },
-                            {
-                                "text": {"type": "plain_text", "text": "Espresso Drink (latte, cappuccino) — 3 Karma"},
+                        {
+                                "text": {"type": "plain_text", "text": "Espresso Drink (latte, cappuccino) — UNAVAILABLE ☕🚫"},
                                 "value": "espresso"
                             }
                         ]
@@ -146,6 +146,14 @@ def handle_modal_submission(ack, body, client):
     ack()
     values = body["view"]["state"]["values"]
     drink_value = values["drink_category"]["input"]["selected_option"]["value"]
+    user_id = body["user"]["id"]
+    if drink_value == "espresso":
+        client.chat_postEphemeral(
+            channel=user_id,
+            user=user_id,
+            text="🚫 Espresso orders are temporarily unavailable — the machine's down. Choose something else while we fix it up."
+        )
+        return
     drink_detail = values["drink_detail"]["input"]["value"]
     drink_map = {
         "water": 1,
@@ -157,7 +165,6 @@ def handle_modal_submission(ack, body, client):
     location = values["location"]["input"]["value"]
     notes = values["notes"]["input"]["value"] if "notes" in values else ""
     gifted_id = values["gift_to"]["input"]["selected_user"] if "gift_to" in values and "input" in values["gift_to"] else None
-    user_id = body["user"]["id"]
     
     
 
@@ -923,16 +930,16 @@ def handle_member_joined_channel(event, client, logger):
 
     try:
         welcome_lines = [
-            f"👋 <@{user_id}> just entered the Koffee Karma zone. Show no mercy. ☕️",
-            f"☕️ <@{user_id}> just logged on to the brew grid.",
-            f"🔥 <@{user_id}> joined. Time to stir some espresso-fueled chaos.",
-            f"📦 <@{user_id}> has checked in. Deliveries won't deliver themselves.",
-            f"💀 <@{user_id}> is here. Hope they're ready for the grind.",
-            f"⚡️ <@{user_id}> appeared. Let's get volatile.",
-            f"🥶 <@{user_id}> dropped in cold. Let’s heat things up.",
-            f"🚨 <@{user_id}> joined the rebellion. Brew responsibly.",
-            f"🌀 <@{user_id}> warped into the zone. Coffee protocol initiated.",
-            f"🧃 <@{user_id}> arrived thirsty. You know what to do."
+            f"👋 <@{user_id}> just entered the Koffee Karma zone. Show no mercy. ☕️\nType /order, /karma, or /leaderboard to survive the grind.",
+            f"☕️ <@{user_id}> just logged on to the brew grid.\nType /order, /karma, or /leaderboard to power up.",
+            f"🔥 <@{user_id}> joined. Time to stir some espresso-fueled chaos.\nTry /order, /karma, or /leaderboard to get in the flow.",
+            f"📦 <@{user_id}> has checked in. Deliveries won't deliver themselves.\nHit /order, /karma, or /leaderboard to jump in.",
+            f"💀 <@{user_id}> is here. Hope they're ready for the grind.\nStart with /order, /karma, or /leaderboard.",
+            f"⚡️ <@{user_id}> appeared. Let's get volatile.\nHit /order, /karma, or /leaderboard to get started.",
+            f"🥶 <@{user_id}> dropped in cold. Let’s heat things up.\nType /order, /karma, or /leaderboard to thaw out.",
+            f"🚨 <@{user_id}> joined the rebellion. Brew responsibly.\nUse /order, /karma, or /leaderboard to stir things up.",
+            f"🌀 <@{user_id}> warped into the zone. Coffee protocol initiated.\nEngage with /order, /karma, or /leaderboard.",
+            f"🧃 <@{user_id}> arrived thirsty. You know what to do.\nTry /order, /karma, or /leaderboard to start the drip."
         ]
         client.chat_postMessage(
             channel=channel_id,
