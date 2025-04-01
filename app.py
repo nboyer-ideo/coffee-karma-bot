@@ -477,7 +477,7 @@ def handle_modal_submission(ack, body, client):
                 return
 
             base_text = order_extras[order_ts].get("base_text", "")
-            new_text = f"{base_text}\n\n⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
+            new_text = base_text
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
@@ -486,10 +486,12 @@ def handle_modal_submission(ack, body, client):
                     {"type": "divider"},
                     {
                         "type": "section",
+                        "block_id": "order_text_block",
                         "text": {"type": "mrkdwn", "text": new_text}
                     },
                     {
                         "type": "actions",
+                        "block_id": "buttons_block",
                         "elements": [
                             {
                                 "type": "button",
