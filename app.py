@@ -646,10 +646,10 @@ def handle_claim_order(ack, body, client):
         channel=user_id,
         text="You took the mission. Don't forget to hit 'MARK AS DELIVERED' once the goods are dropped."
     )
-    if not original_message.get("user"):
-        requester_id = original_message.get("user")
-        print("⚠️ Fallback: using message['user'] as requester_id:", requester_id)
-    requester_id = original_message.get("user")
+    requester_id = None
+    match = re.search(r"FROM <@([A-Z0-9]+)>", order_text)
+    if match:
+        requester_id = match.group(1)
     if requester_id:
         print(f"📬 Sending DM to requester (user_id: {requester_id}) with message: ☕️ Your order was claimed by <@{user_id}>. Hold tight — delivery is on the way.")
         client.chat_postMessage(
