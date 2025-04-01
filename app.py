@@ -435,28 +435,30 @@ def handle_modal_submission(ack, body, client):
                 print(f"⏳ Countdown reached 0 for order {order_ts}")
                 return  # Stop updating and let cancel_unclaimed_order handle final expiration
             import re
-            updated_text = msg_text
-            updated_text = re.sub(
-                r"⏳ \d+ MINUTES TO CLAIM OR IT DIES",
-                f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES",
-                updated_text
-            )
             blocks = current_message["messages"][0].get("blocks", [])
+            updated_text = None  # fallback if needed
+
             for block in blocks:
                 if block.get("type") == "section" and "text" in block and isinstance(block["text"], dict):
-                    original_block_text = block["text"]["text"]
-                    new_block_text = re.sub(
-                        r"⏳ \d+ MINUTES TO CLAIM OR IT DIES",
-                        f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES",
-                        original_block_text
-                    )
-                    block["text"]["text"] = new_block_text
-            client.chat_update(
-                channel=order_channel,
-                ts=order_ts,
-                text=updated_text,
-                blocks=blocks
-            )
+                    text_content = block["text"]["text"]
+                    if "⏳" in text_content and "MINUTES TO CLAIM OR IT DIES" in text_content:
+                        new_text = re.sub(
+                            r"⏳ \d+ MINUTES TO CLAIM OR IT DIES",
+                            f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES",
+                            text_content
+                        )
+                        block["text"]["text"] = new_text
+                        updated_text = new_text  # use as fallback for plain text
+            try:
+                client.chat_update(
+                    channel=order_channel,
+                    ts=order_ts,
+                    text=updated_text,
+                    blocks=blocks
+                )
+                print(f"✅ Countdown updated in Slack: {remaining} minutes remaining.")
+            except Exception as e:
+                print("🚨 chat_update failed:", e)
             if remaining > 1:
                 threading.Timer(60, update_countdown, args=(
                     remaining - 1, order_ts, order_channel,
