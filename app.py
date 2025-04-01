@@ -393,9 +393,12 @@ def handle_modal_submission(ack, body, client):
         try:
             current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
             if current_message["messages"]:
-                current_text = current_message["messages"][0].get("text", "")
-            if any(phrase in current_text for phrase in ["Canceled", "Claimed", "Order canceled by", "❌ Order canceled", "DELIVERED", "✅ *DROP COMPLETED*"]):
+                current_text = current_message["messages"][0].get("text", "").lower()
+                if any(phrase.lower() in current_text for phrase in ["Canceled", "Claimed", "Order canceled by", "❌ Order canceled", "DELIVERED", "✅ *DROP COMPLETED*"]):
                     return  # Skip if canceled, claimed, or delivered
+            else:
+                print(f"⚠️ No message found for order {order_ts}, skipping expiration.")
+                return
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
