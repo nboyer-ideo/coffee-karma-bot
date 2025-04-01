@@ -339,25 +339,25 @@ def handle_modal_submission(ack, body, client):
             elif "Espresso" in current_text:
                 refund_amount = 3
             else:
-                refund_amount = 1  # Fallback
-
-        if user_id:
-            add_karma(user_id, refund_amount)
-            client.chat_postMessage(
-                channel=user_id,
-                text=f"🌀 Your order expired. {refund_amount} Karma refunded. Balance restored."
-            )
-        from sheet import update_order_status
-        update_order_status(order_ts, status="expired")
-        if order_ts in order_extras:
-            order_extras[order_ts]["active"] = False
-            gif_ts = order_extras[order_ts].get("gif_ts")
-            if gif_ts:
-                try:
-                    client.chat_delete(channel=order_channel, ts=gif_ts)
-                except Exception as e:
-                    print("⚠️ Failed to delete gif message:", e)
-            del order_extras[order_ts]
+        refund_amount = 1  # Fallback
+ 
+            if user_id:
+                add_karma(user_id, refund_amount)
+                client.chat_postMessage(
+                    channel=user_id,
+                    text=f"🌀 Your order expired. {refund_amount} Karma refunded. Balance restored."
+                )
+            from sheet import update_order_status
+            update_order_status(order_ts, status="expired")
+            if order_ts in order_extras:
+                order_extras[order_ts]["active"] = False
+                gif_ts = order_extras[order_ts].get("gif_ts")
+                if gif_ts:
+                    try:
+                        client.chat_delete(channel=order_channel, ts=gif_ts)
+                    except Exception as e:
+                        print("⚠️ Failed to delete gif message:", e)
+                del order_extras[order_ts]
         except Exception as e:
             print("⚠️ Failed to expire message:", e)
 
@@ -942,16 +942,16 @@ def handle_member_joined_channel(event, client, logger):
 
     try:
         welcome_lines = [
-            f"👋 <@{user_id}> just entered the Koffee Karma zone. Show no mercy. ☕️\nType /order, /karma, or /leaderboard to survive the grind.",
-            f"☕️ <@{user_id}> just logged on to the brew grid.\nType /order, /karma, or /leaderboard to power up.",
-            f"🔥 <@{user_id}> joined. Time to stir some espresso-fueled chaos.\nTry /order, /karma, or /leaderboard to get in the flow.",
-            f"📦 <@{user_id}> has checked in. Deliveries won't deliver themselves.\nHit /order, /karma, or /leaderboard to jump in.",
-            f"💀 <@{user_id}> is here. Hope they're ready for the grind.\nStart with /order, /karma, or /leaderboard.",
-            f"⚡️ <@{user_id}> appeared. Let's get volatile.\nHit /order, /karma, or /leaderboard to get started.",
-            f"🥶 <@{user_id}> dropped in cold. Let’s heat things up.\nType /order, /karma, or /leaderboard to thaw out.",
-            f"🚨 <@{user_id}> joined the rebellion. Brew responsibly.\nUse /order, /karma, or /leaderboard to stir things up.",
-            f"🌀 <@{user_id}> warped into the zone. Coffee protocol initiated.\nEngage with /order, /karma, or /leaderboard.",
-            f"🧃 <@{user_id}> arrived thirsty. You know what to do.\nTry /order, /karma, or /leaderboard to start the drip."
+            f"👋 <@{user_id}> just entered the Koffee Karma zone. Show no mercy. ☕️\nType `/order`, `/karma`, or `/leaderboard` to survive the grind.",
+            f"☕️ <@{user_id}> just logged on to the brew grid.\nType `/order`, `/karma`, or `/leaderboard` to power up.",
+            f"🔥 <@{user_id}> joined. Time to stir some espresso-fueled chaos.\nTry `/order`, `/karma`, or `/leaderboard` to get in the flow.",
+            f"📦 <@{user_id}> has checked in. Deliveries won't deliver themselves.\nHit `/order`, `/karma`, or `/leaderboard` to jump in.",
+            f"💀 <@{user_id}> is here. Hope they're ready for the grind.\nStart with `/order`, `/karma`, or `/leaderboard`.",
+            f"⚡️ <@{user_id}> appeared. Let's get volatile.\nHit `/order`, `/karma`, or `/leaderboard` to get started.",
+            f"🥶 <@{user_id}> dropped in cold. Let’s heat things up.\nType `/order`, `/karma`, or `/leaderboard` to thaw out.",
+            f"🚨 <@{user_id}> joined the rebellion. Brew responsibly.\nUse `/order`, `/karma`, or `/leaderboard` to stir things up.",
+            f"🌀 <@{user_id}> warped into the zone. Coffee protocol initiated.\nEngage with `/order`, `/karma`, or `/leaderboard`.",
+            f"🧃 <@{user_id}> arrived thirsty. You know what to do.\nTry `/order`, `/karma`, or `/leaderboard` to start the drip."
         ]
         client.chat_postMessage(
             channel=channel_id,
