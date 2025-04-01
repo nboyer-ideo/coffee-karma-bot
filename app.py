@@ -200,6 +200,7 @@ def handle_modal_submission(ack, body, client):
         "*🎯 Hit the mark. Hit the café.*"
     ])
     
+    # For display only: use uppercase formatting for message output.
     full_text = (
         f"💀 NEW DROP // {'FROM <@' + user_id + '> TO <@' + gifted_id + '>' if gifted_id else 'FROM <@' + user_id + '>'}\n"
         f"— — — — — — — — — — — —\n"
@@ -371,40 +372,27 @@ def handle_modal_submission(ack, body, client):
                 if any(phrase in msg_text for phrase in ["Claimed by", "Expired", "Canceled", "Order canceled by"]):
                     return  # Skip reminder if already handled
 
-                # Append the reminder directly to the original message text
+                # Insert reminder as a new section block preserving original formatting
                 if "⚠️ This mission’s still unclaimed." not in msg_text:
-                    updated_text = f"{msg_text}\n\n⚠️ This mission’s still unclaimed. Someone better step up before it expires… ⏳"
-                    
                     order_extras[order_ts]["reminder_added"] = True
                     
+                    original_blocks = current_message["messages"][0].get("blocks", [])
+                    reminder_block = {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "⚠️ This mission’s still unclaimed. Someone better step up before it expires… ⏳"
+                        }
+                    }
+
+                    # Insert the reminder block just before the actions (if any)
+                    insertion_index = next((i for i, b in enumerate(original_blocks) if b.get("type") == "actions"), len(original_blocks))
+                    new_blocks = original_blocks[:insertion_index] + [reminder_block] + original_blocks[insertion_index:]
+
                     client.chat_update(
                         channel=order_channel,
                         ts=order_ts,
-                        text=updated_text,
-                        blocks=[
-                            {
-                                "type": "section",
-                                "text": {"type": "mrkdwn", "text": updated_text}
-                            },
-                            {
-                                "type": "actions",
-                                "elements": [
-                                    {
-                                        "type": "button",
-                                        "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
-                                        "value": f"{user_id}|{drink}|{location}",
-                                        "action_id": "claim_order"
-                                    },
-                                    {
-                                        "type": "button",
-                                        "text": {"type": "plain_text", "text": "CANCEL"},
-                                        "style": "danger",
-                                        "value": f"cancel|{user_id}|{drink_value}",
-                                        "action_id": "cancel_order"
-                                    }
-                                ]
-                            }
-                        ]
+                        blocks=new_blocks
                     )
         except Exception as e:
             print("⚠️ Reminder ping failed:", e)
@@ -441,17 +429,20 @@ def handle_modal_submission(ack, body, client):
             for block in blocks:
                 if block.get("type") == "section" and "text" in block and isinstance(block["text"], dict):
                     text_content = block["text"]["text"]
-                    if "⏳" in text_content:
-                        lines = text_content.split("\n")
-                        new_lines = []
-                        for line in lines:
-                            if line.strip().startswith("⏳") and "MINUTES TO CLAIM OR IT DIES" in line:
-                                new_lines.append(f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES")
-                            else:
-                                new_lines.append(line)
+                    lines = text_content.split("\n")
+                    new_lines = []
+                    countdown_found = False
+                    for line in lines:
+                        if line.strip().startswith("⏳") and "MINUTES TO CLAIM OR IT DIES" in line:
+                            new_lines.append(f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES")
+                            countdown_found = True
+                        else:
+                            new_lines.append(line)
+                    if countdown_found:
                         new_text = "\n".join(new_lines)
                         block["text"]["text"] = new_text
                         updated_text = new_text
+                        print(f"DEBUG: updated_text set to: {updated_text}")
             try:
                 client.chat_update(
                     channel=order_channel,
@@ -653,7 +644,7 @@ def handle_claim_order(ack, body, client):
             text = block.get("text", {}).get("text", "")
             import re
             print("🔍 Trying to extract requester_id from text:", text)
-            match = re.search(r"\*New drop (?:for <@.+?> from <@([A-Z0-9]+)>|from <@([A-Z0-9]+)>)", text)
+            match = re.search(r"(?:FOR <@.+?> FROM <@([A-Z0-9]+)>|FROM <@([A-Z0-9]+)>)", text.upper())
             if match:
                 requester_id = match.group(1) or match.group(2)
                 break

@@ -225,7 +225,7 @@ def update_order_status(order_id, status=None, claimer_id=None, claimer_name=Non
                 if bonus_multiplier is not None:
                     worksheet.update_cell(i + 2, 14, bonus_multiplier)
                 if claimed_time is not None:
-                    worksheet.update_cell(i + 2, 15, claimed_time)
+                    worksheet.update_cell(i + 2, 16, claimed_time)
                 if delivered_time is not None:
                     worksheet.update_cell(i + 2, 17, delivered_time)
                 if requester_name is not None:
