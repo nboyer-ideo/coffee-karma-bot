@@ -7,6 +7,7 @@ import random
 import requests
 import os
 import copy
+import re
 
 order_extras = {}
 countdown_timers = {}  # order_ts -> remaining minutes
