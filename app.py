@@ -367,6 +367,9 @@ def handle_modal_submission(ack, body, client):
     def reminder_ping():
         try:
             current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+            if order_extras.get(order_ts, {}).get("claimed", False):
+                print(f"🔕 Skipping reminder — order {order_ts} already claimed.")
+                return
             if current_message["messages"]:
                 msg_text = current_message["messages"][0].get("text", "")
                 if any(phrase in msg_text for phrase in ["Claimed by", "Expired", "Canceled", "Order canceled by"]):
@@ -441,20 +444,12 @@ def handle_modal_submission(ack, body, client):
 
             for block in blocks:
                 if block.get("type") == "section" and "text" in block and isinstance(block["text"], dict):
-                    text_content = block["text"]["text"]
-                    lines = text_content.split("\n")
-                    new_lines = []
-                    countdown_found = False
-                    for line in lines:
-                        if "⏳" in line and "MINUTES TO CLAIM OR IT DIES" in line:
-                            new_lines.append(f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES")
-                            countdown_found = True
-                        else:
-                            new_lines.append(line)
-                    new_text = "\n".join(new_lines)
-                    block["text"]["text"] = new_text
-                    updated_text = new_text
-                    print(f"DEBUG: updated_text set to: {updated_text}")
+                    old_text = block["text"]["text"]
+                    new_text = re.sub(r"⏳ \d+ MINUTES TO CLAIM OR IT DIES", f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES", old_text)
+                    if old_text != new_text:
+                        block["text"]["text"] = new_text
+                        updated_text = new_text
+                        print(f"DEBUG: Countdown text updated: {updated_text}")
             try:
                 client.chat_update(
                     channel=order_channel,
