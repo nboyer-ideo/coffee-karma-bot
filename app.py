@@ -642,6 +642,15 @@ def handle_claim_order(ack, body, client):
         channel=user_id,
         text="You took the mission. Don't forget to hit 'MARK AS DELIVERED' once the goods are dropped."
     )
+    if not original_message.get("user"):
+        requester_id = original_message.get("user")
+        print("⚠️ Fallback: using message['user'] as requester_id:", requester_id)
+    requester_id = original_message.get("user")
+    if requester_id:
+        client.chat_postMessage(
+            channel=requester_id,
+            text=f"☕️ Your order was claimed by <@{user_id}>. Hold tight — delivery is on the way."
+        )
     def send_completion_reminder():
         try:
             # Fetch the latest version of the message to check if it's already marked as delivered
@@ -659,26 +668,6 @@ def handle_claim_order(ack, body, client):
 
     import threading
     threading.Timer(900, send_completion_reminder).start()  # 15 minutes
-    # Notify the requester that their drink was claimed
-    requester_id = None
-    for block in original_message.get("blocks", []):
-        if block.get("type") == "section":
-            text = block.get("text", {}).get("text", "")
-            import re
-            print("🔍 Trying to extract requester_id from text:", text)
-            match = re.search(r"(?:FOR <@.+?> FROM <@([A-Z0-9]+)>|FROM <@([A-Z0-9]+)>)", text.upper())
-            if match:
-                requester_id = match.group(1) or match.group(2)
-                break
-
-    if not requester_id:
-        requester_id = original_message.get("user")
-        print("⚠️ Fallback: using message['user'] as requester_id:", requester_id)
-
-    client.chat_postMessage(
-        channel=requester_id,
-        text=f"☕️ Your order was claimed by <@{user_id}>. Hold tight — delivery is on the way."
-    )
 
 import threading
 
