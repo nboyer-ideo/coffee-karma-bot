@@ -448,8 +448,11 @@ def handle_modal_submission(ack, body, client):
             updated_blocks = []
             for block in existing_blocks:
                 if block.get("block_id") == "countdown_block":
-                    block["text"]["text"] = f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
-                updated_blocks.append(block)
+                    updated_block = copy.deepcopy(block)
+                    updated_block["text"]["text"] = f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
+                    updated_blocks.append(updated_block)
+                else:
+                    updated_blocks.append(block)
             
             # Remove any existing countdown text from base_text and update with new countdown
             import re
