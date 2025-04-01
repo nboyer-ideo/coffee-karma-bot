@@ -983,14 +983,15 @@ def handle_member_joined_channel(event, client, logger):
         )
         client.chat_postMessage(
             channel=user_id,
-                text=(
+            text=(
                 "Welcome to *Koffee Karma* ☕️💀\n\n"
-                    "Here’s how it works:\n"
-                    "• `/order` — Request a drink (costs Karma).\n"
-                    "• `/karma` — Check your Karma.\n"
-                    "• `/leaderboard` — See the legends.\n\n"
-                    "You’ve got *3 Koffee Karma* to start. Spend wisely. Earn more by delivering orders.\n"
-                    "Let the chaos begin. ⚡️"
+                "Here’s how it works:\n"
+                "• `/order` — Request a drink (costs Karma).\n"
+                "• `/karma` — Check your Karma.\n"
+                "• `/leaderboard` — See the legends.\n"
+                "• `/redeem` — Redeem a code for bonus Karma.\n\n"
+                "You’ve got *3 Koffee Karma* to start. Spend wisely. Earn more by delivering orders.\n"
+                "Let the chaos begin. ⚡️"
             )
         )
     except Exception as e:
