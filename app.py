@@ -372,27 +372,40 @@ def handle_modal_submission(ack, body, client):
                 if any(phrase in msg_text for phrase in ["Claimed by", "Expired", "Canceled", "Order canceled by"]):
                     return  # Skip reminder if already handled
 
-                # Insert reminder as a new section block preserving original formatting
+                # Append the reminder directly to the original message text
                 if "⚠️ This mission’s still unclaimed." not in msg_text:
+                    updated_text = f"{msg_text}\n\n*⚠️ STILL UNCLAIMED — CLOCK'S TICKING ⏳*\n> STEP UP OR STAND DOWN. 5 MINUTES LEFT TO CLAIM."
+                    
                     order_extras[order_ts]["reminder_added"] = True
                     
-                    original_blocks = current_message["messages"][0].get("blocks", [])
-                    reminder_block = {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "⚠️ This mission’s still unclaimed. Someone better step up before it expires… ⏳"
-                        }
-                    }
-
-                    # Insert the reminder block just before the actions (if any)
-                    insertion_index = next((i for i, b in enumerate(original_blocks) if b.get("type") == "actions"), len(original_blocks))
-                    new_blocks = original_blocks[:insertion_index] + [reminder_block] + original_blocks[insertion_index:]
-
                     client.chat_update(
                         channel=order_channel,
                         ts=order_ts,
-                        blocks=new_blocks
+                        text=updated_text,
+                        blocks=[
+                            {
+                                "type": "section",
+                                "text": {"type": "mrkdwn", "text": updated_text}
+                            },
+                            {
+                                "type": "actions",
+                                "elements": [
+                                    {
+                                        "type": "button",
+                                        "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
+                                        "value": f"{user_id}|{drink}|{location}",
+                                        "action_id": "claim_order"
+                                    },
+                                    {
+                                        "type": "button",
+                                        "text": {"type": "plain_text", "text": "CANCEL"},
+                                        "style": "danger",
+                                        "value": f"cancel|{user_id}|{drink_value}",
+                                        "action_id": "cancel_order"
+                                    }
+                                ]
+                            }
+                        ]
                     )
         except Exception as e:
             print("⚠️ Reminder ping failed:", e)
@@ -433,15 +446,14 @@ def handle_modal_submission(ack, body, client):
                     new_lines = []
                     countdown_found = False
                     for line in lines:
-                        if line.strip().startswith("⏳") and "MINUTES TO CLAIM OR IT DIES" in line:
+                        if "⏳" in line and "MINUTES TO CLAIM OR IT DIES" in line:
                             new_lines.append(f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES")
                             countdown_found = True
                         else:
                             new_lines.append(line)
-                    if countdown_found:
-                        new_text = "\n".join(new_lines)
-                        block["text"]["text"] = new_text
-                        updated_text = new_text
+                    new_text = "\n".join(new_lines)
+                    block["text"]["text"] = new_text
+                    updated_text = new_text
                         print(f"DEBUG: updated_text set to: {updated_text}")
             try:
                 client.chat_update(
