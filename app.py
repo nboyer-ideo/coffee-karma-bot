@@ -339,7 +339,7 @@ def handle_modal_submission(ack, body, client):
             elif "Espresso" in current_text:
                 refund_amount = 3
             else:
-        refund_amount = 1  # Fallback
+                refund_amount = 1  # Fallback
  
             if user_id:
                 add_karma(user_id, refund_amount)
