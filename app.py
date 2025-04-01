@@ -75,6 +75,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 
         original_text = current_message["messages"][0].get("text", "")
         print(f"📝 Original text:\n{original_text}")
+        print("🧾 full original text:", repr(original_text))
 
         new_text = re.sub(
             r"⏳\s*\d+\s*MINUTES\s*TO\s*CLAIM\s*OR\s*IT\s*DIES",
@@ -272,7 +273,7 @@ def handle_modal_submission(ack, body, client):
 
     posted = client.chat_postMessage(
         channel="#koffee-karma-sf",
-        text=full_text + "\n⏳ 10 MINUTES TO CLAIM OR IT DIES",
+        text=f"{full_text}\n⏳ 10 MINUTES TO CLAIM OR IT DIES",
         blocks=[
             {"type": "divider"},
             {
