@@ -279,7 +279,14 @@ def handle_modal_submission(ack, body, client):
             "claimer_id": None,
             "active": True
         })
-        order_extras[order_ts]["base_text"] = full_text.replace(f"⏳ 10 MINUTES TO CLAIM OR IT DIES", "").strip()
+        if "base_text" not in order_extras[order_ts]:
+            current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+            if current_message["messages"]:
+                full_msg = current_message["messages"][0]
+                full_text = full_msg.get("text", "")
+                match = re.search(r"(.+?)\n?\s*⏳ \d+ MINUTES TO CLAIM OR IT DIES", full_text, flags=re.DOTALL)
+                if match:
+                    order_extras[order_ts]["base_text"] = match.group(1).strip()
  
     deduct_karma(user_id, karma_cost)
 
@@ -427,95 +434,53 @@ def handle_modal_submission(ack, body, client):
     def update_countdown(remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
         print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
         countdown_text = f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
-        print(f"🔁 Updating countdown block in Slack message for order {order_ts} — {remaining} minutes left")
-        client.chat_update(
-            channel=order_channel,
-            ts=order_ts,
-            blocks=[
-                {"type": "divider"},
-                {
-                    "type": "section",
-                    "block_id": "order_text_block",
-                    "text": {"type": "mrkdwn", "text": order_extras[order_ts].get("base_text", "")}
-                },
-                {
-                    "type": "section",
-                    "block_id": "countdown_block",
-                    "text": {"type": "mrkdwn", "text": countdown_text}
-                },
-                {
-                    "type": "actions",
-                    "block_id": "buttons_block",
-                    "elements": [
-                        {
-                            "type": "button",
-                            "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
-                            "value": f"{user_id}|{drink}|{location}",
-                            "action_id": "claim_order"
-                        },
-                        {
-                            "type": "button",
-                            "text": {"type": "plain_text", "text": "CANCEL"},
-                            "style": "danger",
-                            "value": f"{user_id}|{drink}|{location}",
-                            "action_id": "cancel_order"
-                        }
-                    ]
-                }
-            ]
-        )
-        if remaining > 1:
-            import threading
-            threading.Timer(60, update_countdown, args=(
-                remaining - 1, order_ts, order_channel,
-                user_id, gifted_id, drink, location, notes, karma_cost
-            )).start()
-        try:
-            if order_extras.get(order_ts, {}).get("claimed", False):
-                return
-            if not order_extras.get(order_ts, {}).get("active", True):
-                return
-
-            base_text = order_extras[order_ts].get("base_text", "")
-            new_text = base_text
-            client.chat_update(
-                channel=order_channel,
-                ts=order_ts,
-                text=new_text,
-                blocks=[
-                    {"type": "divider"},
-                    {
-                        "type": "section",
-                        "block_id": "order_text_block",
-                        "text": {"type": "mrkdwn", "text": new_text}
-                    },
-                    {
-                        "type": "actions",
-                        "block_id": "buttons_block",
-                        "elements": [
-                            {
-                                "type": "button",
-                                "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
-                                "value": f"{user_id}|{drink}|{location}",
-                                "action_id": "claim_order"
-                            },
-                            {
-                                "type": "button",
-                                "text": {"type": "plain_text", "text": "CANCEL"},
-                                "style": "danger",
-                                "value": f"cancel|{user_id}|{drink}",
-                                "action_id": "cancel_order"
-                            }
-                        ]
-                    }
-                ]
-            )
-            if not base_text:
-                print("⚠️ No base_text found for countdown.")
-                return
-        except Exception as e:
-            print("⚠️ Error in countdown update:", e)
-
+    updated_text = f"{order_extras[order_ts].get('base_text', '')}\n\n{countdown_text}"
+    print(f"🔁 Updating countdown block in Slack message for order {order_ts} — {remaining} minutes left")
+    default_buttons = {
+        "type": "actions",
+        "block_id": "buttons_block",
+        "elements": [
+            {
+                "type": "button",
+                "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
+                "value": f"{user_id}|{drink}|{location}",
+                "action_id": "claim_order"
+            },
+            {
+                "type": "button",
+                "text": {"type": "plain_text", "text": "CANCEL"},
+                "style": "danger",
+                "value": f"{user_id}|{drink}|{location}",
+                "action_id": "cancel_order"
+            }
+        ]
+    }
+    client.chat_update(
+        channel=order_channel,
+        ts=order_ts,
+        text=updated_text,
+        blocks=[
+            {"type": "divider"},
+            {
+                "type": "section",
+                "block_id": "order_text_block",
+                "text": {"type": "mrkdwn", "text": order_extras[order_ts].get("base_text", "")}
+            },
+            {
+                "type": "section",
+                "block_id": "countdown_block",
+                "text": {"type": "mrkdwn", "text": countdown_text}
+            },
+            order_extras[order_ts].get("buttons_block", default_buttons)
+        ]
+    )
+    if remaining > 1:
+        import threading
+        threading.Timer(60, update_countdown, args=(
+            remaining - 1, order_ts, order_channel,
+            user_id, gifted_id, drink, location, notes, karma_cost
+        )).start()
+    return
 
 
 @app.action("cancel_order")
