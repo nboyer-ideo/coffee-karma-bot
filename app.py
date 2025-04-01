@@ -431,6 +431,10 @@ def handle_modal_submission(ack, body, client):
             print("⚠️ Reminder ping failed:", e)
 
     threading.Timer(300, reminder_ping).start()  # 5-minute reminder
+    update_countdown(
+        10, order_ts, order_channel,
+        user_id, gifted_id, drink, location, notes, karma_cost
+    )
 
     # Start live countdown updates for order expiration
     def update_countdown(remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
