@@ -14,7 +14,9 @@ def get_sheet():
     creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
     
     gc = gspread.authorize(creds)
-    return gc.open("Koffee Karma")
+    result = gc.open("Koffee Karma")
+    print("📗 Connected to Koffee Karma sheet.")
+    return result
     
     # Verified: All calls to get_all_records() in this file are made on Worksheet objects.
 
@@ -22,6 +24,7 @@ def get_sheet():
 def add_karma(user_id, points_to_add=1):
     print(f"📈 Adding {points_to_add} karma to {user_id}")
     worksheet = get_sheet().worksheet("Leaderboard")
+    print("🧮 Leaderboard worksheet loaded.")
     data = worksheet.get_all_records()
     for i, row in enumerate(data):
         if row["Slack ID"] == user_id:
@@ -39,6 +42,7 @@ def add_karma(user_id, points_to_add=1):
 def deduct_karma(user_id, points_to_deduct=1):
     print(f"📉 Deducting {points_to_deduct} karma from {user_id}")
     worksheet = get_sheet().worksheet("Leaderboard")
+    print("📉 Leaderboard worksheet loaded for deduction.")
     data = worksheet.get_all_records()
     for i, row in enumerate(data):
         if row["Slack ID"] == user_id:
@@ -153,6 +157,7 @@ def log_order_to_sheet(order_data):
         sheet = get_sheet()
         print("📝 Logging order data:", order_data)
         worksheet = sheet.worksheet("Order Log")  # Headers: Order ID, Timestamp, Requester ID, Requester Name, Claimer ID, Claimer Name, Recipient ID, Recipient Name, Drink, Location, Notes, Karma Cost, Status, Bonus Multiplier, Ordered Time, Claimed Time, Delivered Time
+        print("🧾 Order Log worksheet loaded. Attempting to append row.")
         print("✅ Accessed Order Log worksheet")
         try:
             worksheet.append_row([
