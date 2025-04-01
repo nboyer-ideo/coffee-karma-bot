@@ -458,41 +458,31 @@ def handle_modal_submission(ack, body, client):
                 if any(phrase in msg_text for phrase in ["Claimed by", "Expired", "Canceled", "Order canceled by"]):
                     return  # Skip reminder if already handled
 
-                # Append the reminder directly to the original message text
-                if "⚠️ This mission’s still unclaimed." not in msg_text:
-                    updated_text = f"{msg_text}\n\n*⚠️ STILL UNCLAIMED — CLOCK'S TICKING ⏳*\n> STEP UP OR STAND DOWN. 5 MINUTES LEFT TO CLAIM."
-                    
-                    order_extras[order_ts]["reminder_added"] = True
-                    
-                    client.chat_update(
-                        channel=order_channel,
-                        ts=order_ts,
-                        text=updated_text,
-                        blocks=[
-                            {
-                                "type": "section",
-                                "text": {"type": "mrkdwn", "text": updated_text}
-                            },
-                            {
-                                "type": "actions",
-                                "elements": [
-                                    {
-                                        "type": "button",
-                                        "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
-                                        "value": f"{user_id}|{drink}|{location}",
-                                        "action_id": "claim_order"
-                                    },
-                                    {
-                                        "type": "button",
-                                        "text": {"type": "plain_text", "text": "CANCEL"},
-                                        "style": "danger",
-                                        "value": f"cancel|{user_id}|{drink_value}",
-                                        "action_id": "cancel_order"
-                                    }
-                                ]
-                            }
-                        ]
-                    )
+                # Insert the reminder block without collapsing formatting
+                current_blocks = current_message["messages"][0].get("blocks", [])
+
+                reminder_block = {
+                    "type": "section",
+                    "block_id": "reminder_block",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*⚠️ STILL UNCLAIMED — CLOCK'S TICKING ⏳*\n> STEP UP OR STAND DOWN.\n> 5 MINUTES LEFT TO CLAIM."
+                    }
+                }
+
+                # Find index of button block to insert above it
+                insert_index = next((i for i, block in enumerate(current_blocks) if block.get("block_id") == "buttons_block"), len(current_blocks))
+                updated_blocks = current_blocks[:insert_index] + [reminder_block] + current_blocks[insert_index:]
+
+                # Commented out previous update that replaced the whole message text
+                # order_extras[order_ts]["reminder_added"] = True
+
+                client.chat_update(
+                    channel=order_channel,
+                    ts=order_ts,
+                    text=msg_text,
+                    blocks=updated_blocks
+                )
         except Exception as e:
             print("⚠️ Reminder ping failed:", e)
 
