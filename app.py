@@ -341,23 +341,23 @@ def handle_modal_submission(ack, body, client):
             else:
                 refund_amount = 1  # Fallback
 
-            if user_id:
-                add_karma(user_id, refund_amount)
-                client.chat_postMessage(
-                    channel=user_id,
-                    text=f"🌀 Your order expired. {refund_amount} Karma refunded. Balance restored."
-                )
-            if order_ts in order_extras:
-                order_extras[order_ts]["active"] = False
-                from sheet import update_order_status
-                update_order_status(order_ts, status="canceled")
-                gif_ts = order_extras[order_ts].get("gif_ts")
-                if gif_ts:
-                    try:
-                        client.chat_delete(channel=order_channel, ts=gif_ts)
-                    except Exception as e:
-                        print("⚠️ Failed to delete gif message:", e)
-                del order_extras[order_ts]
+        if user_id:
+            add_karma(user_id, refund_amount)
+            client.chat_postMessage(
+                channel=user_id,
+                text=f"🌀 Your order expired. {refund_amount} Karma refunded. Balance restored."
+            )
+        from sheet import update_order_status
+        update_order_status(order_ts, status="expired")
+        if order_ts in order_extras:
+            order_extras[order_ts]["active"] = False
+            gif_ts = order_extras[order_ts].get("gif_ts")
+            if gif_ts:
+                try:
+                    client.chat_delete(channel=order_channel, ts=gif_ts)
+                except Exception as e:
+                    print("⚠️ Failed to delete gif message:", e)
+            del order_extras[order_ts]
         except Exception as e:
             print("⚠️ Failed to expire message:", e)
 
@@ -434,41 +434,16 @@ def handle_modal_submission(ack, body, client):
             if remaining == 0:
                 print(f"⏳ Countdown reached 0 for order {order_ts}")
                 return  # Stop updating and let cancel_unclaimed_order handle final expiration
-            context_line = order_extras.get(order_ts, {}).get("context_line", "")
-            reminder_text = ""
-            if order_extras.get(order_ts, {}).get("reminder_added"):
-                reminder_text = "\n\n⚠️ This mission’s still unclaimed. Someone better step up before it expires… ⏳"
-            updated_text = (
-                f"{context_line}\n"
-                f"☚️ *New drop {'for <@' + gifted_id + '> from <@' + user_id + '>' if gifted_id else 'from <@' + user_id + '>'}*\n"
-                f"---\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n---\n"
-                f"🎁 Reward: +{karma_cost} Karma\n"
-                f"⏳ *Time left to claim:* {remaining} min"
-                f"{reminder_text}"
+            import re
+            updated_text = msg_text
+            updated_text = re.sub(
+                r"⏳ \d+ MINUTES TO CLAIM OR IT DIES",
+                f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES",
+                updated_text
             )
             print("Attempting to update countdown message for order", order_ts)
-            actions_block = {
-                "type": "actions",
-                "elements": [
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
-                        "value": f"{user_id}|{drink}|{location}",
-                        "action_id": "claim_order"
-                    },
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "CANCEL"},
-                        "style": "danger",
-                        "value": f"cancel|{user_id}|{drink}",
-                        "action_id": "cancel_order"
-                    }
-                ]
-            }
             blocks = [
-                {"type": "divider"},
-                {"type": "section", "text": {"type": "mrkdwn", "text": updated_text}},
-                actions_block
+                {"type": "section", "text": {"type": "mrkdwn", "text": updated_text}}
             ]
             print("🔍 Final updated_text before countdown update:", repr(updated_text))
             client.chat_update(
@@ -554,6 +529,8 @@ def handle_cancel_order(ack, body, client):
     updated_text = re.sub(r"\n*⏳ \*Time left to claim:\*.*", "", original_text)
     updated_text = re.sub(r"\n*⚠️ This mission’s still unclaimed\..*", "", updated_text)
     updated_text = f"{updated_text}\n\n❌ Order canceled by <@{user_id}>."
+    from sheet import update_order_status
+    update_order_status(order_ts, status="canceled")
     client.chat_update(
         channel=body["channel"]["id"],
         ts=order_ts,
