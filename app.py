@@ -441,11 +441,16 @@ def handle_modal_submission(ack, body, client):
                 f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES",
                 updated_text
             )
-            print("Attempting to update countdown message for order", order_ts)
-            blocks = [
-                {"type": "section", "text": {"type": "mrkdwn", "text": updated_text}}
-            ]
-            print("🔍 Final updated_text before countdown update:", repr(updated_text))
+            blocks = current_message["messages"][0].get("blocks", [])
+            for block in blocks:
+                if block.get("type") == "section" and "text" in block and isinstance(block["text"], dict):
+                    original_block_text = block["text"]["text"]
+                    new_block_text = re.sub(
+                        r"⏳ \d+ MINUTES TO CLAIM OR IT DIES",
+                        f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES",
+                        original_block_text
+                    )
+                    block["text"]["text"] = new_block_text
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
