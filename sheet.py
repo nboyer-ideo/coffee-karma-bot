@@ -153,10 +153,12 @@ def mark_code_redeemed(code, user_id):
     return False
 
 def log_order_to_sheet(order_data):
+    print("🟡 Starting log_order_to_sheet")
     try:
         sheet = get_sheet()
         print("📝 Logging order data:", order_data)
         worksheet = sheet.worksheet("Order Log")  # Headers: Order ID, Timestamp, Requester ID, Requester Name, Claimer ID, Claimer Name, Recipient ID, Recipient Name, Drink, Location, Notes, Karma Cost, Status, Bonus Multiplier, Ordered Time, Claimed Time, Delivered Time
+        print("📒 Retrieved Order Log worksheet successfully.")
         print("🧾 Order Log worksheet loaded. Attempting to append row.")
         print("✅ Accessed Order Log worksheet")
         from slack_sdk import WebClient

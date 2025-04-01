@@ -456,8 +456,9 @@ def handle_modal_submission(ack, body, client):
                 else:
                     updated_blocks.append(block)
             
-            # Preserve the original message's non-countdown text from order_extras
-            base_text = order_extras.get(order_ts, {}).get("base_text", "").strip()
+            # Remove any existing countdown text from base_text and update with new countdown
+            import re
+            base_text = re.sub(r'\n*⏳ \d+ MINUTES TO CLAIM OR IT DIES', '', order_extras.get(order_ts, {}).get("base_text", "").strip())
             combined_text = f"{base_text}\n\n⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
 
             client.chat_update(
@@ -700,6 +701,8 @@ def handle_mark_delivered(ack, body, client):
 
             deliverer_id = safe_body.get("user", {}).get("id")
             text_blocks = original_message.get("blocks", [])
+            requester_id = None
+            recipient_id = None
             for block in text_blocks:
                 if block.get("type") == "section":
                     text = block.get("text", {}).get("text", "")
@@ -710,7 +713,8 @@ def handle_mark_delivered(ack, body, client):
                         break
                     match = re.search(r"FROM <@([A-Z0-9]+)>", text)
                     if match:
-                        recipient_id = match.group(1)
+                        requester_id = match.group(1)
+                        recipient_id = requester_id  # Self-order fallback
                         break
 
             if not claimer_id or (deliverer_id != claimer_id and deliverer_id != recipient_id):
