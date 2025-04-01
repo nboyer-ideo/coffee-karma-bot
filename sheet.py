@@ -20,7 +20,7 @@ def get_sheet():
 
 # Add or update Koffee Karma for a user
 def add_karma(user_id, points_to_add=1):
-    print(f"🔄 Running {'add_karma' if 'add' in locals() else 'deduct_karma'} for {user_id}, amount={points_to_add if 'points_to_add' in locals() else points_to_deduct}")
+    print(f"📈 Adding {points_to_add} karma to {user_id}")
     worksheet = get_sheet().worksheet("Leaderboard")
     data = worksheet.get_all_records()
     for i, row in enumerate(data):
@@ -28,14 +28,16 @@ def add_karma(user_id, points_to_add=1):
             new_total = int(row["Karma"]) + points_to_add
             print(f"📈 Updating karma for {user_id} to {new_total}")
             worksheet.update_cell(i + 2, 2, new_total)
+            print("✅ Karma updated in sheet.")
             return new_total
-    # If user not found, add a new row
+    else:
+        print("⚠️ User not found in sheet. Appending new row.")
     worksheet.append_row(["Unknown", points_to_add, user_id])
     return points_to_add
 
 # Deduct Koffee Karma for a user
 def deduct_karma(user_id, points_to_deduct=1):
-    print(f"🔄 Running {'add_karma' if 'add' in locals() else 'deduct_karma'} for {user_id}, amount={points_to_add if 'points_to_add' in locals() else points_to_deduct}")
+    print(f"📉 Deducting {points_to_deduct} karma from {user_id}")
     worksheet = get_sheet().worksheet("Leaderboard")
     data = worksheet.get_all_records()
     for i, row in enumerate(data):
@@ -43,7 +45,10 @@ def deduct_karma(user_id, points_to_deduct=1):
             new_total = max(0, int(row["Karma"]) - points_to_deduct)
             print(f"📉 Deducting karma for {user_id} to {new_total}")
             worksheet.update_cell(i + 2, 2, new_total)
+            print("✅ Karma updated in sheet.")
             return new_total
+    else:
+        print("⚠️ User not found when deducting karma.")
     return 0
 
 # Get current Koffee Karma balance
