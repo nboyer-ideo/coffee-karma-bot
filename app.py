@@ -53,13 +53,15 @@ import threading
 
 def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
     try:
-        print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
+    print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
+    print(f"🧵 order_extras: {order_extras.get(order_ts)}")
         
         if not order_extras.get(order_ts, {}).get("active", True):
             print(f"⏸️ Countdown stopped for inactive order {order_ts}")
             return
         
         current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+        print(f"📝 current_message: {current_message}")
         if not current_message["messages"]:
             print("⚠️ Could not fetch current message for countdown update.")
             return
@@ -73,6 +75,8 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             flags=re.IGNORECASE
         )
         print("🔄 Countdown update text AFTER:\n", new_text)
+        if original_text == new_text:
+            print("⛔ Regex failed or no match — countdown text unchanged.")
         
         if original_text != new_text:
             client.chat_update(
