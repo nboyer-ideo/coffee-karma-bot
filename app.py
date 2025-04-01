@@ -447,12 +447,14 @@ def handle_modal_submission(ack, body, client):
                 return
             
             original_text = current_message["messages"][0].get("text", "")
+            print("🔍 Countdown update text BEFORE:\n", original_text)
             new_text = re.sub(
                 r"⏳\s*\d+\s*MINUTES\s*TO\s*CLAIM\s*OR\s*IT\s*DIES",
                 f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES",
                 original_text,
                 flags=re.IGNORECASE
             )
+            print("🔄 Countdown update text AFTER:\n", new_text)
             
             if original_text != new_text:
                 client.chat_update(
