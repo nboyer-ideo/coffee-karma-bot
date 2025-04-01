@@ -434,41 +434,41 @@ def handle_modal_submission(ack, body, client):
 
     # Start live countdown updates for order expiration
     def update_countdown(remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
-        try:
-            print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
-            
-            if not order_extras.get(order_ts, {}).get("active", True):
-                print(f"⏸️ Countdown stopped for inactive order {order_ts}")
-                return
-            
-            current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
-            if not current_message["messages"]:
-                print("⚠️ Could not fetch current message for countdown update.")
-                return
-            
-            original_text = current_message["messages"][0].get("text", "")
-            new_text = re.sub(
-                r"⏳\s*\d+\s*MINUTES\s*TO\s*CLAIM\s*OR\s*IT\s*DIES",
-                f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES",
-                original_text,
-                flags=re.IGNORECASE
+    try:
+        print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
+        
+        if not order_extras.get(order_ts, {}).get("active", True):
+            print(f"⏸️ Countdown stopped for inactive order {order_ts}")
+            return
+        
+        current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+        if not current_message["messages"]:
+            print("⚠️ Could not fetch current message for countdown update.")
+            return
+        
+        original_text = current_message["messages"][0].get("text", "")
+        new_text = re.sub(
+            r"⏳\s*\d+\s*MINUTES\s*TO\s*CLAIM\s*OR\s*IT\s*DIES",
+            f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES",
+            original_text,
+            flags=re.IGNORECASE
+        )
+        
+        if original_text != new_text:
+            client.chat_update(
+                channel=order_channel,
+                ts=order_ts,
+                text=new_text
             )
-            
-            if original_text != new_text:
-                client.chat_update(
-                    channel=order_channel,
-                    ts=order_ts,
-                    text=new_text
-                )
-            
-            if remaining > 1:
-                import threading
-                threading.Timer(60, update_countdown, args=(
-                    remaining - 1, order_ts, order_channel,
-                    user_id, gifted_id, drink, location, notes, karma_cost
-                )).start()
-        except Exception as e:
-            print("⚠️ Failed countdown update:", e)
+        
+        if remaining > 1:
+            import threading
+            threading.Timer(60, update_countdown, args=(
+                remaining - 1, order_ts, order_channel,
+                user_id, gifted_id, drink, location, notes, karma_cost
+            )).start()
+    except Exception as e:
+        print("⚠️ Failed countdown update:", e)
 
 
 @app.action("cancel_order")
