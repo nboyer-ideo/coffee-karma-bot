@@ -410,77 +410,77 @@ def handle_modal_submission(ack, body, client):
 
     # Start live countdown updates for order expiration
     def update_countdown(remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
-    print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
-    try:
-        print(f"✅ update_countdown called: remaining={remaining}, order_ts={order_ts}")
-        if order_extras.get(order_ts, {}).get("claimed", False):
-            return  # Don't run updates if order is already claimed
-        # Check if order is still active by inspecting the current message text
-        current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
-        print("🔍 Retrieved current_message:", current_message)
-        if not order_extras.get(order_ts, {}).get("active", True):
-            return
-        if not current_message.get("messages"):
-            return
-        msg_text = current_message["messages"][0].get("text", "")
-        if any(keyword in msg_text for keyword in [
-            "Claimed by", "Expired", "Order canceled by", "❌ Order canceled"
-        ]):
-            order_extras[order_ts]["active"] = False
-            return  # Skip countdown updates if order is no longer active
-        if remaining == 0:
-            print(f"⏳ Countdown reached 0 for order {order_ts}")
-            return  # Stop updating and let cancel_unclaimed_order handle final expiration
-        context_line = order_extras.get(order_ts, {}).get("context_line", "")
-        reminder_text = ""
-        if order_extras.get(order_ts, {}).get("reminder_added"):
-            reminder_text = "\n\n⚠️ This mission’s still unclaimed. Someone better step up before it expires… ⏳"
-        updated_text = (
-            f"{context_line}\n"
-            f"☚️ *New drop {'for <@' + gifted_id + '> from <@' + user_id + '>' if gifted_id else 'from <@' + user_id + '>'}*\n"
-            f"---\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n---\n"
-            f"🎁 Reward: +{karma_cost} Karma\n"
-            f"⏳ *Time left to claim:* {remaining} min"
-            f"{reminder_text}"
-        )
-        print("Attempting to update countdown message for order", order_ts)
-        actions_block = {
-            "type": "actions",
-            "elements": [
-                {
-                    "type": "button",
-                    "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
-                    "value": f"{user_id}|{drink}|{location}",
-                    "action_id": "claim_order"
-                },
-                {
-                    "type": "button",
-                    "text": {"type": "plain_text", "text": "CANCEL"},
-                    "style": "danger",
-                    "value": f"cancel|{user_id}|{drink}",
-                    "action_id": "cancel_order"
-                }
+        print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
+        try:
+            print(f"✅ update_countdown called: remaining={remaining}, order_ts={order_ts}")
+            if order_extras.get(order_ts, {}).get("claimed", False):
+                return  # Don't run updates if order is already claimed
+            # Check if order is still active by inspecting the current message text
+            current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+            print("🔍 Retrieved current_message:", current_message)
+            if not order_extras.get(order_ts, {}).get("active", True):
+                return
+            if not current_message.get("messages"):
+                return
+            msg_text = current_message["messages"][0].get("text", "")
+            if any(keyword in msg_text for keyword in [
+                "Claimed by", "Expired", "Order canceled by", "❌ Order canceled"
+            ]):
+                order_extras[order_ts]["active"] = False
+                return  # Skip countdown updates if order is no longer active
+            if remaining == 0:
+                print(f"⏳ Countdown reached 0 for order {order_ts}")
+                return  # Stop updating and let cancel_unclaimed_order handle final expiration
+            context_line = order_extras.get(order_ts, {}).get("context_line", "")
+            reminder_text = ""
+            if order_extras.get(order_ts, {}).get("reminder_added"):
+                reminder_text = "\n\n⚠️ This mission’s still unclaimed. Someone better step up before it expires… ⏳"
+            updated_text = (
+                f"{context_line}\n"
+                f"☚️ *New drop {'for <@' + gifted_id + '> from <@' + user_id + '>' if gifted_id else 'from <@' + user_id + '>'}*\n"
+                f"---\n• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n---\n"
+                f"🎁 Reward: +{karma_cost} Karma\n"
+                f"⏳ *Time left to claim:* {remaining} min"
+                f"{reminder_text}"
+            )
+            print("Attempting to update countdown message for order", order_ts)
+            actions_block = {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
+                        "value": f"{user_id}|{drink}|{location}",
+                        "action_id": "claim_order"
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "CANCEL"},
+                        "style": "danger",
+                        "value": f"cancel|{user_id}|{drink}",
+                        "action_id": "cancel_order"
+                    }
+                ]
+            }
+            blocks = [
+                {"type": "divider"},
+                {"type": "section", "text": {"type": "mrkdwn", "text": updated_text}},
+                actions_block
             ]
-        }
-        blocks = [
-            {"type": "divider"},
-            {"type": "section", "text": {"type": "mrkdwn", "text": updated_text}},
-            actions_block
-        ]
-        print("🔍 Final updated_text before countdown update:", repr(updated_text))
-        client.chat_update(
-            channel=order_channel,
-            ts=order_ts,
-            text=updated_text,
-            blocks=blocks
-        )
-        if remaining > 1:
-            threading.Timer(60, update_countdown, args=(
-                remaining - 1, order_ts, order_channel,
-                user_id, gifted_id, drink, location, notes, karma_cost
-            )).start()
-    except Exception as e:
-        print("⚠️ Countdown update failed:", e)
+            print("🔍 Final updated_text before countdown update:", repr(updated_text))
+            client.chat_update(
+                channel=order_channel,
+                ts=order_ts,
+                text=updated_text,
+                blocks=blocks
+            )
+            if remaining > 1:
+                threading.Timer(60, update_countdown, args=(
+                    remaining - 1, order_ts, order_channel,
+                    user_id, gifted_id, drink, location, notes, karma_cost
+                )).start()
+        except Exception as e:
+            print("⚠️ Countdown update failed:", e)
     threading.Thread(target=update_countdown, args=(9, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost)).start()  # Start at 9 since initial message shows 10 min
 
 
@@ -979,4 +979,3 @@ if __name__ == "__main__":
     
     threading.Thread(target=run_schedule, daemon=True).start()
     flask_app.run(host="0.0.0.0", port=port, threaded=True)
-    print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
