@@ -435,7 +435,7 @@ def handle_modal_submission(ack, body, client):
     # Start live countdown updates for order expiration
     def update_countdown(remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
         try:
-        print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
+            print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
         
         if not order_extras.get(order_ts, {}).get("active", True):
             print(f"⏸️ Countdown stopped for inactive order {order_ts}")
