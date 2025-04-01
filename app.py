@@ -272,6 +272,7 @@ def handle_modal_submission(ack, body, client):
             "claimer_id": None,
             "active": True
         })
+        order_extras[order_ts]["base_text"] = full_text.replace(f"⏳ 10 MINUTES TO CLAIM OR IT DIES", "").strip()
  
     deduct_karma(user_id, karma_cost)
 
@@ -419,67 +420,54 @@ def handle_modal_submission(ack, body, client):
     def update_countdown(remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
         print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
         try:
-            print(f"✅ update_countdown called: remaining={remaining}, order_ts={order_ts}")
             if order_extras.get(order_ts, {}).get("claimed", False):
-                return  # Don't run updates if order is already claimed
-            # Check if order is still active by inspecting the current message text
-            current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
-            print("🔍 Retrieved current_message:", current_message)
+                return
             if not order_extras.get(order_ts, {}).get("active", True):
                 return
-            if not current_message.get("messages"):
-                return
-            msg_text = current_message["messages"][0].get("text", "")
-            new_text = re.sub(r"⏳ \d+ MINUTES TO CLAIM OR IT DIES", f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES", msg_text)
-            if new_text != msg_text:
-                try:
-                    client.chat_update(
-                        channel=order_channel,
-                        ts=order_ts,
-                        text=new_text,
-                        blocks=current_message["messages"][0].get("blocks", [])
-                    )
-                    print(f"✅ Countdown updated in Slack: {remaining} minutes remaining.")
-                except Exception as e:
-                    print("🚨 chat_update failed:", e)
-            if any(keyword in msg_text for keyword in [
-                "Claimed by", "Expired", "Order canceled by", "❌ Order canceled"
-            ]):
-                order_extras[order_ts]["active"] = False
-                return  # Skip countdown updates if order is no longer active
-            if remaining == 0:
-                print(f"⏳ Countdown reached 0 for order {order_ts}")
-                return  # Stop updating and let cancel_unclaimed_order handle final expiration
-            import re
-            blocks = current_message["messages"][0].get("blocks", [])
-            updated_text = None  # fallback if needed
+    except Exception as e:
+        print("⚠️ Error in countdown update:", e)
+    base_text = order_extras[order_ts].get("base_text", "")
+    if not base_text:
+        print("⚠️ No base_text found for countdown.")
+        return
 
-            for block in blocks:
-                if block.get("type") == "section" and "text" in block and isinstance(block["text"], dict):
-                    old_text = block["text"]["text"]
-                    new_text = re.sub(r"⏳ \d+ MINUTES TO CLAIM OR IT DIES", f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES", old_text)
-                    if old_text != new_text:
-                        block["text"]["text"] = new_text
-                        updated_text = new_text
-                        print(f"DEBUG: Countdown text updated: {updated_text}")
-            try:
-                client.chat_update(
-                    channel=order_channel,
-                    ts=order_ts,
-                    text=updated_text,
-                    blocks=blocks
-                )
-                print(f"✅ Countdown updated in Slack: {remaining} minutes remaining.")
-            except Exception as e:
-                print("🚨 chat_update failed:", e)
-            if remaining > 1:
-                threading.Timer(60, update_countdown, args=(
-                    remaining - 1, order_ts, order_channel,
-                    user_id, gifted_id, drink, location, notes, karma_cost
-                )).start()
-        except Exception as e:
-            print("⚠️ Countdown update failed:", e)
-    threading.Thread(target=update_countdown, args=(9, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost)).start()  # Start at 9 since initial message shows 10 min
+    new_text = f"{base_text}\n\n⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
+    client.chat_update(
+        channel=order_channel,
+        ts=order_ts,
+        text=new_text,
+        blocks=[
+            {"type": "divider"},
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": new_text}
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
+                        "value": f"{user_id}|{drink}|{location}",
+                        "action_id": "claim_order"
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "CANCEL"},
+                        "style": "danger",
+                        "value": f"cancel|{user_id}|{drink}",
+                        "action_id": "cancel_order"
+                    }
+                ]
+            }
+        ]
+    )
+    if remaining > 1:
+        import threading
+        threading.Timer(60, update_countdown, args=(
+            remaining - 1, order_ts, order_channel,
+            user_id, gifted_id, drink, location, notes, karma_cost
+        )).start()
 
 
 @app.action("cancel_order")
