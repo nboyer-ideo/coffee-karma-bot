@@ -215,7 +215,7 @@ def update_order_status(order_id, status=None, claimer_id=None, claimer_name=Non
         worksheet = sheet.worksheet("Order Log")
         data = worksheet.get_all_records()
         for i, row in enumerate(data):
-            if row.get("Order ID") == order_id:
+        if str(row.get("Order ID")) == str(order_id):
                 if status is not None:
                     worksheet.update_cell(i + 2, 13, status)
                 if claimer_id is not None:

@@ -612,6 +612,27 @@ def handle_claim_order(ack, body, client):
     order_extras[order_ts]["claimer_id"] = user_id
     order_extras[order_ts]["active"] = False
     order_extras[order_ts]["claimed"] = True
+    
+    from sheet import update_order_status
+    from slack_sdk import WebClient
+    slack_token = os.environ.get("SLACK_BOT_TOKEN")
+    slack_client = WebClient(token=slack_token)
+    
+    # Fetch claimer's real name
+    claimer_name = ""
+    try:
+        user_info = slack_client.users_info(user=user_id)
+        claimer_name = user_info["user"]["real_name"]
+    except Exception as e:
+        print("⚠️ Failed to fetch claimer real name for update:", e)
+    
+    update_order_status(
+        order_id=order_ts,
+        status="claimed",
+        claimer_id=user_id,
+        claimer_name=claimer_name,
+        claimed_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    )
 
     client.chat_postMessage(
         channel=user_id,
@@ -771,6 +792,13 @@ def handle_mark_delivered(ack, body, client):
 
 
 
+            from sheet import update_order_status
+            update_order_status(
+                order_id=order_ts,
+                status="delivered",
+                delivered_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                bonus_multiplier=bonus_multiplier
+            )
             print("✅ All steps completed successfully")
 
         except Exception as e:
