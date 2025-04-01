@@ -454,15 +454,9 @@ def handle_modal_submission(ack, body, client):
                 else:
                     updated_blocks.append(block)
             
-            # Remove any existing countdown text from base_text and update with new countdown
-            import re
-            base_text = re.sub(r'\n*⏳ \d+ MINUTES TO CLAIM OR IT DIES', '', order_extras.get(order_ts, {}).get("base_text", "").strip())
-            combined_text = f"{base_text}\n\n⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
-
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
-                text=combined_text,
                 blocks=updated_blocks
             )
 
