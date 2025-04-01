@@ -454,7 +454,7 @@ def handle_modal_submission(ack, body, client):
                     new_text = "\n".join(new_lines)
                     block["text"]["text"] = new_text
                     updated_text = new_text
-                        print(f"DEBUG: updated_text set to: {updated_text}")
+                    print(f"DEBUG: updated_text set to: {updated_text}")
             try:
                 client.chat_update(
                     channel=order_channel,
