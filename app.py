@@ -207,20 +207,19 @@ def handle_modal_submission(ack, body, client):
         f"DRINK: {drink.upper()}\n"
         f"LOCATION: {location.upper()}\n"
         f"NOTES: {notes.upper() if notes else 'NONE'}\n"
-        f"— — — — — — — — — — — —\n\n"
-        f"🎁 {karma_cost} KARMA REWARD\n"
-        f"⏳ 10 MINUTES TO CLAIM OR IT DIES"
+        f"— — — — — — — — — — — —\n"
+        f"🎁 {karma_cost} KARMA REWARD"
     )
 
     posted = client.chat_postMessage(
         channel="#koffee-karma-sf",
-        text=full_text,
+        text=full_text + "\n⏳ 10 MINUTES TO CLAIM OR IT DIES",
         blocks=[
             {"type": "divider"},
             {
                 "type": "section",
                 "block_id": "order_text_block",
-                "text": {"type": "mrkdwn", "text": full_text.replace(f"\n\n⏳ 10 MINUTES TO CLAIM OR IT DIES", "")}
+                "text": {"type": "mrkdwn", "text": full_text}
             },
             {
                 "type": "section",
