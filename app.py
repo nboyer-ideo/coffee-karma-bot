@@ -430,6 +430,18 @@ def handle_modal_submission(ack, body, client):
             if not current_message.get("messages"):
                 return
             msg_text = current_message["messages"][0].get("text", "")
+            new_text = re.sub(r"⏳ \d+ MINUTES TO CLAIM OR IT DIES", f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES", msg_text)
+            if new_text != msg_text:
+                try:
+                    client.chat_update(
+                        channel=order_channel,
+                        ts=order_ts,
+                        text=new_text,
+                        blocks=current_message["messages"][0].get("blocks", [])
+                    )
+                    print(f"✅ Countdown updated in Slack: {remaining} minutes remaining.")
+                except Exception as e:
+                    print("🚨 chat_update failed:", e)
             if any(keyword in msg_text for keyword in [
                 "Claimed by", "Expired", "Order canceled by", "❌ Order canceled"
             ]):
