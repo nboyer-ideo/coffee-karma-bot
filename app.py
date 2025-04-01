@@ -478,6 +478,7 @@ def handle_modal_submission(ack, body, client):
     threading.Timer(300, reminder_ping).start()  # 5-minute reminder
 
 
+    print("🔁 Kicking off countdown now...")
     update_countdown(client, 10, order_ts, order_channel,
         user_id, gifted_id, drink, location, notes, karma_cost
     )
