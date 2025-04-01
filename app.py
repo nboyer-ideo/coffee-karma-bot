@@ -443,36 +443,33 @@ def handle_modal_submission(ack, body, client):
             if not current_message["messages"]:
                 print("⚠️ Could not fetch current message for countdown update.")
                 return
-            
+
             existing_blocks = current_message["messages"][0].get("blocks", [])
-            updated_blocks = []
-            countdown_updated = False
-            for block in existing_blocks:
-                if block.get("block_id") == "countdown_block":
-                    updated_blocks.append({
-                        "type": "section",
-                        "block_id": "countdown_block",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
-                        }
-                    })
-                    countdown_updated = True
-                else:
-                    updated_blocks.append(block)
-            if not countdown_updated:
-                updated_blocks.append({
-                    "type": "section",
-                    "block_id": "countdown_block",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
-                    }
-                })
-            
+            # Extract and update base_text from existing message text
+            original_text = current_message["messages"][0].get("text", "")
+            new_text = re.sub(
+                r"⏳ \d+ MINUTES TO CLAIM OR IT DIES",
+                f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES",
+                original_text,
+                flags=re.MULTILINE
+            )
+
+            # Build updated countdown block
+            updated_blocks = [block for block in existing_blocks if block.get("block_id") != "countdown_block"]
+            updated_blocks.append({
+                "type": "section",
+                "block_id": "countdown_block",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
+                }
+            })
+
+            # Send the Slack message update
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
+                text=new_text,
                 blocks=updated_blocks
             )
 
