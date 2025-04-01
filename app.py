@@ -78,7 +78,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print("🧾 full original text:", repr(original_text))
 
         new_text = re.sub(
-            r"⏳\s*\d+\s*MINUTES\s*TO\s*CLAIM\s*OR\s*IT\s*DIES",
+            r"(?:⏳|:hourglass_flowing_sand:)\s*\d+\s*MINUTES\s*TO\s*CLAIM\s*OR\s*IT\s*DIES",
             f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES",
             original_text,
             flags=re.IGNORECASE
