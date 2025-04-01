@@ -159,6 +159,30 @@ def log_order_to_sheet(order_data):
         worksheet = sheet.worksheet("Order Log")  # Headers: Order ID, Timestamp, Requester ID, Requester Name, Claimer ID, Claimer Name, Recipient ID, Recipient Name, Drink, Location, Notes, Karma Cost, Status, Bonus Multiplier, Ordered Time, Claimed Time, Delivered Time
         print("🧾 Order Log worksheet loaded. Attempting to append row.")
         print("✅ Accessed Order Log worksheet")
+        from slack_sdk import WebClient
+        slack_token = os.environ.get("SLACK_BOT_TOKEN")
+        slack_client = WebClient(token=slack_token)
+        if not order_data.get("requester_real_name"):
+            try:
+                user_info = slack_client.users_info(user=order_data["requester_id"])
+                order_data["requester_real_name"] = user_info["user"]["real_name"]
+            except Exception as e:
+                print("⚠️ Failed to fetch requester real name:", e)
+
+        if not order_data.get("recipient_real_name") and order_data.get("recipient_id"):
+            try:
+                recipient_info = slack_client.users_info(user=order_data["recipient_id"])
+                order_data["recipient_real_name"] = recipient_info["user"]["real_name"]
+            except Exception as e:
+                print("⚠️ Failed to fetch recipient real name:", e)
+
+        if not order_data.get("claimer_real_name") and order_data.get("claimer_id"):
+            try:
+                claimer_info = slack_client.users_info(user=order_data["claimer_id"])
+                order_data["claimer_real_name"] = claimer_info["user"]["real_name"]
+            except Exception as e:
+                print("⚠️ Failed to fetch claimer real name:", e)
+
         try:
             worksheet.append_row([
                 order_data.get("order_id", ""),

@@ -289,7 +289,7 @@ def handle_modal_submission(ack, body, client):
         "requester_real_name": "",
         "claimer_id": "",
         "claimer_real_name": "",
-        "recipient_id": gifted_id if gifted_id else user_id,
+    "recipient_id": gifted_id if gifted_id else user_id,
         "recipient_real_name": "",
         "drink": drink,
         "location": location,
@@ -348,6 +348,8 @@ def handle_modal_submission(ack, body, client):
                 )
             if order_ts in order_extras:
                 order_extras[order_ts]["active"] = False
+                from sheet import update_order_status
+                update_order_status(order_ts, status="canceled")
                 gif_ts = order_extras[order_ts].get("gif_ts")
                 if gif_ts:
                     try:
