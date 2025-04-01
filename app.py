@@ -675,7 +675,7 @@ def handle_claim_order(ack, body, client):
             current_message = client.conversations_history(channel=body["channel"]["id"], latest=body["message"]["ts"], inclusive=True, limit=1)
             if current_message["messages"]:
                 msg_text = current_message["messages"][0].get("text", "")
-                if "Delivered." in msg_text:
+                if re.search(r"drop completed", msg_text, re.IGNORECASE):
                     return  # Already completed
             print(f"📬 Sending DM to claimer (user_id: {user_id}) with message: ⏰ Heads-up: Your claimed order is still marked as undelivered. Don’t forget to hit *MARK AS DELIVERED* once it’s done!")
             client.chat_postMessage(
