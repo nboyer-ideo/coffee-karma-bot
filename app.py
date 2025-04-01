@@ -598,6 +598,8 @@ def handle_claim_order(ack, body, client):
         ]
     )
     order_ts = body["message"]["ts"]
+    if order_ts not in order_extras:
+        order_extras[order_ts] = {"claimer_id": None, "active": True, "claimed": False}
     order_extras[order_ts]["claimer_id"] = user_id
     order_extras[order_ts]["active"] = False
     order_extras[order_ts]["claimed"] = True
