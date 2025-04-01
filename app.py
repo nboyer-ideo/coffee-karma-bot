@@ -201,13 +201,14 @@ def handle_modal_submission(ack, body, client):
     ])
     
     full_text = (
-        f"{context_line}\n"
-        f"☚️ *New drop {'for <@' + gifted_id + '> from <@' + user_id + '>' if gifted_id else 'from <@' + user_id + '>'}*\n"
-        f"---\n"
-        f"• *Drink:* {drink}\n• *Drop Spot:* {location}\n• *Notes:* {notes or 'None'}\n"
-        f"---\n"
-        f"🎁 Reward: +{karma_cost} Karma\n"
-        f"⏳ *Time left to claim:* 10 min"
+        f"💀 NEW DROP // {'FROM <@' + user_id + '> TO <@' + gifted_id + '>' if gifted_id else 'FROM <@' + user_id + '>'}\n"
+        f"— — — — — — — — — — — —\n"
+        f"DRINK: {drink.upper()}\n"
+        f"LOCATION: {location.upper()}\n"
+        f"NOTES: {notes.upper() if notes else 'NONE'}\n"
+        f"— — — — — — — — — — — —\n\n"
+        f"🎁 {karma_cost} KARMA REWARD\n"
+        f"⏳ 10 MINUTES TO CLAIM OR IT DIES"
     )
 
     posted = client.chat_postMessage(
@@ -587,12 +588,15 @@ def handle_claim_order(ack, body, client):
     client.chat_update(
         channel=body["channel"]["id"],
         ts=body["message"]["ts"],
-        text=f"{order_text}\n\n☚️ *Claimed by <@{user_id}>* — don't let us down.",
+        text=f"{order_text}\n\n☚️ CLAIMED BY <@{user_id}>",
         blocks=[
             {"type": "divider"},
             {
                 "type": "section",
-                "text": {"type": "mrkdwn", "text": f"{order_text}\n\n☚️ *Claimed by <@{user_id}>*"}
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"{order_text}\n\n☚️ CLAIMED BY <@{user_id}>"
+                }
             },
             {
                 "type": "actions",
@@ -755,8 +759,8 @@ def handle_mark_delivered(ack, body, client):
             print(f"☚️ +{bonus_multiplier} point(s) for {claimer_id}. Total: {points}")
 
             new_text = (
-                f"{order_text}\n\n✅ *Delivered.* Respect.\n"
-                f"☕️ +{bonus_multiplier} Karma for <@{claimer_id}>. New total: *{points}*."
+                f"{order_text}\n\n✅ *DROP COMPLETED*\n"
+                f"💥 <@{claimer_id}> EARNED +{bonus_multiplier} KARMA (TOTAL: *{points}*)"
             )
 
             safe_client.chat_update(
