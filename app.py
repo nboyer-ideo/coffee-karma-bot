@@ -441,14 +441,17 @@ def handle_modal_submission(ack, body, client):
             for block in blocks:
                 if block.get("type") == "section" and "text" in block and isinstance(block["text"], dict):
                     text_content = block["text"]["text"]
-                    if "⏳" in text_content and "MINUTES TO CLAIM OR IT DIES" in text_content:
-                        new_text = re.sub(
-                            r"⏳ \d+ MINUTES TO CLAIM OR IT DIES",
-                            f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES",
-                            text_content
-                        )
+                    if "⏳" in text_content:
+                        lines = text_content.split("\n")
+                        new_lines = []
+                        for line in lines:
+                            if line.strip().startswith("⏳") and "MINUTES TO CLAIM OR IT DIES" in line:
+                                new_lines.append(f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES")
+                            else:
+                                new_lines.append(line)
+                        new_text = "\n".join(new_lines)
                         block["text"]["text"] = new_text
-                        updated_text = new_text  # use as fallback for plain text
+                        updated_text = new_text
             try:
                 client.chat_update(
                     channel=order_channel,
@@ -659,11 +662,10 @@ def handle_claim_order(ack, body, client):
         requester_id = original_message.get("user")
         print("⚠️ Fallback: using message['user'] as requester_id:", requester_id)
 
-    if requester_id:
-        client.chat_postMessage(
-            channel=requester_id,
-            text=f"☕️ Your order was claimed by <@{user_id}>. Hold tight — delivery is on the way."
-        )
+    client.chat_postMessage(
+        channel=requester_id,
+        text=f"☕️ Your order was claimed by <@{user_id}>. Hold tight — delivery is on the way."
+    )
 
 import threading
 
