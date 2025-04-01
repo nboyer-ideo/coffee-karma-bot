@@ -431,12 +431,8 @@ def handle_modal_submission(ack, body, client):
             print("⚠️ Reminder ping failed:", e)
 
     threading.Timer(300, reminder_ping).start()  # 5-minute reminder
-    update_countdown(
-        10, order_ts, order_channel,
-        user_id, gifted_id, drink, location, notes, karma_cost
-    )
 
-    # Start live countdown updates for order expiration
+    # Define update_countdown function before its invocation
     def update_countdown(remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
         try:
             print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
@@ -475,6 +471,11 @@ def handle_modal_submission(ack, body, client):
                 )).start()
         except Exception as e:
             print("⚠️ Failed countdown update:", e)
+
+    update_countdown(
+        10, order_ts, order_channel,
+        user_id, gifted_id, drink, location, notes, karma_cost
+    )
 
 
 @app.action("cancel_order")
