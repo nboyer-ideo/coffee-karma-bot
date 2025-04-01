@@ -90,10 +90,17 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 
         if original_text != new_text:
             print("💬 Sending updated message to Slack...")
+ 
+            updated_blocks = current_message["messages"][0].get("blocks", [])
+            for block in updated_blocks:
+                if block.get("block_id") == "countdown_block" and block["type"] == "section":
+                    block["text"]["text"] = f":hourglass_flowing_sand: {remaining} MINUTES TO CLAIM OR IT DIES"
+ 
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
-                text=new_text
+                text=new_text,
+                blocks=updated_blocks
             )
             print("✅ Slack message updated")
 
