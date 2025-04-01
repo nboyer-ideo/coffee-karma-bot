@@ -410,7 +410,7 @@ def handle_modal_submission(ack, body, client):
 
     # Start live countdown updates for order expiration
     def update_countdown(remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
-    print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
+        print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
     try:
         print(f"✅ update_countdown called: remaining={remaining}, order_ts={order_ts}")
             if order_extras.get(order_ts, {}).get("claimed", False):
