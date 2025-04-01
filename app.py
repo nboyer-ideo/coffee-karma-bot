@@ -53,8 +53,8 @@ import threading
 
 def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
     try:
-    print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
-    print(f"🧵 order_extras: {order_extras.get(order_ts)}")
+        print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
+        print(f"🧵 order_extras: {order_extras.get(order_ts)}")
         
         if not order_extras.get(order_ts, {}).get("active", True):
             print(f"⏸️ Countdown stopped for inactive order {order_ts}")
