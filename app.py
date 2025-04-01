@@ -53,45 +53,58 @@ import threading
 
 def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
     try:
-        print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
-        print(f"🧵 order_extras: {order_extras.get(order_ts)}")
-        
-        if not order_extras.get(order_ts, {}).get("active", True):
-            print(f"⏸️ Countdown stopped for inactive order {order_ts}")
+        print(f"⏱️ update_countdown triggered for order {order_ts}")
+        print(f"🔢 Remaining: {remaining}")
+        print(f"📡 Channel: {order_channel}")
+        print(f"👤 User: {user_id}, Gifted: {gifted_id}")
+        print(f"🥤 Drink: {drink}, 📍 Location: {location}, 📝 Notes: {notes}, 💰 Karma Cost: {karma_cost}")
+
+        extras = order_extras.get(order_ts)
+        print(f"📦 order_extras for {order_ts}: {extras}")
+
+        if not extras or not extras.get("active", True):
+            print(f"⏸️ Countdown stopped — order inactive or missing extras")
             return
-        
+
         current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
-        print(f"📝 current_message: {current_message}")
+        print(f"📨 Message fetch result: {current_message}")
+
         if not current_message["messages"]:
-            print("⚠️ Could not fetch current message for countdown update.")
+            print("❌ No messages found for countdown update")
             return
-        
+
         original_text = current_message["messages"][0].get("text", "")
-        print("🔍 Countdown update text BEFORE:\n", original_text)
+        print(f"📝 Original text:\n{original_text}")
+
         new_text = re.sub(
             r"⏳\s*\d+\s*MINUTES\s*TO\s*CLAIM\s*OR\s*IT\s*DIES",
             f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES",
             original_text,
             flags=re.IGNORECASE
         )
-        print("🔄 Countdown update text AFTER:\n", new_text)
+        print(f"🆕 Updated text:\n{new_text}")
+
         if original_text == new_text:
-            print("⛔ Regex failed or no match — countdown text unchanged.")
-        
+            print("⚠️ Regex replacement did not change the text")
+
         if original_text != new_text:
+            print("💬 Sending updated message to Slack...")
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
                 text=new_text
             )
-        
+            print("✅ Slack message updated")
+
         if remaining > 1:
+            print(f"🕒 Scheduling next countdown tick — remaining: {remaining - 1}")
             threading.Timer(60, update_countdown, args=(
                 client, remaining - 1, order_ts, order_channel,
                 user_id, gifted_id, drink, location, notes, karma_cost
             )).start()
+
     except Exception as e:
-        print("⚠️ Failed countdown update:", e)
+        print(f"🚨 update_countdown FAILED: {e}")
 
 from flask import jsonify
 
