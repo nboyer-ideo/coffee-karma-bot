@@ -432,55 +432,49 @@ def handle_modal_submission(ack, body, client):
 
     # Start live countdown updates for order expiration
     def update_countdown(remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
-        print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
-        countdown_text = f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
-    updated_text = f"{order_extras[order_ts].get('base_text', '')}\n\n{countdown_text}"
-    print(f"🔁 Updating countdown block in Slack message for order {order_ts} — {remaining} minutes left")
-    default_buttons = {
-        "type": "actions",
-        "block_id": "buttons_block",
-        "elements": [
-            {
-                "type": "button",
-                "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
-                "value": f"{user_id}|{drink}|{location}",
-                "action_id": "claim_order"
-            },
-            {
-                "type": "button",
-                "text": {"type": "plain_text", "text": "CANCEL"},
-                "style": "danger",
-                "value": f"{user_id}|{drink}|{location}",
-                "action_id": "cancel_order"
-            }
-        ]
-    }
-    client.chat_update(
-        channel=order_channel,
-        ts=order_ts,
-        text=updated_text,
-        blocks=[
-            {"type": "divider"},
-            {
-                "type": "section",
-                "block_id": "order_text_block",
-                "text": {"type": "mrkdwn", "text": order_extras[order_ts].get("base_text", "")}
-            },
-            {
-                "type": "section",
-                "block_id": "countdown_block",
-                "text": {"type": "mrkdwn", "text": countdown_text}
-            },
-            order_extras[order_ts].get("buttons_block", default_buttons)
-        ]
-    )
-    if remaining > 1:
-        import threading
-        threading.Timer(60, update_countdown, args=(
-            remaining - 1, order_ts, order_channel,
-            user_id, gifted_id, drink, location, notes, karma_cost
-        )).start()
-    return
+        try:
+            print(f"⏱️ Starting countdown update. Remaining: {remaining} for order {order_ts}")
+
+            if not order_extras.get(order_ts, {}).get("active", True):
+                print(f"⏸️ Countdown stopped for inactive order {order_ts}")
+                return
+
+            current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+            if not current_message["messages"]:
+                print("⚠️ Could not fetch current message for countdown update.")
+                return
+            
+            existing_blocks = current_message["messages"][0].get("blocks", [])
+            updated_blocks = []
+            for block in existing_blocks:
+                if block.get("block_id") == "countdown_block":
+                    updated_blocks.append({
+                        "type": "section",
+                        "block_id": "countdown_block",
+                        "text": {"type": "mrkdwn", "text": f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES"}
+                    })
+                else:
+                    updated_blocks.append(block)
+            
+            # Preserve the original message's non-countdown text from order_extras
+            base_text = order_extras.get(order_ts, {}).get("base_text", "").strip()
+            combined_text = f"{base_text}\n\n⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
+
+            client.chat_update(
+                channel=order_channel,
+                ts=order_ts,
+                text=combined_text,
+                blocks=updated_blocks
+            )
+
+            if remaining > 1:
+                import threading
+                threading.Timer(60, update_countdown, args=(
+                    remaining - 1, order_ts, order_channel,
+                    user_id, gifted_id, drink, location, notes, karma_cost
+                )).start()
+        except Exception as e:
+            print("⚠️ Failed countdown update:", e)
 
 
 @app.action("cancel_order")
