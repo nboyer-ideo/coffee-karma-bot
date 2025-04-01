@@ -827,6 +827,7 @@ def handle_leaderboard_command(ack, body, client):
     ack()
     leaderboard = get_leaderboard()
     blocks = [
+        {"type": "divider"},
         {"type": "section", "text": {"type": "mrkdwn", "text": "*🏆 Koffee Karma Leaderboard* — The bold, the brewed, the brave."}}
     ]
     for i, row in enumerate(leaderboard, start=1):
