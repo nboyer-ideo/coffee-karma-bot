@@ -446,13 +446,29 @@ def handle_modal_submission(ack, body, client):
             
             existing_blocks = current_message["messages"][0].get("blocks", [])
             updated_blocks = []
+            countdown_updated = False
             for block in existing_blocks:
                 if block.get("block_id") == "countdown_block":
-                    updated_block = copy.deepcopy(block)
-                    updated_block["text"]["text"] = f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
-                    updated_blocks.append(updated_block)
+                    updated_blocks.append({
+                        "type": "section",
+                        "block_id": "countdown_block",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
+                        }
+                    })
+                    countdown_updated = True
                 else:
                     updated_blocks.append(block)
+            if not countdown_updated:
+                updated_blocks.append({
+                    "type": "section",
+                    "block_id": "countdown_block",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES"
+                    }
+                })
             
             client.chat_update(
                 channel=order_channel,
