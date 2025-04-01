@@ -291,6 +291,7 @@ def handle_modal_submission(ack, body, client):
     deduct_karma(user_id, karma_cost)
 
     if gifted_id:
+        print(f"📬 Sending DM to gifted_id: {gifted_id} with message: 🎁 You’ve been gifted a drink order by <@{user_id}>. Let the koffee flow.")
         client.chat_postMessage(
             channel=gifted_id,
             text=f"🎁 You’ve been gifted a drink order by <@{user_id}>. Let the koffee flow."
@@ -359,6 +360,7 @@ def handle_modal_submission(ack, body, client):
  
             if user_id:
                 add_karma(user_id, refund_amount)
+                print(f"📬 Sending DM to user_id: {user_id} with message: 🌀 Your order expired. {refund_amount} Karma refunded. Balance restored.")
                 client.chat_postMessage(
                     channel=user_id,
                     text=f"🌀 Your order expired. {refund_amount} Karma refunded. Balance restored."
@@ -540,6 +542,7 @@ def handle_cancel_order(ack, body, client):
     elif "Espresso" in original_text:
         karma_cost = 3
     add_karma(user_id, karma_cost)
+    print(f"📬 Sending DM to user_id: {user_id} with message: 🌀 Your order was canceled. {karma_cost} Karma refunded. Balance restored.")
     client.chat_postMessage(
         channel=user_id,
         text=f"🌀 Your order was canceled. {karma_cost} Karma refunded. Balance restored."
@@ -638,6 +641,7 @@ def handle_claim_order(ack, body, client):
         claimed_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     )
 
+    print(f"📬 Sending DM to claimer (user_id: {user_id}) with message: You took the mission. Don't forget to hit 'MARK AS DELIVERED' once the goods are dropped.")
     client.chat_postMessage(
         channel=user_id,
         text="You took the mission. Don't forget to hit 'MARK AS DELIVERED' once the goods are dropped."
@@ -647,6 +651,7 @@ def handle_claim_order(ack, body, client):
         print("⚠️ Fallback: using message['user'] as requester_id:", requester_id)
     requester_id = original_message.get("user")
     if requester_id:
+        print(f"📬 Sending DM to requester (user_id: {requester_id}) with message: ☕️ Your order was claimed by <@{user_id}>. Hold tight — delivery is on the way.")
         client.chat_postMessage(
             channel=requester_id,
             text=f"☕️ Your order was claimed by <@{user_id}>. Hold tight — delivery is on the way."
@@ -659,6 +664,7 @@ def handle_claim_order(ack, body, client):
                 msg_text = current_message["messages"][0].get("text", "")
                 if "Delivered." in msg_text:
                     return  # Already completed
+            print(f"📬 Sending DM to claimer (user_id: {user_id}) with message: ⏰ Heads-up: Your claimed order is still marked as undelivered. Don’t forget to hit *MARK AS DELIVERED* once it’s done!")
             client.chat_postMessage(
                 channel=user_id,
                 text="⏰ Heads-up: Your claimed order is still marked as undelivered. Don’t forget to hit *MARK AS DELIVERED* once it’s done!"
@@ -773,6 +779,7 @@ def handle_mark_delivered(ack, body, client):
                     text=f"🎉 *Bonus Karma!* <@{claimer_id}> earned *{bonus_multiplier}x* points for this drop. 🔥"
                 )
 
+            print(f"📬 Sending DM to claimer (claimer_id: {claimer_id}) with message: Mission complete. +1 Koffee Karma. Balance: *{points}*. Stay sharp.")
             safe_client.chat_postMessage(
                 channel=claimer_id,
                 text=f"Mission complete. +1 Koffee Karma. Balance: *{points}*. Stay sharp."
