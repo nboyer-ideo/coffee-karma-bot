@@ -27,12 +27,10 @@ def wrap_line(label, value, width=40):
         if len(current_line + (" " if current_line else "") + word) <= max_content:
             current_line += (" " if current_line else "") + word
         else:
-            padding = " " * (max_content - len(current_line))
-            lines.append(f"| {current_line}{padding} |")
+            lines.append(f"| {current_line.ljust(max_content)} |")
             current_line = word
     if current_line:
-        padding = " " * (max_content - len(current_line))
-        lines.append(f"| {current_line}{padding} |")
+        lines.append(f"| {current_line.ljust(max_content)} |")
     return lines
  
 def format_order_message(order_data):
@@ -41,9 +39,9 @@ def format_order_message(order_data):
     border_bot = "+----------------------------------------+"
     lines = [
         border_top,
-        "║        ☠ KOFFEE KARMA TERMINAL ☠       ║",
-        "╠════════════════════════════════════════╣",
-        f"║  DROP ID: #{order_data['order_id']}".ljust(40)[:40] + "║",
+        "|        KOFFEE KARMA TERMINAL          |",
+        border_mid,
+        f"| DROP ID: {order_data['order_id'].ljust(33)}|",
         border_mid,
     ]
     lines += wrap_line("  FROM", order_data["requester_real_name"] or f"<@{order_data['requester_id']}>")
