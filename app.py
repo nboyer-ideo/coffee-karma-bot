@@ -9,6 +9,12 @@ import os
 import copy
 import re
 
+def strip_formatting(s):
+    import re
+    s = re.sub(r"<@[^>]+>", "", s)  # remove Slack user mentions
+    s = re.sub(r"[^\x00-\x7F]", "", s)  # remove non-ASCII characters (e.g., emojis)
+    return s
+
 order_extras = {}
 countdown_timers = {}  # order_ts -> remaining minutes
 countdown_timers = {}
@@ -19,6 +25,7 @@ from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_kar
  
 def wrap_line(label, value, width=40):
     full = f"{label}: {value}".upper()
+    full = strip_formatting(full)
     max_content = width - 4  # account for borders and spacing
     words = full.split()
     lines = []
@@ -51,7 +58,7 @@ def format_order_message(order_data):
     lines += wrap_line("  NOTES", order_data["notes"] or "None")
     lines.append(border_mid)
     lines += wrap_line("  REWARD", f"{order_data['karma_cost']} KARMA")
-    lines += wrap_line("  STATUS", f"⏳ {order_data.get('remaining_minutes', 10)} MINUTES TO CLAIM")
+    lines += wrap_line("  STATUS", f"{order_data.get('remaining_minutes', 10)} MINUTES TO CLAIM")
     lines.append(border_bot)
  
     return [
