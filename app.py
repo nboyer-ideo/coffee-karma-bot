@@ -46,9 +46,9 @@ def format_order_message(order_data):
     border_bot = "+----------------------------------------+"
     lines = [
         border_top,
-        "|        KOFFEE KARMA TERMINAL          |",
+        *wrap_line("", "KOFFEE KARMA TERMINAL")[0],
         border_mid,
-        f"| DROP ID: {order_data['order_id'].ljust(33)}|",
+        *wrap_line("DROP ID", order_data["order_id"]),
         border_mid,
     ]
     lines += wrap_line("  FROM", order_data["requester_real_name"] or f"<@{order_data['requester_id']}>")
