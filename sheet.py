@@ -1,18 +1,12 @@
+import os
+import json
 import gspread
 from google.oauth2.service_account import Credentials
 import datetime
 
-# Connect to the Koffee Karma Google Sheet
-import os
-import json
 from io import StringIO
 
 def get_sheet():
-    from google.oauth2.service_account import Credentials
-    import gspread
-    import os
-    import json
-
     creds_json = os.environ.get("GOOGLE_CREDS_JSON", "")
     if not creds_json:
         raise Exception("Missing GOOGLE_CREDS_JSON environment variable.")
