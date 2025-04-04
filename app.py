@@ -25,7 +25,7 @@ from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_kar
  
 def wrap_line(label, value, width=40):
     if not label and value:
-        centered = value.upper().center(width - 4)
+        centered = value.upper().center(width - 2)
         return [f"| {centered} |"]
     full = f"{label}: {value}".upper()
     full = strip_formatting(full)
@@ -49,7 +49,7 @@ def format_order_message(order_data):
     border_bot = "+----------------------------------------+"
     lines = [
         border_top,
-        *wrap_line("", "KOFFEE KARMA TERMINAL")[0],
+        *wrap_line("", "KOFFEE KARMA TERMINAL"),
         border_mid,
         *wrap_line("DROP ID", order_data["order_id"]),
         border_mid,
