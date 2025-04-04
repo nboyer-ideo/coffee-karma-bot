@@ -7,18 +7,7 @@ import os
 import json
 from io import StringIO
 
-def get_sheet():
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    
-    creds_info = json.loads(os.environ["GOOGLE_CREDS_JSON"])
-    creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
-    
-    gc = gspread.authorize(creds)
-    result = gc.open("Koffee Karma")
-    print("📗 Connected to Koffee Karma sheet.")
-    return result
-    
-    # Verified: All calls to get_all_records() in this file are made on Worksheet objects.
+
 
 # Add or update Koffee Karma for a user
 def add_karma(user_id, points_to_add=1):

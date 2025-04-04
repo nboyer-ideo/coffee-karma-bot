@@ -14,27 +14,80 @@ countdown_timers = {}  # order_ts -> remaining minutes
 countdown_timers = {}
 
 
-def get_punk_gif():
-    api_key = os.environ.get("GIPHY_API_KEY")  # You’ll need to get one from Giphy
-    if not api_key:
-        return None
-
-    query = random.choice(["punk", "sarcastic", "grunge", "rebel", "dark humor", "eyeroll", "anarchy"])
-    url = f"https://api.giphy.com/v1/gifs/search?api_key={api_key}&q={query}&limit=20&offset=0&rating=pg-13&lang=en"
-
-    try:
-        response = requests.get(url)
-        data = response.json()
-        if data["data"]:
-            gif_url = random.choice(data["data"])["images"]["downsized"]["url"]
-            return gif_url
-    except Exception as e:
-        print("⚠️ Giphy API error:", e)
-        return None
-
-    return None
 
 from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma
+ 
+def wrap_line(label, value, width=40):
+    full_line = f"{label}: {value}"
+    if len(full_line) <= width:
+        return [full_line.ljust(width)]
+    else:
+        first_line = f"{label}: {value[:width - len(label) - 2]}"
+        wrapped = [first_line.ljust(width)]
+        remaining = value[width - len(label) - 2:]
+        while remaining:
+            wrapped.append(remaining[:width].ljust(width))
+            remaining = remaining[width:]
+        return wrapped
+ 
+def format_order_message(order_data):
+    border_top = "+----------------------------------------+"
+    border_mid = "|----------------------------------------|"
+    border_bot = "+----------------------------------------+"
+    lines = [
+        border_top,
+        "|        ☠ KOFFEE KARMA TERMINAL ☠       |",
+        border_top,
+        f"|  DROP ID: #{order_data['order_id']}".ljust(41) + "|",
+        border_mid,
+    ]
+    lines += wrap_line("  FROM", order_data["requester_real_name"] or f"<@{order_data['requester_id']}>")
+    lines += wrap_line("  TO", order_data["recipient_real_name"] or f"<@{order_data['recipient_id']}>")
+    lines += wrap_line("  DRINK", order_data["drink"])
+    lines += wrap_line("  LOCATION", order_data["location"])
+    lines += wrap_line("  NOTES", order_data["notes"] or "None")
+    lines.append(border_mid)
+    lines += wrap_line("  REWARD", f"{order_data['karma_cost']} KARMA")
+    lines += wrap_line("  STATUS", f"⏳ {order_data.get('remaining_minutes', 10)} MINUTES TO CLAIM")
+    lines.append(border_bot)
+ 
+    return [
+        {
+            "type": "section",
+            "block_id": "order_text_block",
+            "text": {
+                "type": "mrkdwn",
+                "text": "```" + "\n".join(lines) + "```"
+            }
+        },
+        {
+            "type": "actions",
+            "block_id": "buttons_block",
+            "elements": [
+                {
+                    "type": "button",
+                    "action_id": "claim_order",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "CLAIM THIS MISSION",
+                        "emoji": True
+                    },
+                    "value": f"{order_data['requester_id']}|{order_data['drink']}|{order_data['location']}"
+                },
+                {
+                    "type": "button",
+                    "action_id": "cancel_order",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "CANCEL",
+                        "emoji": True
+                    },
+                    "style": "danger",
+                    "value": f"cancel|{order_data['requester_id']}|{order_data['drink']}"
+                }
+            ]
+        }
+    ]
 
 # Load secrets from .env
 from dotenv import load_dotenv
@@ -278,81 +331,39 @@ def handle_modal_submission(ack, body, client):
         f"🎁 {karma_cost} KARMA REWARD"
     )
 
+    import datetime
+    order_data = {
+        "order_id": "",
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "requester_id": user_id,
+        "requester_real_name": "",
+        "claimer_id": "",
+        "claimer_real_name": "",
+        "recipient_id": gifted_id if gifted_id else user_id,
+        "recipient_real_name": "",
+        "drink": drink,
+        "location": location,
+        "notes": notes,
+        "karma_cost": karma_cost,
+        "status": "pending",
+        "bonus_multiplier": "",
+        "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "time_claimed": "",
+        "time_delivered": "",
+        "remaining_minutes": 10
+    }
+    formatted_blocks = format_order_message(order_data)
     posted = client.chat_postMessage(
         channel="#koffee-karma-sf",
-        text=f"{full_text}\n⏳ 10 MINUTES TO CLAIM OR IT DIES",
-        blocks=[
-            {"type": "divider"},
-            {
-                "type": "section",
-                "block_id": "order_text_block",
-                "text": {"type": "mrkdwn", "text": full_text}
-            },
-            {
-                "type": "section",
-                "block_id": "countdown_block",
-                "text": {"type": "mrkdwn", "text": "⏳ 10 MINUTES TO CLAIM OR IT DIES"}
-            },
-            {
-                "type": "actions",
-                "block_id": "buttons_block",
-                "elements": [
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "CLAIM THIS MISSION"},
-                        "value": f"{user_id}|{drink}|{location}",
-                        "action_id": "claim_order"
-                    },
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "CANCEL"},
-                        "style": "danger",
-                        "value": f"cancel|{user_id}|{drink_value}",
-                        "action_id": "cancel_order"
-                    }
-                ]
-            }
-        ]
+        text="New Koffee Karma order posted",
+        blocks=formatted_blocks
     )
     order_ts = posted["ts"]
     order_channel = posted["channel"]
+    order_data["order_id"] = order_ts
+    order_ts = posted["ts"]
+    order_channel = posted["channel"]
  
-    # Post punk GIF and track its timestamp
-    gif_ts = None
-    gif_url = get_punk_gif()
-    if gif_url:
-        try:
-            gif_message = client.chat_postMessage(
-                channel=order_channel,
-                blocks=[{
-                    "type": "image",
-                    "image_url": gif_url,
-                    "alt_text": "coffee gif"
-                }],
-                text="Grit drop"
-            )
-            gif_ts = gif_message["ts"]
-        except Exception as e:
-            print("⚠️ Failed to post gif:", e)
- 
-    if order_ts and gif_ts:
-        global order_extras
-        if order_ts not in order_extras:
-            order_extras[order_ts] = {}
-        order_extras[order_ts].update({
-            "gif_ts": gif_ts,
-            "context_line": context_line,
-            "claimer_id": None,
-            "active": True
-        })
-        if "base_text" not in order_extras[order_ts]:
-            current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
-            if current_message["messages"]:
-                full_msg = current_message["messages"][0]
-                full_text = full_msg.get("text", "")
-                match = re.search(r"(.+?)\n?\s*⏳ \d+ MINUTES TO CLAIM OR IT DIES", full_text, flags=re.DOTALL)
-                if match:
-                    order_extras[order_ts]["base_text"] = match.group(1).strip()
  
     deduct_karma(user_id, karma_cost)
 
