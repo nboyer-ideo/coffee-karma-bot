@@ -7,6 +7,21 @@ import os
 import json
 from io import StringIO
 
+def get_sheet():
+    from google.oauth2.service_account import Credentials
+    import gspread
+    import os
+    import json
+
+    creds_json = os.environ.get("GOOGLE_CREDS_JSON", "")
+    if not creds_json:
+        raise Exception("Missing GOOGLE_CREDS_JSON environment variable.")
+
+    creds_dict = json.loads(creds_json)
+    creds = Credentials.from_service_account_info(creds_dict, scopes=["https://www.googleapis.com/auth/spreadsheets"])
+    client = gspread.authorize(creds)
+    return client.open("Koffee Karma")
+
 
 
 # Add or update Koffee Karma for a user
