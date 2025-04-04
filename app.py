@@ -19,19 +19,26 @@ from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_kar
  
 def wrap_line(label, value, width=40):
     full = f"{label}: {value}".upper()
-    max_content = width - 6  # 2 for borders, 4 for padding
+    max_content = width - 4  # account for borders and spacing
+    words = full.split()
     lines = []
-    while full:
-        chunk = full[:max_content]
-        full = full[max_content:]
-        padding = " " * (max_content - len(chunk))
-        lines.append(f"║  {chunk}{padding}  ║")
+    current_line = ""
+    for word in words:
+        if len(current_line + (" " if current_line else "") + word) <= max_content:
+            current_line += (" " if current_line else "") + word
+        else:
+            padding = " " * (max_content - len(current_line))
+            lines.append(f"| {current_line}{padding} |")
+            current_line = word
+    if current_line:
+        padding = " " * (max_content - len(current_line))
+        lines.append(f"| {current_line}{padding} |")
     return lines
  
 def format_order_message(order_data):
-    border_top = "╔════════════════════════════════════════╗"
-    border_mid = "║----------------------------------------║"
-    border_bot = "╚════════════════════════════════════════╝"
+    border_top = "+----------------------------------------+"
+    border_mid = "+----------------------------------------+"
+    border_bot = "+----------------------------------------+"
     lines = [
         border_top,
         "║        ☠ KOFFEE KARMA TERMINAL ☠       ║",
