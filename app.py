@@ -18,27 +18,25 @@ countdown_timers = {}
 from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma
  
 def wrap_line(label, value, width=40):
-    full_line = f"{label}: {value}"
-    if len(full_line) <= width:
-        return [full_line.ljust(width)]
-    else:
-        first_line = f"{label}: {value[:width - len(label) - 2]}"
-        wrapped = [first_line.ljust(width)]
-        remaining = value[width - len(label) - 2:]
-        while remaining:
-            wrapped.append(remaining[:width].ljust(width))
-            remaining = remaining[width:]
-        return wrapped
+    full = f"{label}: {value}".upper()
+    max_content = width - 6  # 2 for borders, 4 for padding
+    lines = []
+    while full:
+        chunk = full[:max_content]
+        full = full[max_content:]
+        padding = " " * (max_content - len(chunk))
+        lines.append(f"║  {chunk}{padding}  ║")
+    return lines
  
 def format_order_message(order_data):
-    border_top = "+----------------------------------------+"
-    border_mid = "|----------------------------------------|"
-    border_bot = "+----------------------------------------+"
+    border_top = "╔════════════════════════════════════════╗"
+    border_mid = "║----------------------------------------║"
+    border_bot = "╚════════════════════════════════════════╝"
     lines = [
         border_top,
-        "|        ☠ KOFFEE KARMA TERMINAL ☠       |",
-        border_top,
-        f"|  DROP ID: #{order_data['order_id']}".ljust(41) + "|",
+        "║        ☠ KOFFEE KARMA TERMINAL ☠       ║",
+        "╠════════════════════════════════════════╣",
+        f"║  DROP ID: #{order_data['order_id']}".ljust(40)[:40] + "║",
         border_mid,
     ]
     lines += wrap_line("  FROM", order_data["requester_real_name"] or f"<@{order_data['requester_id']}>")
