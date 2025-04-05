@@ -25,7 +25,7 @@ from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_kar
  
 def wrap_line(label, value, width=42):
     if not label and value:
-        centered = value.upper().center(width - 2)
+        centered = value.upper().center(width - 4)
         return [f"| {centered} |"]
     full = f"{label}: {value}".upper()
     full = strip_formatting(full)
