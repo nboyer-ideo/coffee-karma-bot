@@ -34,13 +34,13 @@ def wrap_line(label, value, width=40):
     lines = []
     current_line = ""
     for word in words:
-        if len(current_line + (" " if current_line else "") + word) <= max_content:
+        if len(current_line + (" " if current_line else "") + word) <= (width - 4):
             current_line += (" " if current_line else "") + word
         else:
-            lines.append(f"| {current_line.ljust(max_content)} |")
+            lines.append(f"| {current_line.ljust(width - 4)} |")
             current_line = word
     if current_line:
-        lines.append(f"| {current_line.ljust(max_content)} |")
+        lines.append(f"| {current_line.ljust(width - 4)} |")
     return lines
  
 def format_order_message(order_data):
