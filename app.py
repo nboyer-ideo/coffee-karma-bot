@@ -23,13 +23,13 @@ countdown_timers = {}
 
 from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma
  
-def wrap_line(label, value, width=42):
+def wrap_line(label, value, width=40):
     if not label and value:
         centered = value.upper().center(width - 2)
         return [f"| {centered} |"]
     full = f"{label}: {value}".upper()
     full = strip_formatting(full)
-    max_content = width - 2  # correct width to match the top and bottom lines
+    max_content = width - 3  # leave 1 space padding on both sides for proper border alignment
     words = full.split()
     lines = []
     current_line = ""
@@ -37,10 +37,10 @@ def wrap_line(label, value, width=42):
         if len(current_line + (" " if current_line else "") + word) <= max_content:
             current_line += (" " if current_line else "") + word
         else:
-            lines.append(f"| {current_line.ljust(max_content)}|")
+            lines.append(f"| {current_line.ljust(max_content)} |")
             current_line = word
     if current_line:
-        lines.append(f"| {current_line.ljust(max_content)}|")
+        lines.append(f"| {current_line.ljust(max_content)} |")
     return lines
  
 def format_order_message(order_data):
