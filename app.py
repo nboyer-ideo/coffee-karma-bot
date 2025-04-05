@@ -23,7 +23,7 @@ countdown_timers = {}
 
 from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma
  
-def wrap_line(label, value, width=40):
+def wrap_line(label, value, width=42):
     if not label and value:
         centered = value.upper().center(width - 2)
         return [f"| {centered} |"]
