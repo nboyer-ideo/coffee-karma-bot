@@ -101,8 +101,14 @@ def format_order_message(order_data):
     ]
     lines.append(border_mid)
     lines += wrap_line("  DROP ID", order_data["order_id"])
-    lines += wrap_line("  FROM", order_data["requester_real_name"] or f"<@{order_data['requester_id']}>")
-    lines += wrap_line("  TO", order_data["recipient_real_name"] or f"<@{order_data['recipient_id']}>")
+    requester_display = order_data.get("requester_real_name") or f"<@{order_data['requester_id']}>"
+    recipient_display = order_data.get("recipient_real_name") or f"<@{order_data['recipient_id']}>"
+    if order_data.get("requester_id") == order_data.get("recipient_id"):
+        recipient_display += " (Self)"
+    else:
+        recipient_display += " (Gift)"
+    lines += wrap_line("  FROM", requester_display)
+    lines += wrap_line("  TO", recipient_display)
     lines += wrap_line("  DRINK", order_data["drink"])
     lines += wrap_line("  LOCATION", order_data["location"])
     lines += wrap_line("  NOTES", order_data["notes"] or "NONE")
@@ -367,7 +373,7 @@ def handle_order(ack, body, client):
                     "type": "input",
                     "block_id": "drink_detail",
                     "label": {"type": "plain_text", "text": "What exactly do you want?"},
-                    "element": {"type": "plain_text_input", "action_id": "input"}
+                    "element": {"type": "plain_text_input", "action_id": "input", "max_length": 25}
                 },
                 {
                     "type": "input",
@@ -442,11 +448,6 @@ def handle_order(ack, body, client):
                             {"text": {"type": "plain_text", "text": "Play Lab"}, "value": "Play Lab"},
                             {"text": {"type": "plain_text", "text": "Production"}, "value": "Production"},
                             {"text": {"type": "plain_text", "text": "Shop"}, "value": "Shop"},
-                            {"text": {"type": "plain_text", "text": "Cork Canyon"}, "value": "Cork Canyon"},
-                            {"text": {"type": "plain_text", "text": "Production/Shop Storage"}, "value": "Production/Shop Storage"},
-                            {"text": {"type": "plain_text", "text": "Play Lab"}, "value": "Play Lab"},
-                            {"text": {"type": "plain_text", "text": "Production"}, "value": "Production"},
-                            {"text": {"type": "plain_text", "text": "Shop"}, "value": "Shop"}
                         ]
                     }
                 },
@@ -466,7 +467,7 @@ def handle_order(ack, body, client):
                     "block_id": "notes",
                     "optional": True,
                     "label": {"type": "plain_text", "text": "Extra details (if it matters)"},
-                    "element": {"type": "plain_text_input", "action_id": "input"}
+                    "element": {"type": "plain_text_input", "action_id": "input", "max_length": 40}
                 }
             ]
         }
@@ -549,7 +550,7 @@ def handle_modal_submission(ack, body, client):
         "requester_id": user_id,
         "requester_real_name": "",
         "claimer_id": "",
-        "claimer_real_name": "",
+        "claimer_real_name": extras.get("claimer_real_name", ""),
         "recipient_id": gifted_id if gifted_id else user_id,
         "recipient_real_name": "",
         "drink": drink,
@@ -881,6 +882,7 @@ def handle_claim_order(ack, body, client):
     if order_ts not in order_extras:
         order_extras[order_ts] = {"claimer_id": None, "active": True, "claimed": False}
     order_extras[order_ts]["claimer_id"] = user_id
+    order_extras[order_ts]["claimer_real_name"] = claimer_name
     order_extras[order_ts]["active"] = False
     order_extras[order_ts]["claimed"] = True
     
