@@ -614,15 +614,15 @@ def handle_modal_submission(ack, body, client):
     # Log order with "time_ordered" as the timestamp key
     from sheet import log_order_to_sheet
     import datetime
-    order_data = {
+    order_data.update({
         "order_id": order_ts,
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "requester_id": user_id,
-        "requester_real_name": "",
+        "requester_real_name": order_data.get("requester_real_name", ""),
         "claimer_id": "",
         "claimer_real_name": "",
-    "recipient_id": gifted_id if gifted_id else user_id,
-        "recipient_real_name": "",
+        "recipient_id": gifted_id if gifted_id else user_id,
+        "recipient_real_name": order_data.get("recipient_real_name", ""),
         "drink": drink,
         "location": location,
         "notes": notes,
@@ -632,7 +632,7 @@ def handle_modal_submission(ack, body, client):
         "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "time_claimed": "",
         "time_delivered": ""
-    }
+    })
     log_order_to_sheet(order_data)
 
     # Start countdown timer for order expiration
