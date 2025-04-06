@@ -295,9 +295,9 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
                 client, remaining - 1, order_ts, order_channel,
                 user_id, gifted_id, drink, location, notes, karma_cost
             ))
-                print("🌀 Starting new countdown thread with threading.Timer")
-                sys.stdout.flush()
-                t.start()
+            print("🌀 Starting new countdown thread with threading.Timer")
+            sys.stdout.flush()
+            t.start()
             print("🌀 Countdown timer thread started")
 
     except Exception as e:
