@@ -1,0 +1,258 @@
+{
+  "NW Studio": {
+    "x": 1,
+    "y": 2
+  },
+  "The Courtyard": {
+    "x": 5,
+    "y": 1
+  },
+  "4A": {
+    "x": 5,
+    "y": 0
+  },
+  "4B": {
+    "x": 6,
+    "y": 0
+  },
+  "4C": {
+    "x": 7,
+    "y": 0
+  },
+  "4D": {
+    "x": 7,
+    "y": 1
+  },
+  "4E": {
+    "x": 6,
+    "y": 2
+  },
+  "4F": {
+    "x": 5,
+    "y": 2
+  },
+  "Sugar Cube 1": {
+    "x": 9,
+    "y": 0
+  },
+  "Sugar Cube 2": {
+    "x": 9,
+    "y": 1
+  },
+  "Sugar Cube 3": {
+    "x": 9,
+    "y": 2
+  },
+  "Sugar Cube 4": {
+    "x": 9,
+    "y": 3
+  },
+  "Shipping/Receiving": {
+    "x": 7,
+    "y": 3
+  },
+  "Cherry Pit": {
+    "x": 12,
+    "y": 1
+  },
+  "Hive": {
+    "x": 12,
+    "y": 2
+  },
+  "Honey": {
+    "x": 12,
+    "y": 3
+  },
+  "The Scoop": {
+    "x": 15,
+    "y": 2
+  },
+  "The Jelly": {
+    "x": 15,
+    "y": 3
+  },
+  "The Crumb": {
+    "x": 16,
+    "y": 1
+  },
+  "Cavity 1": {
+    "x": 16,
+    "y": 0
+  },
+  "Cavity 2": {
+    "x": 16,
+    "y": 0
+  },
+  "The Cookie Jar": {
+    "x": 17,
+    "y": 0
+  },
+  "Caf\u00e9 Booths": {
+    "x": 19,
+    "y": 1
+  },
+  "The Lookout": {
+    "x": 24,
+    "y": 1
+  },
+  "Caf\u00e9": {
+    "x": 19,
+    "y": 3
+  },
+  "The Jam": {
+    "x": 17,
+    "y": 3
+  },
+  "Technology": {
+    "x": 5,
+    "y": 4
+  },
+  "Restrooms": {
+    "x": 7,
+    "y": 5
+  },
+  "4H": {
+    "x": 4,
+    "y": 5
+  },
+  "Vista 1": {
+    "x": 2,
+    "y": 7
+  },
+  "Vista 2": {
+    "x": 1,
+    "y": 7
+  },
+  "Vista 3": {
+    "x": 0,
+    "y": 7
+  },
+  "Redwood 1": {
+    "x": 8,
+    "y": 7
+  },
+  "Redwood 2": {
+    "x": 7,
+    "y": 7
+  },
+  "Redwood 3": {
+    "x": 6,
+    "y": 7
+  },
+  "Redwood 4": {
+    "x": 5,
+    "y": 7
+  },
+  "4I": {
+    "x": 0,
+    "y": 9
+  },
+  "4J": {
+    "x": 1,
+    "y": 9
+  },
+  "4K": {
+    "x": 5,
+    "y": 9
+  },
+  "4L": {
+    "x": 6,
+    "y": 9
+  },
+  "4M": {
+    "x": 7,
+    "y": 9
+  },
+  "Redwood Booths": {
+    "x": 10,
+    "y": 8
+  },
+  "Lactation Lounge": {
+    "x": 13,
+    "y": 7
+  },
+  "SW Studio": {
+    "x": 5,
+    "y": 11
+  },
+  "Beach 1": {
+    "x": 15,
+    "y": 7
+  },
+  "Beach 2": {
+    "x": 14,
+    "y": 7
+  },
+  "Digital Dream Lab": {
+    "x": 17,
+    "y": 7
+  },
+  "Elevator": {
+    "x": 13,
+    "y": 4
+  },
+  "Mini Shop": {
+    "x": 18,
+    "y": 5
+  },
+  "4N": {
+    "x": 13,
+    "y": 9
+  },
+  "4O": {
+    "x": 14,
+    "y": 9
+  },
+  "4P": {
+    "x": 15,
+    "y": 9
+  },
+  "Prototyping Kitchen": {
+    "x": 17,
+    "y": 9
+  },
+  "Theater": {
+    "x": 23,
+    "y": 5
+  },
+  "AV Closet": {
+    "x": 23,
+    "y": 7
+  },
+  "Facilities Storage": {
+    "x": 24,
+    "y": 7
+  },
+  "4Q": {
+    "x": 23,
+    "y": 9
+  },
+  "Spray Booth": {
+    "x": 25,
+    "y": 9
+  },
+  "Play Lab Photo Studio": {
+    "x": 14,
+    "y": 10
+  },
+  "Cork Canyon": {
+    "x": 13,
+    "y": 11
+  },
+  "Production/Shop Storage": {
+    "x": 14,
+    "y": 12
+  },
+  "Play Lab": {
+    "x": 19,
+    "y": 11
+  },
+  "Production": {
+    "x": 17,
+    "y": 11
+  },
+  "Shop": {
+    "x": 22,
+    "y": 10
+  }
+}
