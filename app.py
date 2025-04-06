@@ -126,9 +126,9 @@ def format_order_message(order_data):
     lines.append(border_bot)
     lines += [
         "|           CHANNEL COMMANDS             |",
-        "|  /ORDER          PLACE AN ORDER        |",
-        "|  /KARMA          CHECK YOUR KARMA      |",
-        "|  /LEADERBOARD    TOP KARMA EARNERS     |",
+        "| /ORDER          PLACE AN ORDER         |",
+        "| /KARMA          CHECK YOUR KARMA       |",
+        "| /LEADERBOARD    TOP KARMA EARNERS      |",
         border_bot
     ]
     # Mini-map rendering
@@ -1254,6 +1254,14 @@ def catch_all_events(event, logger, next):
     next()  # Allow other event handlers to continue processing
 
 import datetime
+
+@flask_app.route("/debug-countdown", methods=["GET"])
+def manual_countdown_trigger():
+    from slack_sdk import WebClient
+    client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
+    # Replace these placeholders with real values for a live order to test
+    update_countdown(client, 9, "ORDER_TS", "CHANNEL_ID", "USER_ID", None, "coffee", "4A", "", 2)
+    return "Triggered countdown manually."
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
