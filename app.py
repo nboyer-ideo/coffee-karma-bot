@@ -275,19 +275,16 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         if original_text == new_text:
             print("⚠️ Regex replacement did not change the text")
 
-        if original_text != new_text:
-            print("💬 Sending updated message to Slack...")
-            print("📤 Attempting client.chat_update with updated countdown state")
-            
-            print(f"🧾 Updated blocks:\n{updated_blocks}")
-            client.chat_update(
-                channel=order_channel,
-                ts=order_ts,
-                text=new_text,
-                blocks=updated_blocks
-            )
-            print("✅ Countdown block update pushed to Slack")
-            print(f"📣 client.chat_update call completed for order {order_ts}")
+        print("📤 Sending updated message to Slack regardless of text match")
+        print(f"🧾 Updated blocks:\n{updated_blocks}")
+        client.chat_update(
+            channel=order_channel,
+            ts=order_ts,
+            text=original_text,
+            blocks=updated_blocks
+        )
+        print("✅ Countdown block update pushed to Slack")
+        print(f"📣 client.chat_update call completed for order {order_ts}")
 
         if remaining > 1:
             print(f"🕒 Scheduling next countdown tick — remaining: {remaining - 1}")
