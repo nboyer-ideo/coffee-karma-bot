@@ -263,6 +263,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print("🛠️ Calling format_order_message with updated remaining time")
         print(f"🧱 Regenerating order message with remaining_minutes={remaining}")
         updated_blocks = format_order_message(order_data)
+        print(f"🔍 Progress bar update should now be reflected in updated_blocks:\n{updated_blocks}")
         print(f"📨 Message fetch result: {current_message}")
 
         if not current_message["messages"]:
@@ -291,16 +292,19 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             print("💬 Sending updated message to Slack...")
             print("📤 Attempting client.chat_update with updated countdown state")
             print("📤 Attempting to send updated countdown message via chat_update")
+            print("📢 About to call client.chat_update with the following arguments:")
+            print(f"🧾 Channel: {order_channel}, Timestamp: {order_ts}")
+            print(f"🧾 Updated blocks:\n{updated_blocks}")
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
                 text=new_text,
                 blocks=updated_blocks
             )
-            print(f"📡 Slack chat_update called for message: {order_ts}")
-            print(f"✅ Message update succeeded for {order_ts}")
-            print("🧾 Countdown message updated successfully.")
+            print("✅ Countdown block update pushed to Slack")
+            print(f"📣 client.chat_update call completed for order {order_ts}")
 
+        print(f"⏳ Countdown check — remaining is {remaining}")
         if remaining > 1:
             print(f"🕒 Scheduling next countdown tick — remaining: {remaining - 1}")
             print(f"🧭 Timer thread will now sleep for 60 seconds before next update_countdown call")
@@ -310,10 +314,14 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
                 user_id, gifted_id, drink, location, notes, karma_cost
             ))
             t.start()
+            print(f"🔄 Timer thread for next countdown tick successfully started")
             print("🌀 Countdown timer thread started")
             print("⏱️ Timer set, waiting 60 seconds to trigger next update_countdown()")
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"🚨 Countdown exception traceback printed above for order {order_ts}")
         print(f"🚨 update_countdown FAILED: {e}")
 
 from flask import jsonify
