@@ -213,6 +213,9 @@ import re
 import threading
 
 def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
+    import sys
+    print("🔥 ENTERED update_countdown()")
+    sys.stdout.flush()
     print(f"🔁 Countdown tick for {order_ts} — remaining: {remaining}")
     try:
         print(f"👤 User: {user_id}, Gifted: {gifted_id}")
@@ -220,6 +223,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 
         extras = order_extras.get(order_ts)
         print(f"📦 order_extras for {order_ts}: {extras}")
+        sys.stdout.flush()
 
         if not extras or not extras.get("active", True):
             print(f"⛔ Countdown aborted — order_extras missing or marked inactive for {order_ts}")
@@ -291,7 +295,9 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
                 client, remaining - 1, order_ts, order_channel,
                 user_id, gifted_id, drink, location, notes, karma_cost
             ))
-            t.start()
+                print("🌀 Starting new countdown thread with threading.Timer")
+                sys.stdout.flush()
+                t.start()
             print("🌀 Countdown timer thread started")
 
     except Exception as e:
@@ -1253,15 +1259,6 @@ def catch_all_events(event, logger, next):
     logger.info(f"🌀 CATCH-ALL EVENT: {event}")
     next()  # Allow other event handlers to continue processing
 
-import datetime
-
-@flask_app.route("/debug-countdown", methods=["GET"])
-def manual_countdown_trigger():
-    from slack_sdk import WebClient
-    client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
-    # Replace these placeholders with real values for a live order to test
-    update_countdown(client, 9, "1743912474.636569", "C08LXEPQXRS", "U02EY5S5J0M", None, "test", "4B", "", 1)
-    return "Triggered countdown manually."
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
