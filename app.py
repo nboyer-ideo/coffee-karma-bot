@@ -69,17 +69,26 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
             print("⚠️ Failed to load coordinates:", e)
             cached_coordinates = {}
     coordinates = cached_coordinates
+    print(f"📌 Loaded coordinates for {len(coordinates)} locations")
 
     map_lines = map_template.splitlines()
     if location_name in coordinates:
         x = int(coordinates[location_name]["x"])
         y = int(coordinates[location_name]["y"])
         print(f"🗺️ Marking location on map at ({x}, {y}) for {location_name}")
+        print(f"🧭 Coordinates for '{location_name}': x={x}, y={y}")
         if 0 <= y < len(map_lines):
             line = list(map_lines[y])
             if 0 <= x < len(line):
+                # Mark the location with ✗
                 line[x] = "✗"
+                print(f"🧩 Original line at y={y}: {map_lines[y]}")
+                print(f"🔧 Modified line at y={y}: {''.join(line)}")
             map_lines[y] = "".join(line)
+            print("✅ Updated map line:", map_lines[y])
+    print("📤 Final rendered mini map preview:")
+    for ml in map_lines:
+        print(ml)
     return map_lines
  
 def format_order_message(order_data):
@@ -113,8 +122,8 @@ def format_order_message(order_data):
     lines.append(border_bot)
     lines += [
         "|           CHANNEL COMMANDS             |",
-        "|  /ORDER\t\t\tPLACE AN ORDER           |",
-        "|  /KARMA\t\t\tCHECK YOUR KARMA         |",
+        "|  /ORDER        PLACE AN ORDER         |",
+        "|  /KARMA        CHECK YOUR KARMA       |",
         "|  /LEADERBOARD\tTOP KARMA EARNERS        |",
         border_bot
     ]
