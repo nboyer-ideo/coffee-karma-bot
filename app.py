@@ -50,6 +50,8 @@ def wrap_line(label, value, width=42):
     return lines
 
 def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.json", map_file="lion_map_template.txt"):
+    import json
+    print(f"🔍 build_mini_map called with location_name={location_name}")
     global cached_map_template
     if cached_map_template is None:
         try:
@@ -69,6 +71,9 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
             print("⚠️ Failed to load coordinates:", e)
             cached_coordinates = {}
     coordinates = cached_coordinates
+    print(f"📌 Checking if location exists in coordinates: {location_name in coordinates}")
+    if location_name not in coordinates:
+        print(f"❌ Location '{location_name}' not found in coordinate mapping keys: {list(coordinates.keys())}")
     print(f"📌 Loaded coordinates for {len(coordinates)} locations")
 
     map_lines = map_template.splitlines()
@@ -80,12 +85,13 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
         if 0 <= y < len(map_lines):
             line = list(map_lines[y])
             if 0 <= x < len(line):
-                # Mark the location with ✗
+                print(f"✅ Coordinates ({x}, {y}) are within bounds (line length: {len(line)})")
+                print(f"✍️ Attempting to place '✗' at line[{y}][{x}]")
+                print(f"🧩 Original line at y={y}: {''.join(line)}")
                 line[x] = "✗"
-                print(f"🧩 Original line at y={y}: {map_lines[y]}")
-                print(f"🔧 Modified line at y={y}: {''.join(line)}")
+                print(f"📏 Final line after insertion: {''.join(line)}")
             map_lines[y] = "".join(line)
-            print("✅ Updated map line:", map_lines[y])
+            print(f"🆗 map_lines[{y}] updated successfully.")
     print("📤 Final rendered mini map preview:")
     for ml in map_lines:
         print(ml)
@@ -122,9 +128,9 @@ def format_order_message(order_data):
     lines.append(border_bot)
     lines += [
         "|           CHANNEL COMMANDS             |",
-        "|  /ORDER        PLACE AN ORDER         |",
-        "|  /KARMA        CHECK YOUR KARMA       |",
-        "|  /LEADERBOARD\tTOP KARMA EARNERS        |",
+        "|  /ORDER          PLACE AN ORDER        |",
+        "|  /KARMA          CHECK YOUR KARMA      |",
+        "|  /LEADERBOARD    TOP KARMA EARNERS     |",
         border_bot
     ]
     # Mini-map rendering
