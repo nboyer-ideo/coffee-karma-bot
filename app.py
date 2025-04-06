@@ -8,6 +8,10 @@ import requests
 import os
 import copy
 import re
+import csv
+ 
+cached_coordinates = None
+cached_map_template = None
 
 def strip_formatting(s):
     import re
@@ -44,6 +48,37 @@ def wrap_line(label, value, width=42):
         padding = max_content - len(current_line)
         lines.append(f"| {current_line}{' ' * padding} |")
     return lines
+
+def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.json", map_file="lion_map_template.txt"):
+    global cached_map_template
+    if cached_map_template is None:
+        try:
+            with open(map_file, "r") as mf:
+                cached_map_template = mf.read()
+        except Exception as e:
+            print("⚠️ Failed to load map template:", e)
+            return []
+    map_template = cached_map_template
+
+    global cached_coordinates
+    if cached_coordinates is None:
+        try:
+            with open(coord_file, "r") as f:
+                cached_coordinates = json.load(f)
+        except Exception as e:
+            print("⚠️ Failed to load coordinates:", e)
+            cached_coordinates = {}
+    coordinates = cached_coordinates
+
+    map_lines = map_template.splitlines()
+    if location_name in coordinates:
+        x, y = coordinates[location_name]
+        if 0 <= y < len(map_lines):
+            line = list(map_lines[y])
+            if 0 <= x < len(line):
+                line[x] = "✗"
+            map_lines[y] = "".join(line)
+    return map_lines
  
 def format_order_message(order_data):
     border_top = "+----------------------------------------+"
@@ -60,11 +95,57 @@ def format_order_message(order_data):
     lines += wrap_line("  TO", order_data["recipient_real_name"] or f"<@{order_data['recipient_id']}>")
     lines += wrap_line("  DRINK", order_data["drink"])
     lines += wrap_line("  LOCATION", order_data["location"])
-    lines += wrap_line("  NOTES", order_data["notes"] or "None")
+    lines += wrap_line("  NOTES", order_data["notes"] or "NONE")
     lines.append(border_mid)
     lines += wrap_line("  REWARD", f"{order_data['karma_cost']} KARMA")
     lines += wrap_line("  STATUS", f"{order_data.get('remaining_minutes', 10)} MINUTES TO CLAIM")
+    total_blocks = 20
+    remaining = order_data.get("remaining_minutes", 10)
+    filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
+    empty_blocks = total_blocks - filled_blocks
+    progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
+    padding = 42 - 4 - len(progress_bar)
+    lines.append(f"|  {progress_bar}{' ' * padding}|")
+    lines.append(border_mid)
+    lines.append("|  ------------------------------------  |")
+    lines.append("|  ↓ CLICK BELOW TO CLAIM THIS ORDER ↓  |".upper())
+    lines.append("|  ------------------------------------  |")
     lines.append(border_bot)
+    lines += [
+        "|           CHANNEL COMMANDS             |",
+        "|  /ORDER\tPLACE AN ORDER           |",
+        "|  /KARMA\tCHECK YOUR KARMA         |",
+        "|  /LEADERBOARD\tTOP KARMA EARNERS        |",
+        border_bot
+    ]
+    # Mini-map rendering
+    if order_data.get("location"):
+        from map_util import build_mini_map
+        mini_map = build_mini_map(order_data["location"])
+
+        # Add header for map panel
+        map_title = "+--------------------------+"
+        padded_map = [f"{line:<26}"[:26] for line in mini_map]
+        map_lines = [map_title, "|       LION MAP           |", map_title]
+        map_lines += [f"|{line}|" for line in padded_map]
+        map_legend = [
+            "|                          |",  # Keep for spacing consistency
+            "| ✗ = DRINK LOCATION       |",
+            "| ☕ = CAFÉ                 |",
+            "| ▯ = ELEVATOR             |",
+            "| ≋ = BATHROOM             |",
+            "+--------------------------+"
+        ]
+        map_lines.extend(map_legend)
+
+        # Merge lines side by side
+        merged_lines = []
+        max_lines = max(len(lines), len(map_lines))
+        for i in range(max_lines):
+            left = lines[i] if i < len(lines) else " " * 42
+            right = map_lines[i] if i < len(map_lines) else ""
+            merged_lines.append(f"{left}  {right}")
+        lines = merged_lines
  
     return [
         {
@@ -135,6 +216,28 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             return
 
         current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+        import datetime
+        order_data = {
+            "order_id": order_ts,
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "requester_id": user_id,
+            "requester_real_name": "",
+            "claimer_id": "",
+            "claimer_real_name": "",
+            "recipient_id": gifted_id if gifted_id else user_id,
+            "recipient_real_name": "",
+            "drink": drink,
+            "location": location,
+            "notes": notes,
+            "karma_cost": karma_cost,
+            "status": "pending",
+            "bonus_multiplier": "",
+            "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "time_claimed": "",
+            "time_delivered": "",
+            "remaining_minutes": remaining
+        }
+        updated_blocks = format_order_message(order_data)
         print(f"📨 Message fetch result: {current_message}")
 
         if not current_message["messages"]:
@@ -158,11 +261,6 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 
         if original_text != new_text:
             print("💬 Sending updated message to Slack...")
- 
-            updated_blocks = current_message["messages"][0].get("blocks", [])
-            for block in updated_blocks:
-                if block.get("block_id") == "countdown_block" and block["type"] == "section":
-                    block["text"]["text"] = f":hourglass_flowing_sand: {remaining} MINUTES TO CLAIM OR IT DIES"
  
             client.chat_update(
                 channel=order_channel,
@@ -252,7 +350,82 @@ def handle_order(ack, body, client):
                     "type": "input",
                     "block_id": "location",
                     "label": {"type": "plain_text", "text": "Where’s it going?"},
-                    "element": {"type": "plain_text_input", "action_id": "input"}
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "input",
+                        "placeholder": {"type": "plain_text", "text": "Select a location"},
+                        "options": [
+                            {"text": {"type": "plain_text", "text": "NW Studio"}, "value": "NW Studio"},
+                            {"text": {"type": "plain_text", "text": "The Courtyard"}, "value": "The Courtyard"},
+                            {"text": {"type": "plain_text", "text": "4A"}, "value": "4A"},
+                            {"text": {"type": "plain_text", "text": "4B"}, "value": "4B"},
+                            {"text": {"type": "plain_text", "text": "4C"}, "value": "4C"},
+                            {"text": {"type": "plain_text", "text": "4D"}, "value": "4D"},
+                            {"text": {"type": "plain_text", "text": "4E"}, "value": "4E"},
+                        {"text": {"type": "plain_text", "text": "4F"}, "value": "4F"},
+                            {"text": {"type": "plain_text", "text": "Sugar Cube 1"}, "value": "Sugar Cube 1"},
+                            {"text": {"type": "plain_text", "text": "Sugar Cube 2"}, "value": "Sugar Cube 2"},
+                            {"text": {"type": "plain_text", "text": "Sugar Cube 3"}, "value": "Sugar Cube 3"},
+                            {"text": {"type": "plain_text", "text": "Sugar Cube 4"}, "value": "Sugar Cube 4"},
+                            {"text": {"type": "plain_text", "text": "Shipping/Receiving"}, "value": "Shipping/Receiving"},
+                            {"text": {"type": "plain_text", "text": "Cherry Pit"}, "value": "Cherry Pit"},
+                            {"text": {"type": "plain_text", "text": "Hive"}, "value": "Hive"},
+                            {"text": {"type": "plain_text", "text": "Honey"}, "value": "Honey"},
+                            {"text": {"type": "plain_text", "text": "The Scoop"}, "value": "The Scoop"},
+                            {"text": {"type": "plain_text", "text": "The Jelly"}, "value": "The Jelly"},
+                            {"text": {"type": "plain_text", "text": "The Crumb"}, "value": "The Crumb"},
+                            {"text": {"type": "plain_text", "text": "Cavity 1"}, "value": "Cavity 1"},
+                            {"text": {"type": "plain_text", "text": "Cavity 2"}, "value": "Cavity 2"},
+                            {"text": {"type": "plain_text", "text": "The Cookie Jar"}, "value": "The Cookie Jar"},
+                            {"text": {"type": "plain_text", "text": "Café Booths"}, "value": "Café Booths"},
+                            {"text": {"type": "plain_text", "text": "The Lookout"}, "value": "The Lookout"},
+                            {"text": {"type": "plain_text", "text": "Café"}, "value": "Café"},
+                            {"text": {"type": "plain_text", "text": "The Jam"}, "value": "The Jam"},
+                            {"text": {"type": "plain_text", "text": "Technology"}, "value": "Technology"},
+                            {"text": {"type": "plain_text", "text": "Restrooms"}, "value": "Restrooms"},
+                            {"text": {"type": "plain_text", "text": "4H"}, "value": "4H"},
+                            {"text": {"type": "plain_text", "text": "Vista 1"}, "value": "Vista 1"},
+                            {"text": {"type": "plain_text", "text": "Vista 2"}, "value": "Vista 2"},
+                            {"text": {"type": "plain_text", "text": "Vista 3"}, "value": "Vista 3"},
+                            {"text": {"type": "plain_text", "text": "Redwood 1"}, "value": "Redwood 1"},
+                            {"text": {"type": "plain_text", "text": "Redwood 2"}, "value": "Redwood 2"},
+                            {"text": {"type": "plain_text", "text": "Redwood 3"}, "value": "Redwood 3"},
+                            {"text": {"type": "plain_text", "text": "Redwood 4"}, "value": "Redwood 4"},
+                            {"text": {"type": "plain_text", "text": "4I"}, "value": "4I"},
+                            {"text": {"type": "plain_text", "text": "4J"}, "value": "4J"},
+                            {"text": {"type": "plain_text", "text": "4K"}, "value": "4K"},
+                            {"text": {"type": "plain_text", "text": "4L"}, "value": "4L"},
+                            {"text": {"type": "plain_text", "text": "4M"}, "value": "4M"},
+                            {"text": {"type": "plain_text", "text": "Redwood Booths"}, "value": "Redwood Booths"},
+                            {"text": {"type": "plain_text", "text": "Lactation Lounge"}, "value": "Lactation Lounge"},
+                            {"text": {"type": "plain_text", "text": "SW Studio"}, "value": "SW Studio"},
+                            {"text": {"type": "plain_text", "text": "Beach 1"}, "value": "Beach 1"},
+                            {"text": {"type": "plain_text", "text": "Beach 2"}, "value": "Beach 2"},
+                            {"text": {"type": "plain_text", "text": "Digital Dream Lab"}, "value": "Digital Dream Lab"},
+                            {"text": {"type": "plain_text", "text": "Elevator"}, "value": "Elevator"},
+                            {"text": {"type": "plain_text", "text": "Mini Shop"}, "value": "Mini Shop"},
+                            {"text": {"type": "plain_text", "text": "4N"}, "value": "4N"},
+                            {"text": {"type": "plain_text", "text": "4O"}, "value": "4O"},
+                            {"text": {"type": "plain_text", "text": "4P"}, "value": "4P"},
+                            {"text": {"type": "plain_text", "text": "Prototyping Kitchen"}, "value": "Prototyping Kitchen"},
+                            {"text": {"type": "plain_text", "text": "Theater"}, "value": "Theater"},
+                            {"text": {"type": "plain_text", "text": "AV Closet"}, "value": "AV Closet"},
+                            {"text": {"type": "plain_text", "text": "Facilities Storage"}, "value": "Facilities Storage"},
+                            {"text": {"type": "plain_text", "text": "4Q"}, "value": "4Q"},
+                            {"text": {"type": "plain_text", "text": "Spray Booth"}, "value": "Spray Booth"},
+                            {"text": {"type": "plain_text", "text": "Play Lab Photo Studio"}, "value": "Play Lab Photo Studio"},
+                            {"text": {"type": "plain_text", "text": "Cork Canyon"}, "value": "Cork Canyon"},
+                            {"text": {"type": "plain_text", "text": "Production/Shop Storage"}, "value": "Production/Shop Storage"},
+                            {"text": {"type": "plain_text", "text": "Play Lab"}, "value": "Play Lab"},
+                            {"text": {"type": "plain_text", "text": "Production"}, "value": "Production"},
+                            {"text": {"type": "plain_text", "text": "Shop"}, "value": "Shop"},
+                            {"text": {"type": "plain_text", "text": "Cork Canyon"}, "value": "Cork Canyon"},
+                            {"text": {"type": "plain_text", "text": "Production/Shop Storage"}, "value": "Production/Shop Storage"},
+                            {"text": {"type": "plain_text", "text": "Play Lab"}, "value": "Play Lab"},
+                            {"text": {"type": "plain_text", "text": "Production"}, "value": "Production"},
+                            {"text": {"type": "plain_text", "text": "Shop"}, "value": "Shop"}
+                        ]
+                    }
                 },
                 {
                     "type": "input",
