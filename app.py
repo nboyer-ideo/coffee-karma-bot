@@ -258,7 +258,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "time_delivered": "",
         "remaining_minutes": remaining
     }
-    print(f"🧪 Names Debug — requester: {order_data['requester_real_name']}, recipient: {order_data['recipient_real_name']}")
+        print(f"🧪 Names Debug — requester: {order_data['requester_real_name']}, recipient: {order_data['recipient_real_name']}")
         print("🛠️ Calling format_order_message with updated remaining time")
         updated_blocks = format_order_message(order_data)
         print(f"🔍 Progress bar update should now be reflected in updated_blocks:\n{updated_blocks}")
