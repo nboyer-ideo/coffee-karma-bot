@@ -908,6 +908,25 @@ def handle_claim_order(ack, body, client):
         ]
     )
     order_ts = body["message"]["ts"]
+    # Extract original values to reconstruct terminal
+    drink = location = notes = ""
+    karma_cost = 1
+    for block in original_message.get("blocks", []):
+        if block.get("type") == "section" and "text" in block:
+            block_text = block["text"]["text"]
+            drink_match = re.search(r"DRINK: (.+)", block_text)
+            if drink_match:
+                drink = drink_match.group(1).strip()
+            location_match = re.search(r"LOCATION: (.+)", block_text)
+            if location_match:
+                location = location_match.group(1).strip()
+            notes_match = re.search(r"NOTES: (.+)", block_text)
+            if notes_match:
+                notes = notes_match.group(1).strip()
+            karma_match = re.search(r"REWARD: (\d+)", block_text)
+            if karma_match:
+                karma_cost = int(karma_match.group(1).strip())
+            break
     if order_ts not in order_extras:
         order_extras[order_ts] = {"claimer_id": None, "active": True, "claimed": False}
     order_extras[order_ts]["claimer_id"] = user_id
@@ -934,6 +953,24 @@ def handle_claim_order(ack, body, client):
         claimer_id=user_id,
         claimer_name=claimer_name,
         claimed_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    )
+    order_data = {
+        "order_id": order_ts,
+        "claimed_by": claimer_name,
+        "requester_real_name": order_extras.get(order_ts, {}).get("requester_real_name"),
+        "recipient_real_name": order_extras.get(order_ts, {}).get("recipient_real_name"),
+        "drink": drink,
+        "location": location,
+        "notes": notes,
+        "karma_cost": karma_cost,
+        "claimer_karma": get_karma(user_id),
+        "bonus_multiplier": ""
+    }
+    updated_blocks = format_order_message(order_data)
+    client.chat_update(
+        channel=body["channel"]["id"],
+        ts=body["message"]["ts"],
+        blocks=updated_blocks
     )
 
     print(f"📬 Sending DM to claimer (user_id: {user_id}) with message: You took the mission. Don't forget to hit 'MARK AS DELIVERED' once the goods are dropped.")
