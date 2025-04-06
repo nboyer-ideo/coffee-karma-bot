@@ -550,7 +550,7 @@ def handle_modal_submission(ack, body, client):
         "requester_id": user_id,
         "requester_real_name": "",
         "claimer_id": "",
-        "claimer_real_name": extras.get("claimer_real_name", ""),
+        "claimer_real_name": "",
         "recipient_id": gifted_id if gifted_id else user_id,
         "recipient_real_name": "",
         "drink": drink,
