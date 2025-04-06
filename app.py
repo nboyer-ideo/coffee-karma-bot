@@ -106,13 +106,13 @@ def format_order_message(order_data):
     lines.append(f"|  {progress_bar}{' ' * padding}|")
     lines.append(border_mid)
     lines.append("|  ------------------------------------  |")
-    lines.append("|  ↓ CLICK BELOW TO CLAIM THIS ORDER ↓  |".upper())
+    lines.append("|   ↓ CLICK BELOW TO CLAIM THIS ORDER ↓  |")
     lines.append("|  ------------------------------------  |")
     lines.append(border_bot)
     lines += [
         "|           CHANNEL COMMANDS             |",
-        "|  /ORDER\t\t\tPLACE AN ORDER           |",
-        "|  /KARMA\t\t\tCHECK YOUR KARMA         |",
+        "|  /ORDER\t\tPLACE AN ORDER             |",
+        "|  /KARMA\t\tCHECK YOUR KARMA           |",
         "|  /LEADERBOARD\tTOP KARMA EARNERS        |",
         border_bot
     ]
@@ -123,7 +123,7 @@ def format_order_message(order_data):
         # Add header for map panel
         map_title = "+--------------------------+"
         padded_map = [f"{line:<26}"[:26] for line in mini_map]
-        map_lines = [map_title, "|         LION MAP         |", map_title]
+        map_lines = [map_title, "|         LION MAP         |"]
         map_lines += [f"|{line}|" for line in padded_map]
         map_lines.append("+--------------------------+")
         map_legend = [
