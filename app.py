@@ -115,27 +115,40 @@ def format_order_message(order_data):
     lines += wrap_line("  NOTES", order_data["notes"] or "NONE")
     lines.append(border_mid)
     lines += wrap_line("  REWARD", f"{order_data['karma_cost']} KARMA")
-    lines += wrap_line("  STATUS", f"{order_data.get('remaining_minutes', 10)} MINUTES TO CLAIM")
-    total_blocks = 20
-    remaining = order_data.get("remaining_minutes", 10)
-    filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
-    empty_blocks = total_blocks - filled_blocks
-    print(f"🧮 Progress bar: {filled_blocks} filled, {empty_blocks} empty")
-    progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
-    print(f"📊 New progress bar string: {progress_bar}")
-    padding = 42 - 4 - len(progress_bar)
-    lines.append(f"|{' ' * 9}{progress_bar}{' ' * 9}|")
+    if order_data.get("delivered_by"):
+        lines += wrap_line("  STATUS", "COMPLETED")
+        lines += wrap_line("", f"DELIVERED BY {order_data['delivered_by'].upper()}")
+        lines.append("|  ------------------------------------  |")
+        lines.append(f"|       +{order_data['bonus_multiplier']} KARMA EARNED — TOTAL: {order_data['claimer_karma']}       |")
+        lines.append("|  ------------------------------------  |")
+    elif order_data.get("claimed_by"):
+        lines += wrap_line("  STATUS", f"CLAIMED BY {order_data['claimed_by'].upper()}")
+        lines += wrap_line("", "WAITING TO BE DELIVERED")
+    else:
+        lines += wrap_line("  STATUS", f"{order_data.get('remaining_minutes', 10)} MINUTES TO CLAIM")
+        total_blocks = 20
+        remaining = order_data.get("remaining_minutes", 10)
+        filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
+        empty_blocks = total_blocks - filled_blocks
+        print(f"🧮 Progress bar: {filled_blocks} filled, {empty_blocks} empty")
+        progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
+        print(f"📊 New progress bar string: {progress_bar}")
+        padding = 42 - 4 - len(progress_bar)
+        lines.append(f"|{' ' * 9}{progress_bar}{' ' * 9}|")
     
     # lines.append(border_mid)
     lines.append("|  ------------------------------------  |")
-    lines.append("|   ↓ CLICK BELOW TO CLAIM THIS ORDER ↓  |")
+    if order_data.get("claimed_by"):
+        lines.append("|  ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓ |")
+    else:
+        lines.append("|   ↓ CLICK BELOW TO CLAIM THIS ORDER ↓  |")
     lines.append("|  ------------------------------------  |")
     lines.append(border_bot)
     lines += [
-        "|           CHANNEL COMMANDS             |",
         "| /ORDER          PLACE AN ORDER         |",
         "| /KARMA          CHECK YOUR KARMA       |",
         "| /LEADERBOARD    TOP KARMA EARNERS      |",
+        "| /REDEEM         BONUS KARMA CODES      |",
         border_bot
     ]
     # Mini-map rendering
@@ -261,6 +274,16 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print(f"🧪 Names Debug — requester: {order_data['requester_real_name']}, recipient: {order_data['recipient_real_name']}")
         print("🛠️ Calling format_order_message with updated remaining time")
         updated_blocks = format_order_message(order_data)
+        current_blocks = current_message["messages"][0].get("blocks", [])
+        if any(block.get("block_id") == "reminder_block" for block in current_blocks):
+            updated_blocks.insert(0, {
+                "type": "section",
+                "block_id": "reminder_block",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*⚠️ STILL UNCLAIMED — CLOCK'S TICKING ⏳*"
+                }
+            })
         print(f"🔍 Progress bar update should now be reflected in updated_blocks:\n{updated_blocks}")
         print(f"📨 Message fetch result: {current_message}")
 
@@ -295,7 +318,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print("✅ Countdown block update pushed to Slack")
         print(f"📣 client.chat_update call completed for order {order_ts}")
 
-        if remaining > 1:
+        if remaining > 1 and extras.get("active", True):
             print(f"🕒 Scheduling next countdown tick — remaining: {remaining - 1}")
             t = threading.Timer(60, update_countdown, args=(
                 client, remaining - 1, order_ts, order_channel,
@@ -721,13 +744,11 @@ def handle_modal_submission(ack, body, client):
                     "block_id": "reminder_block",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "*⚠️ STILL UNCLAIMED — CLOCK'S TICKING ⏳*\n> STEP UP OR STAND DOWN.\n> 5 MINUTES LEFT TO CLAIM."
+                        "text": "*⚠️ STILL UNCLAIMED — CLOCK'S TICKING ⏳*"
                     }
                 }
 
-                # Find index of button block to insert above it
-                insert_index = next((i for i, block in enumerate(current_blocks) if block.get("block_id") == "buttons_block"), len(current_blocks))
-                updated_blocks = current_blocks[:insert_index] + [reminder_block] + current_blocks[insert_index:]
+                updated_blocks = current_blocks + [reminder_block]
 
                 # Commented out previous update that replaced the whole message text
                 # order_extras[order_ts]["reminder_added"] = True
@@ -1090,17 +1111,36 @@ def handle_karma_command(ack, body, client):
 def handle_leaderboard_command(ack, body, client):
     ack()
     leaderboard = get_leaderboard()
-    blocks = [
-        {"type": "divider"},
-        {"type": "section", "text": {"type": "mrkdwn", "text": "*🏆 Koffee Karma Leaderboard* — The bold, the brewed, the brave."}}
-    ]
+    
+    header = "+====================[ LEADERBOARD ]====================+"
+    title = "|  RANK  |            NAME            |    KARMA PTS    |"
+    divider = "|--------|----------------------------|-----------------|"
+    footer = "+=======================================================+"
+    commands = "|    /ORDER     /KARMA     /LEADERBOARD     /REDEEM     |"
+    
+    lines = [header, title, divider]
     for i, row in enumerate(leaderboard, start=1):
-        user_line = f"{i}. <@{row['Slack ID']}> — *{row['Karma']}* karma"
-        blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": user_line}})
+        rank = f"{i}".center(6)
+        name = row['Name'].upper()[:26].ljust(26)
+        karma = f"{row['Karma']}".center(15)
+        lines.append(f"|  {rank} | {name} | {karma} |")
+    
+    lines.append(footer)
+    lines.append(commands)
+    lines.append(footer)
+    
+    leaderboard_text = "```" + "\n".join(lines) + "```"
+    
     client.chat_postMessage(
         channel=body["channel_id"],
-        blocks=blocks,
-    text="The brave rise. Here's the Koffee Karma leaderboard."
+        text="Koffee Karma Leaderboard",
+        blocks=[{
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": leaderboard_text
+            }
+        }]
     )
 
 @app.command("/redeem")
