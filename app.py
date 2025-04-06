@@ -105,6 +105,7 @@ def format_order_message(order_data):
         border_top,
         *wrap_line("", "KOFFEE KARMA TERMINAL"),
     ]
+    lines.append(border_mid)
     lines += wrap_line("  DROP ID", order_data["order_id"])
     lines += wrap_line("  FROM", order_data["requester_real_name"] or f"<@{order_data['requester_id']}>")
     lines += wrap_line("  TO", order_data["recipient_real_name"] or f"<@{order_data['recipient_id']}>")
@@ -116,12 +117,16 @@ def format_order_message(order_data):
     lines += wrap_line("  STATUS", f"{order_data.get('remaining_minutes', 10)} MINUTES TO CLAIM")
     total_blocks = 20
     remaining = order_data.get("remaining_minutes", 10)
+    print(f"🧪 format_order_message received remaining_minutes={remaining}")
     filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
     empty_blocks = total_blocks - filled_blocks
+    print(f"🧮 Progress bar: {filled_blocks} filled, {empty_blocks} empty")
     progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
+    print(f"📊 New progress bar string: {progress_bar}")
     padding = 42 - 4 - len(progress_bar)
     lines.append(f"|  {progress_bar}{' ' * padding}|")
-    lines.append(border_mid)
+    print(f"🖼️ Appended progress bar line to message block")
+    # lines.append(border_mid)
     lines.append("|  ------------------------------------  |")
     lines.append("|   ↓ CLICK BELOW TO CLAIM THIS ORDER ↓  |")
     lines.append("|  ------------------------------------  |")
@@ -144,10 +149,10 @@ def format_order_message(order_data):
         map_lines += [f"|{line}|" for line in padded_map]
         map_lines.append("+--------------------------+")
         map_legend = [
-            "| ✗ = DRINK LOCATION      |",
-            "| ☕ = CAFÉ                |",
-            "| ▯ = ELEVATOR            |",
-            "| ≋ = BATHROOM            |",
+            "| ✗ = DRINK LOCATION       |",
+            "| ☕ = CAFÉ                 |",
+            "| ▯ = ELEVATOR             |",
+            "| ≋ = BATHROOM             |",
             "+--------------------------+"
         ]
         map_lines.extend(map_legend)
@@ -215,7 +220,10 @@ import re
 import threading
 
 def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
+    print(f"🔁 Countdown tick for {order_ts} — remaining: {remaining}")
     try:
+        print(f"⏳ [DEBUG] Entered update_countdown with remaining={remaining}")
+        print(f"⏳ [DEBUG] order_ts={order_ts}, order_channel={order_channel}")
         print(f"⏱️ update_countdown triggered for order {order_ts}")
         print(f"🔢 Remaining: {remaining}")
         print(f"📡 Channel: {order_channel}")
@@ -251,6 +259,8 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "time_delivered": "",
             "remaining_minutes": remaining
         }
+        print("🛠️ Calling format_order_message with updated remaining time")
+        print(f"🧱 Regenerating order message with remaining_minutes={remaining}")
         updated_blocks = format_order_message(order_data)
         print(f"📨 Message fetch result: {current_message}")
 
@@ -275,21 +285,26 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 
         if original_text != new_text:
             print("💬 Sending updated message to Slack...")
- 
+            print("📤 Attempting client.chat_update with updated countdown state")
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
                 text=new_text,
                 blocks=updated_blocks
             )
-            print("✅ Slack message updated")
+            print(f"📡 Slack chat_update called for message: {order_ts}")
+            print(f"✅ Message update succeeded for {order_ts}")
+            print("🧾 Countdown message updated successfully.")
 
         if remaining > 1:
             print(f"🕒 Scheduling next countdown tick — remaining: {remaining - 1}")
-            threading.Timer(60, update_countdown, args=(
+            t = threading.Timer(60, update_countdown, args=(
                 client, remaining - 1, order_ts, order_channel,
                 user_id, gifted_id, drink, location, notes, karma_cost
-            )).start()
+            ))
+            t.start()
+            print("🧭 Timer started, next tick scheduled.")
+            print("⏱️ Timer set, waiting 60 seconds to trigger next update_countdown()")
 
     except Exception as e:
         print(f"🚨 update_countdown FAILED: {e}")
