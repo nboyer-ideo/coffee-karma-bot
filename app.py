@@ -746,6 +746,7 @@ def handle_modal_submission(ack, body, client):
 
     print("🔁 Kicking off countdown now...")
     print("🚀 Starting countdown thread via update_countdown() in handle_modal_submission")
+    order_extras[order_ts] = {"active": True, "claimed": False}
     update_countdown(client, 10, order_ts, order_channel,
         user_id, gifted_id, drink, location, notes, karma_cost
     )
