@@ -72,7 +72,9 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
 
     map_lines = map_template.splitlines()
     if location_name in coordinates:
-        x, y = int(coordinates[location_name][0]), int(coordinates[location_name][1])
+        x = int(coordinates[location_name]["x"])
+        y = int(coordinates[location_name]["y"])
+        print(f"🗺️ Marking location on map at ({x}, {y}) for {location_name}")
         if 0 <= y < len(map_lines):
             line = list(map_lines[y])
             if 0 <= x < len(line):
@@ -111,8 +113,8 @@ def format_order_message(order_data):
     lines.append(border_bot)
     lines += [
         "|           CHANNEL COMMANDS             |",
-        "|  /ORDER\t\tPLACE AN ORDER             |",
-        "|  /KARMA\t\tCHECK YOUR KARMA           |",
+        "|  /ORDER\t\t\tPLACE AN ORDER           |",
+        "|  /KARMA\t\t\tCHECK YOUR KARMA         |",
         "|  /LEADERBOARD\tTOP KARMA EARNERS        |",
         border_bot
     ]
@@ -123,15 +125,14 @@ def format_order_message(order_data):
         # Add header for map panel
         map_title = "+--------------------------+"
         padded_map = [f"{line:<26}"[:26] for line in mini_map]
-        map_lines = [map_title, "|         LION MAP         |"]
+        map_lines = [map_title, "|         LION MAP         |", map_title]
         map_lines += [f"|{line}|" for line in padded_map]
         map_lines.append("+--------------------------+")
         map_legend = [
-            "+--------------------------+",
-            "| ✗ = DRINK LOCATION       |",
-            "| ☕ = CAFÉ                 |",
-            "| ▯ = ELEVATOR             |",
-            "| ≋ = BATHROOM             |",
+            "| ✗ = DRINK LOCATION      |",
+            "| ☕ = CAFÉ                |",
+            "| ▯ = ELEVATOR            |",
+            "| ≋ = BATHROOM            |",
             "+--------------------------+"
         ]
         map_lines.extend(map_legend)
