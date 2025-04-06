@@ -1260,7 +1260,7 @@ def manual_countdown_trigger():
     from slack_sdk import WebClient
     client = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
     # Replace these placeholders with real values for a live order to test
-    update_countdown(client, 9, "1743912474.636569", "C08LXEPQXRS", "U02EY5S5J0M", None, "test", "4B", "", 2)
+    update_countdown(client, 9, "1743912474.636569", "C08LXEPQXRS", "U02EY5S5J0M", None, "test", "4B", "", 1)
     return "Triggered countdown manually."
 
 if __name__ == "__main__":
