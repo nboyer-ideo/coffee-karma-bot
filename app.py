@@ -72,7 +72,7 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
 
     map_lines = map_template.splitlines()
     if location_name in coordinates:
-        x, y = coordinates[location_name]
+        x, y = int(coordinates[location_name][0]), int(coordinates[location_name][1])
         if 0 <= y < len(map_lines):
             line = list(map_lines[y])
             if 0 <= x < len(line):
@@ -87,10 +87,8 @@ def format_order_message(order_data):
     lines = [
         border_top,
         *wrap_line("", "KOFFEE KARMA TERMINAL"),
-        border_mid,
-        *wrap_line("DROP ID", order_data["order_id"]),
-        border_mid,
     ]
+    lines += wrap_line("  DROP ID", order_data["order_id"])
     lines += wrap_line("  FROM", order_data["requester_real_name"] or f"<@{order_data['requester_id']}>")
     lines += wrap_line("  TO", order_data["recipient_real_name"] or f"<@{order_data['recipient_id']}>")
     lines += wrap_line("  DRINK", order_data["drink"])
@@ -113,29 +111,30 @@ def format_order_message(order_data):
     lines.append(border_bot)
     lines += [
         "|           CHANNEL COMMANDS             |",
-        "|  /ORDER\tPLACE AN ORDER           |",
-        "|  /KARMA\tCHECK YOUR KARMA         |",
+        "|  /ORDER\t\t\tPLACE AN ORDER           |",
+        "|  /KARMA\t\t\tCHECK YOUR KARMA         |",
         "|  /LEADERBOARD\tTOP KARMA EARNERS        |",
         border_bot
     ]
-    # Mini-map rendering
-    if order_data.get("location"):
-        mini_map = build_mini_map(order_data["location"])
-
-        # Add header for map panel
-        map_title = "+--------------------------+"
-        padded_map = [f"{line:<26}"[:26] for line in mini_map]
-        map_lines = [map_title, "|       LION MAP           |", map_title]
-        map_lines += [f"|{line}|" for line in padded_map]
-        map_legend = [
-            "|                          |",  # Keep for spacing consistency
-            "| ✗ = DRINK LOCATION       |",
-            "| ☕ = CAFÉ                 |",
-            "| ▯ = ELEVATOR             |",
-            "| ≋ = BATHROOM             |",
-            "+--------------------------+"
-        ]
-        map_lines.extend(map_legend)
+        # Mini-map rendering
+        if order_data.get("location"):
+            mini_map = build_mini_map(order_data["location"])
+ 
+            # Add header for map panel
+            map_title = "+--------------------------+"
+            padded_map = [f"{line:<26}"[:26] for line in mini_map]
+            map_lines = [map_title, "|         LION MAP         |", map_title]
+            map_lines += [f"|{line}|" for line in padded_map]
+            map_lines.append("+--------------------------+")
+            map_legend = [
+                "+--------------------------+",
+                "| ✗ = DRINK LOCATION       |",
+                "| ☕ = CAFÉ                 |",
+                "| ▯ = ELEVATOR             |",
+                "| ≋ = BATHROOM             |",
+                "+--------------------------+"
+            ]
+            map_lines.extend(map_legend)
 
         # Merge lines side by side
         merged_lines = []
@@ -539,17 +538,42 @@ def handle_modal_submission(ack, body, client):
         "time_delivered": "",
         "remaining_minutes": 10
     }
-    formatted_blocks = format_order_message(order_data)
+    # Post a preliminary message to obtain the drop ID
     posted = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
         text="New Koffee Karma order posted",
-        blocks=formatted_blocks
+        blocks=[]
     )
     order_ts = posted["ts"]
     order_channel = posted["channel"]
+    # Set the correct Drop ID before rendering the message
     order_data["order_id"] = order_ts
-    order_ts = posted["ts"]
-    order_channel = posted["channel"]
+    from slack_sdk import WebClient
+    slack_token = os.environ.get("SLACK_BOT_TOKEN")
+    slack_client = WebClient(token=slack_token)
+    
+    try:
+        user_info = slack_client.users_info(user=user_id)
+        order_data["requester_real_name"] = user_info["user"]["real_name"]
+    except Exception as e:
+        print("⚠️ Failed to fetch requester real name:", e)
+    
+    if gifted_id:
+        try:
+            recipient_info = slack_client.users_info(user=gifted_id)
+            order_data["recipient_real_name"] = recipient_info["user"]["real_name"]
+        except Exception as e:
+            print("⚠️ Failed to fetch recipient real name:", e)
+    else:
+        order_data["recipient_real_name"] = order_data["requester_real_name"]
+    
+    formatted_blocks = format_order_message(order_data)
+    client.chat_update(
+        channel=order_channel,
+        ts=order_ts,
+        text="New Koffee Karma order posted",
+        blocks=formatted_blocks
+    )
  
  
     deduct_karma(user_id, karma_cost)
