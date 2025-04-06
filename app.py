@@ -92,6 +92,7 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
  
 def format_order_message(order_data):
     print(f"📨 format_order_message called with order_data: {order_data}")
+    print(f"🧪 format_order_message FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
     border_top = "+----------------------------------------+"
     border_mid = "+----------------------------------------+"
     border_bot = "+----------------------------------------+"
@@ -241,11 +242,11 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "order_id": order_ts,
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "requester_id": user_id,
-            "requester_real_name": "",
+            "requester_real_name": extras.get("requester_real_name", ""),
             "claimer_id": "",
             "claimer_real_name": "",
             "recipient_id": gifted_id if gifted_id else user_id,
-            "recipient_real_name": "",
+            "recipient_real_name": extras.get("recipient_real_name", ""),
             "drink": drink,
             "location": location,
             "notes": notes,
@@ -255,8 +256,9 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "time_claimed": "",
             "time_delivered": "",
-            "remaining_minutes": remaining
-        }
+        "remaining_minutes": remaining
+    }
+    print(f"🧪 Names Debug — requester: {order_data['requester_real_name']}, recipient: {order_data['recipient_real_name']}")
         print("🛠️ Calling format_order_message with updated remaining time")
         updated_blocks = format_order_message(order_data)
         print(f"🔍 Progress bar update should now be reflected in updated_blocks:\n{updated_blocks}")
@@ -283,6 +285,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 
         print("📤 Sending updated message to Slack regardless of text match")
         print(f"🧾 Updated blocks:\n{updated_blocks}")
+        print(f"🧪 Sending to Slack with FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
         client.chat_update(
             channel=order_channel,
             ts=order_ts,
