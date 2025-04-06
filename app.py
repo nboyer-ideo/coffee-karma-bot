@@ -98,6 +98,7 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
     return map_lines
  
 def format_order_message(order_data):
+    print(f"📨 format_order_message called with order_data: {order_data}")
     border_top = "+----------------------------------------+"
     border_mid = "+----------------------------------------+"
     border_bot = "+----------------------------------------+"
@@ -234,7 +235,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print(f"📦 order_extras for {order_ts}: {extras}")
 
         if not extras or not extras.get("active", True):
-            print(f"⏸️ Countdown stopped — order inactive or missing extras")
+            print(f"⛔ Countdown aborted — order_extras missing or marked inactive for {order_ts}")
             return
 
         current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
@@ -271,6 +272,8 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         original_text = current_message["messages"][0].get("text", "")
         print(f"📝 Original text:\n{original_text}")
         print("🧾 full original text:", repr(original_text))
+        print("🧪 Performing regex substitution to update countdown text")
+        print(f"🧾 Regex input text: {original_text}")
 
         new_text = re.sub(
             r"(?:⏳|:hourglass_flowing_sand:)\s*\d+\s*MINUTES\s*TO\s*CLAIM\s*OR\s*IT\s*DIES",
@@ -279,6 +282,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             flags=re.IGNORECASE
         )
         print(f"🆕 Updated text:\n{new_text}")
+        print(f"🔁 Regex output text: {new_text}")
 
         if original_text == new_text:
             print("⚠️ Regex replacement did not change the text")
@@ -286,6 +290,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         if original_text != new_text:
             print("💬 Sending updated message to Slack...")
             print("📤 Attempting client.chat_update with updated countdown state")
+            print("📤 Attempting to send updated countdown message via chat_update")
             client.chat_update(
                 channel=order_channel,
                 ts=order_ts,
@@ -298,12 +303,14 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 
         if remaining > 1:
             print(f"🕒 Scheduling next countdown tick — remaining: {remaining - 1}")
+            print(f"🧭 Timer thread will now sleep for 60 seconds before next update_countdown call")
+            print(f"🔄 Timer scheduled to re-trigger update_countdown in 60s for remaining={remaining - 1}")
             t = threading.Timer(60, update_countdown, args=(
                 client, remaining - 1, order_ts, order_channel,
                 user_id, gifted_id, drink, location, notes, karma_cost
             ))
             t.start()
-            print("🧭 Timer started, next tick scheduled.")
+            print("🌀 Countdown timer thread started")
             print("⏱️ Timer set, waiting 60 seconds to trigger next update_countdown()")
 
     except Exception as e:
