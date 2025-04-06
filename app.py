@@ -470,8 +470,8 @@ def handle_modal_submission(ack, body, client):
     }
     karma_cost = drink_map[drink_value]
     drink = drink_detail
-    location = values["location"]["input"]["value"]
-    notes = values["notes"]["input"]["value"] if "notes" in values else ""
+    location = values["location"]["input"]["selected_option"]["value"]
+    notes = values["notes"]["input"]["value"] if "notes" in values and "input" in values["notes"] else ""
     gifted_id = values["gift_to"]["input"]["selected_user"] if "gift_to" in values and "input" in values["gift_to"] else None
     
     
