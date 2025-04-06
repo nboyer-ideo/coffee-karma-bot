@@ -116,25 +116,25 @@ def format_order_message(order_data):
         "|  /LEADERBOARD\tTOP KARMA EARNERS        |",
         border_bot
     ]
-        # Mini-map rendering
-        if order_data.get("location"):
-            mini_map = build_mini_map(order_data["location"])
+    # Mini-map rendering
+    if order_data.get("location"):
+        mini_map = build_mini_map(order_data["location"])
  
-            # Add header for map panel
-            map_title = "+--------------------------+"
-            padded_map = [f"{line:<26}"[:26] for line in mini_map]
-            map_lines = [map_title, "|         LION MAP         |", map_title]
-            map_lines += [f"|{line}|" for line in padded_map]
-            map_lines.append("+--------------------------+")
-            map_legend = [
-                "+--------------------------+",
-                "| ✗ = DRINK LOCATION       |",
-                "| ☕ = CAFÉ                 |",
-                "| ▯ = ELEVATOR             |",
-                "| ≋ = BATHROOM             |",
-                "+--------------------------+"
-            ]
-            map_lines.extend(map_legend)
+        # Add header for map panel
+        map_title = "+--------------------------+"
+        padded_map = [f"{line:<26}"[:26] for line in mini_map]
+        map_lines = [map_title, "|         LION MAP         |", map_title]
+        map_lines += [f"|{line}|" for line in padded_map]
+        map_lines.append("+--------------------------+")
+        map_legend = [
+            "+--------------------------+",
+            "| ✗ = DRINK LOCATION       |",
+            "| ☕ = CAFÉ                 |",
+            "| ▯ = ELEVATOR             |",
+            "| ≋ = BATHROOM             |",
+            "+--------------------------+"
+        ]
+        map_lines.extend(map_legend)
 
         # Merge lines side by side
         merged_lines = []
