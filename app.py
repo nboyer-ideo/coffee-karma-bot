@@ -117,7 +117,7 @@ def format_order_message(order_data):
     progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
     print(f"📊 New progress bar string: {progress_bar}")
     padding = 42 - 4 - len(progress_bar)
-    lines.append(f"|  {progress_bar}{' ' * padding}|")
+    lines.append(f"|{' ' * 9}{progress_bar}{' ' * 9}|")
     
     # lines.append(border_mid)
     lines.append("|  ------------------------------------  |")
