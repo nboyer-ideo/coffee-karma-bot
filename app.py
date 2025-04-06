@@ -120,7 +120,6 @@ def format_order_message(order_data):
     ]
     # Mini-map rendering
     if order_data.get("location"):
-        from map_util import build_mini_map
         mini_map = build_mini_map(order_data["location"])
 
         # Add header for map panel
