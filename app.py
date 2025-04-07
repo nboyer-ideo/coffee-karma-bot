@@ -115,7 +115,6 @@ def format_order_message(order_data):
     lines.append(f'| FROM :        {requester_display.upper():<32} |')
     lines.append(f'| TO :          {recipient_display.upper():<32} |')
     lines.append(f'| DRINK :       {order_data["drink"].upper():<32} |')
-    lines.append(f'| DRINK :       {order_data["drink"].upper():<32} |')
     lines.append(f'| LOCATION :    {order_data["location"].upper():<32} |')
     lines.append(f'| NOTES :       {(order_data["notes"] or "NONE").upper():<32} |')
     lines.append(border_mid)
@@ -132,14 +131,6 @@ def format_order_message(order_data):
         lines.append("| ---------------------------------------------- |")
     elif order_data.get("claimed_by"):
         lines.append(f'| STATUS :      CLAIMED BY {order_data["claimed_by"].upper():<22} |')
-        lines.append(f'| FROM :        {requester_display.upper():<32} |')
-        lines.append(f'| TO :          {recipient_display.upper():<32} |')
-        lines.append(f'| DRINK :       {order_data["drink"].upper():<32} |')
-        lines.append(f'| LOCATION :    {order_data["location"].upper():<32} |')
-        lines.append(f'| NOTES :       {(order_data["notes"] or "NONE").upper():<32} |')
-        lines.append(border_mid)
-        lines.append(f'| REWARD :      {order_data["karma_cost"]} KARMA{" " * (32 - len(str(order_data["karma_cost"]) + " KARMA"))} |')
-        lines.append(f'|               WAITING TO BE DELIVERED           |')
     else:
         total_blocks = 20
         remaining = order_data.get("remaining_minutes", 10)
@@ -825,14 +816,9 @@ def handle_cancel_order(ack, body, client):
             if original_text:
                 break
 
-    # Extract the original_user_id from the cancel button's value
-    original_user_id = None
-    for action in body.get("actions", []):
-        if action.get("action_id") == "cancel_order":
-            value_parts = action.get("value", "").split("|")
-            if len(value_parts) >= 2:
-                original_user_id = value_parts[1]
-                break
+    order_ts = message["ts"]
+    extras = order_extras.get(order_ts, {})
+    original_user_id = extras.get("requester_id")
 
     if user_id != original_user_id:
         client.chat_postEphemeral(
@@ -862,13 +848,7 @@ def handle_cancel_order(ack, body, client):
         del order_extras[order_ts]
     
     # Refund the karma cost to the original user
-    karma_cost = 1  # Default in case it can't be determined
-    if "Water" in original_text:
-        karma_cost = 1
-    elif "Drip" in original_text:
-        karma_cost = 2
-    elif "Espresso" in original_text:
-        karma_cost = 3
+    karma_cost = extras.get("karma_cost", 1)
     add_karma(user_id, karma_cost)
     print(f"📬 Sending DM to user_id: {user_id} with message: 🌀 Your order was canceled. {karma_cost} Karma refunded. Balance restored.")
     client.chat_postMessage(
@@ -914,28 +894,30 @@ def handle_claim_order(ack, body, client):
     order_text = re.sub(r"\n*📸 \*Flex the drop\..*", "", order_text, flags=re.MULTILINE)
     
     order_ts = body["message"]["ts"]
-    # Extract original values to reconstruct terminal
-    drink = location = notes = ""
-    karma_cost = 1
-    for block in original_message.get("blocks", []):
-        if block.get("type") == "section" and "text" in block:
-            block_text = block["text"]["text"]
-            drink_match = re.search(r"DRINK: (.+)", block_text)
-            if drink_match:
-                drink = drink_match.group(1).strip()
-            location_match = re.search(r"LOCATION: (.+)", block_text)
-            if location_match:
-                location = location_match.group(1).strip()
-            notes_match = re.search(r"NOTES: (.+)", block_text)
-            if notes_match:
-                notes = notes_match.group(1).strip()
-            karma_match = re.search(r"REWARD: (\d+)", block_text)
-            if karma_match:
-                karma_cost = int(karma_match.group(1).strip())
-            break
+    # Pull values from order_extras instead of parsing the message text
+    extras = order_extras.get(order_ts, {})
+    drink = extras.get("drink", "")
+    if not drink:
+        # Attempt to extract the drink from the order text if not already set
+        order_text = ""
+        for block in body["message"].get("blocks", []):
+            if block.get("type") == "section" and "text" in block:
+                order_text = block["text"].get("text", "")
+                break
+        import re
+        match = re.search(r"\| DRINK :\s+(\S+)", order_text)
+        if match:
+            drink = match.group(1).strip()
+    location = extras.get("location", "")
+    notes = extras.get("notes", "")
+    karma_cost = extras.get("karma_cost", 1)
     if order_ts not in order_extras:
         order_extras[order_ts] = {"claimer_id": None, "active": True, "claimed": False}
+        order_extras[order_ts]["location"] = location
+        order_extras[order_ts]["notes"] = notes
     order_extras[order_ts]["claimer_id"] = user_id
+    order_extras[order_ts]["drink"] = drink
+    order_extras[order_ts]["karma_cost"] = karma_cost
     order_extras[order_ts]["active"] = False
     order_extras[order_ts]["claimed"] = True
     
@@ -969,14 +951,16 @@ def handle_claim_order(ack, body, client):
         requester_id = user_id  # fallback if not found
     order_extras[order_ts]["recipient_id"] = gifted_id if gifted_id else user_id
     order_extras[order_ts]["requester_id"] = requester_id
+    order_extras[order_ts]["drink"] = drink
+    order_extras[order_ts]["karma_cost"] = karma_cost
     order_data = {
         "order_id": order_ts,
         "requester_real_name": order_extras.get(order_ts, {}).get("requester_real_name"),
         "recipient_real_name": order_extras.get(order_ts, {}).get("recipient_real_name"),
         "recipient_id": order_extras.get(order_ts, {}).get("recipient_id", user_id),
-        "drink": drink,
-        "location": location,
-        "notes": notes,
+        "drink": extras.get("drink", ""),
+        "location": extras.get("location", ""),
+        "notes": extras.get("notes", ""),
         "karma_cost": karma_cost,
         "claimer_karma": get_karma(user_id),
         "claimer_name": claimer_name,
@@ -1064,21 +1048,8 @@ def handle_mark_delivered(ack, body, client):
 
             deliverer_id = safe_body.get("user", {}).get("id")
             text_blocks = original_message.get("blocks", [])
-            requester_id = None
-            recipient_id = None
-            for block in text_blocks:
-                if block.get("type") == "section":
-                    text = block.get("text", {}).get("text", "")
-                    # Try matching both gift and non-gift formats
-                    match = re.search(r"FROM <@([A-Z0-9]+)> TO <@([A-Z0-9]+)>", text)
-                    if match:
-                        requester_id, recipient_id = match.groups()
-                        break
-                    match = re.search(r"FROM <@([A-Z0-9]+)>", text)
-                    if match:
-                        requester_id = match.group(1)
-                        recipient_id = requester_id  # Self-order fallback
-                        break
+            requester_id = order_extras.get(order_ts, {}).get("requester_id")
+            recipient_id = order_extras.get(order_ts, {}).get("recipient_id")
 
             if not claimer_id or (deliverer_id != claimer_id and deliverer_id != recipient_id):
                 safe_client.chat_postEphemeral(
@@ -1099,13 +1070,8 @@ def handle_mark_delivered(ack, body, client):
 
             # Removed redundant check since claimer_id is now validated above
 
-            # Prevent bonus if claimer is also the original requester
-            if claimer_id == recipient_id:
-                bonus_multiplier = 1
-            else:
-                bonus_multiplier = 1
-                if random.randint(1, 5) == 1:  # 20% chance
-                    bonus_multiplier = random.choice([2, 3])
+            bonus_multiplier = order_extras.get(order_ts, {}).get("bonus_multiplier", 1)
+            claimer_name = order_extras.get(order_ts, {}).get("claimer_real_name", "")
             points = add_karma(claimer_id, bonus_multiplier)
             print(f"☚️ +{bonus_multiplier} point(s) for {claimer_id}. Total: {points}")
 
@@ -1118,15 +1084,7 @@ def handle_mark_delivered(ack, body, client):
                 f"{order_text}\n\n✅ *DROP COMPLETED*\n"
                 f"💥 <@{claimer_id}> EARNED +{bonus_multiplier} KARMA (TOTAL: *{points}*)"
             )
-            drink = ""
-            # Extract drink details from message blocks
-            for block in original_message.get("blocks", []):
-                if block.get("type") == "section" and "text" in block:
-                    block_text = block["text"]["text"]
-                    drink_match = re.search(r"DRINK: (.+)", block_text)
-                    if drink_match:
-                        drink = drink_match.group(1).strip()
-                    break
+            drink = order_extras.get(order_ts, {}).get("drink", "")
 
             order_data = {
                 "order_id": order_ts,
