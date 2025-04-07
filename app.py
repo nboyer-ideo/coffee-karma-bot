@@ -203,7 +203,6 @@ def format_order_message(order_data):
                 "text": "CLAIM THIS MISSION",
                 "emoji": True
             },
-            "style": "default",
             "value": order_data["order_id"]
         })
         elements.append({
