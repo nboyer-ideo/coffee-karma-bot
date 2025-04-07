@@ -115,8 +115,9 @@ def format_order_message(order_data):
     lines.append(f'| FROM :        {requester_display.upper():<32} |')
     lines.append(f'| TO :          {recipient_display.upper():<32} |')
     lines.append(f'| DRINK :       {order_data["drink"].upper():<32} |')
-    lines.append(f'| LOCATION :    {order_data["location"]:<32} |')
-    lines.append(f'| NOTES :       {(order_data["notes"] or "NONE"):<32} |')
+    lines.append(f'| DRINK :       {order_data["drink"].upper():<32} |')
+    lines.append(f'| LOCATION :    {order_data["location"].upper():<32} |')
+    lines.append(f'| NOTES :       {(order_data["notes"] or "NONE").upper():<32} |')
     lines.append(border_mid)
     lines.append(f'| REWARD :      {order_data["karma_cost"]} KARMA{" " * (32 - len(str(order_data["karma_cost"]) + " KARMA"))} |')
     if order_data.get("delivered_by"):
@@ -131,7 +132,14 @@ def format_order_message(order_data):
         lines.append("| ---------------------------------------------- |")
     elif order_data.get("claimed_by"):
         lines.append(f'| STATUS :      CLAIMED BY {order_data["claimed_by"].upper():<22} |')
-        lines.append(f'|               WAITING TO BE DELIVERED       |')
+        lines.append(border_mid)
+        lines.append(f'| DRINK :       {order_data["drink"].upper():<32} |')
+        lines.append(f'| LOCATION :    {order_data["location"].upper():<32} |')
+        lines.append(border_mid)
+        lines.append(f'|               WAITING TO BE DELIVERED           |')
+        lines.append("| ---------------------------------------------- |")
+        lines.append("|      ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓     |")
+        lines.append("| ---------------------------------------------- |")
     else:
         total_blocks = 20
         remaining = order_data.get("remaining_minutes", 10)
@@ -140,7 +148,7 @@ def format_order_message(order_data):
         progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
         status_line = f'{order_data.get("remaining_minutes", 10)} MINUTES TO CLAIM'
         lines.append(f'| STATUS :      {status_line:<32} |')
-        lines.append(f'|               {progress_bar:<32} |')
+        lines.append(f'|               {progress_bar:<33} |')
     
     # Only add call-to-action if order is not delivered
     if not order_data.get("delivered_by"):
@@ -158,33 +166,6 @@ def format_order_message(order_data):
         "| /REDEEM       BONUS KARMA CODES                |",
         border_bot
     ]
-    # Mini-map rendering
-    if order_data.get("location"):
-        mini_map = build_mini_map(order_data["location"])
- 
-        # Add header for map panel
-        map_title = "+--------------------------+"
-        padded_map = [f"{line:<26}"[:26] for line in mini_map]
-        map_lines = [map_title, "|         LION MAP         |", map_title]
-        map_lines += [f"|{line}|" for line in padded_map]
-        map_lines.append("+--------------------------+")
-        map_legend = [
-            "| ✗ = DRINK LOCATION       |",
-            "| ☕ = CAFÉ                 |",
-            "| ▯ = ELEVATOR             |",
-            "| ≋ = BATHROOM             |",
-            "+--------------------------+"
-        ]
-        map_lines.extend(map_legend)
-
-        # Merge lines side by side
-        merged_lines = []
-        max_lines = max(len(lines), len(map_lines))
-        for i in range(max_lines):
-            left = lines[i] if i < len(lines) else " " * 42
-            right = map_lines[i] if i < len(map_lines) else ""
-            merged_lines.append(f"{left}  {right}")
-        lines = merged_lines
  
     # Define button elements based on order claim status
     elements = []
@@ -1449,3 +1430,30 @@ if __name__ == "__main__":
     
     threading.Thread(target=run_schedule, daemon=True).start()
     flask_app.run(host="0.0.0.0", port=port, threaded=True)
+    # Mini-map rendering
+    if order_data.get("location"):
+        mini_map = build_mini_map(order_data["location"])
+ 
+        # Add header for map panel
+        map_title = "+--------------------------+"
+        padded_map = [f"{line:<26}"[:26] for line in mini_map]
+        map_lines = [map_title, "|         LION MAP         |", map_title]
+        map_lines += [f"|{line}|" for line in padded_map]
+        map_lines.append("+--------------------------+")
+        map_legend = [
+            "| ✗ = DRINK LOCATION       |",
+            "| ☕ = CAFÉ                 |",
+            "| ▯ = ELEVATOR             |",
+            "| ≋ = BATHROOM             |",
+            "+--------------------------+"
+        ]
+        map_lines.extend(map_legend)
+ 
+        # Merge lines side by side
+        merged_lines = []
+        max_lines = max(len(lines), len(map_lines))
+        for i in range(max_lines):
+            left = lines[i] if i < len(lines) else " " * 42
+            right = map_lines[i] if i < len(map_lines) else ""
+            merged_lines.append(f"{left}  {right}")
+        lines = merged_lines
