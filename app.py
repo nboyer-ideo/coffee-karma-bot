@@ -121,8 +121,10 @@ def format_order_message(order_data):
         lines += wrap_line("", f"DELIVERED BY {order_data['delivered_by'].upper()}")
         lines.append("|  ------------------------------------  |")
         karma_line = f"+{order_data['bonus_multiplier']} KARMA EARNED — TOTAL: {order_data['claimer_karma']}"
-        padding = 38 - len(karma_line)
-        lines.append(f"|  {karma_line}{' ' * padding}|")
+        total_width = 38
+        left_padding = (total_width - len(karma_line)) // 2
+        right_padding = total_width - len(karma_line) - left_padding
+        lines.append(f"|  {' ' * left_padding}{karma_line}{' ' * right_padding}  |")
         lines.append("|  ------------------------------------  |")
     elif order_data.get("claimed_by"):
         lines += wrap_line("  STATUS", f"CLAIMED BY {order_data['claimed_by'].upper()}")
@@ -414,9 +416,9 @@ def handle_order(ack, body, client):
                                 "value": "drip"
                             },
                         {
-                                "text": {"type": "plain_text", "text": "Espresso Drink (latte, cappuccino) — UNAVAILABLE ☕🚫"},
+                                "text": {"type": "plain_text", "text": "Espresso Drink (latte, cappuccino) — 3 Karma"},
                                 "value": "espresso"
-                            }
+                        }
                         ]
                     }
                 },
@@ -530,13 +532,6 @@ def handle_modal_submission(ack, body, client):
     values = body["view"]["state"]["values"]
     drink_value = values["drink_category"]["input"]["selected_option"]["value"]
     user_id = body["user"]["id"]
-    if drink_value == "espresso":
-        client.chat_postEphemeral(
-            channel=user_id,
-            user=user_id,
-            text="🚫 Espresso orders are temporarily unavailable — the machine's down. Choose something else while we fix it up."
-        )
-        return
     drink_detail = values["drink_detail"]["input"]["value"]
     drink_map = {
         "water": 1,
@@ -1198,10 +1193,29 @@ def handle_karma_command(ack, body, client):
     ack()
     user_id = body["user_id"]
     points = get_karma(user_id)
+    def get_title(karma):
+        if karma >= 20:
+            return "CAFE SHADE MYSTIC"
+        elif karma >= 16:
+            return "ORDER ORACLE"
+        elif karma >= 12:
+            return "STEAM WHISPERER"
+        elif karma >= 8:
+            return "FOAM SCRYER"
+        elif karma >= 5:
+            return "KEEPER OF THE DRIP"
+        elif karma >= 3:
+            return "BEAN SEEKER"
+        elif karma >= 1:
+            return "THE INITIATE"
+        else:
+            return "THE PARCHED"
+
+    title = get_title(points)
     client.chat_postEphemeral(
         channel=body["channel_id"],
         user=user_id,
-        text=f"☚️ You've got *{points} Koffee Karma* — keep the chaos brewing."
+        text=f"☚️ You've got *{points} Koffee Karma* — title: *{title}*. Keep the chaos brewing."
     )
 
 @app.command("/leaderboard")
@@ -1209,19 +1223,37 @@ def handle_leaderboard_command(ack, body, client):
     ack()
     leaderboard = get_leaderboard()
     
-    header = "+====================[ LEADERBOARD ]====================+"
-    title = "|  RANK  |            NAME            |    KARMA PTS    |"
-    divider = "|--------|----------------------------|-----------------|"
-    footer = "+=======================================================+"
-    commands = "|    /ORDER     /KARMA     /LEADERBOARD     /REDEEM     |"
+    def get_title(karma):
+        if karma >= 20:
+            return "CAFE SHADE MYSTIC"
+        elif karma >= 16:
+            return "ORDER ORACLE"
+        elif karma >= 12:
+            return "STEAM WHISPERER"
+        elif karma >= 8:
+            return "FOAM SCRYER"
+        elif karma >= 5:
+            return "KEEPER OF THE DRIP"
+        elif karma >= 3:
+            return "BEAN SEEKER"
+        elif karma >= 1:
+            return "THE INITIATE"
+        else:
+            return "THE PARCHED"
+    
+    header = "+=======================[ HONOR BOARD ]========================+"
+    title = "| RANK |         NAME         | KARMA |       TITLE           |"
+    divider = "|------|----------------------|--------|------------------------|"
+    footer = "+=============================================================+"
+    commands = "| /ORDER /KARMA /LEADERBOARD /REDEEM || TOP UP OR DROP OUT.   |"
     
     lines = [header, title, divider]
     for i, row in enumerate(leaderboard, start=1):
-        rank = f"{i}".center(5)
-        name = row['Name'].upper()[:26].ljust(26)
-        karma = f"{row['Karma']}".center(15)
-        lines.append(f"|  {rank} | {name} | {karma} |")
-    
+        rank = f"{i:03}"
+        name = row['Name'].upper()[:22].ljust(22)
+        karma = f"{row['Karma']}".center(6)
+        title_str = get_title(row['Karma'])[:22].ljust(22)
+        lines.append(f"|  {rank} | {name} |  {karma} | {title_str} |")
     lines.append(footer)
     lines.append(commands)
     lines.append(footer)
