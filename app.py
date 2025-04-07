@@ -35,7 +35,7 @@ def wrap_line(label, value, width=50):
     label = label.lstrip()
     # Pad label to fixed width for alignment; using fixed column start for values
     label = label.rstrip(":")
-    full = f"{label.upper():<9}:\t{value}".upper()
+    full = f"{label.upper():<11}{value}".upper()
     full = strip_formatting(full).replace("|", "")  # remove stray pipe characters
     max_content = width - 4  # leave 1 space padding on both sides for proper border alignment
     words = full.split()
@@ -105,20 +105,20 @@ def format_order_message(order_data):
         *wrap_line("", "KOFFEE KARMA TERMINAL", width=50),
     ]
     lines.append(border_mid)
-    lines += wrap_line("   DROP ID", order_data["order_id"], width=50)
+    lines.append(f'| DROP ID :     {order_data["order_id"]:<30} |')
     requester_display = order_data.get("requester_real_name") or f"<@{order_data['requester_id']}>"
     recipient_display = order_data.get("recipient_real_name") or f"<@{order_data['recipient_id']}>"
     if order_data.get("requester_id") == order_data.get("recipient_id"):
         recipient_display += " (Self)"
     else:
         recipient_display += " (Gift)"
-    lines += wrap_line("   FROM", requester_display, width=50)
-    lines += wrap_line("   TO", recipient_display, width=50)
-    lines += wrap_line("   DRINK", order_data["drink"], width=50)
-    lines += wrap_line("   LOCATION", order_data["location"], width=50)
-    lines += wrap_line("   NOTES", order_data["notes"] or "NONE", width=50)
+    lines.append(f'| FROM :        {requester_display:<30} |')
+    lines.append(f'| TO :          {recipient_display:<30} |')
+    lines.append(f'| DRINK :       {order_data["drink"]:<30} |')
+    lines.append(f'| LOCATION :    {order_data["location"]:<30} |')
+    lines.append(f'| NOTES :       {(order_data["notes"] or "NONE"):<30} |')
     lines.append(border_mid)
-    lines += wrap_line("   REWARD", f"{order_data['karma_cost']} KARMA", width=50)
+    lines.append(f'| REWARD :      {order_data["karma_cost"]} KARMA{" " * (30 - len(str(order_data["karma_cost"]) + " KARMA"))} |')
     if order_data.get("delivered_by"):
         lines += wrap_line("   STATUS", "COMPLETED", width=50)
         lines += wrap_line("", f"   DELIVERED BY {order_data['delivered_by'].upper()}", width=50)
@@ -133,18 +133,13 @@ def format_order_message(order_data):
         lines += wrap_line("   STATUS", f"CLAIMED BY {order_data['claimed_by'].upper()}", width=50)
         lines += wrap_line("", " WAITING TO BE DELIVERED", width=50)
     else:
-        lines += wrap_line("   STATUS", f"{order_data.get('remaining_minutes', 10)} MINUTES TO CLAIM", width=50)
         total_blocks = 20
         remaining = order_data.get("remaining_minutes", 10)
         filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
         empty_blocks = total_blocks - filled_blocks
-        print(f"🧮 Progress bar: {filled_blocks} filled, {empty_blocks} empty")
         progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
-        print(f"📊 New progress bar string: {progress_bar}")
-        padding = 42 - 4 - len(progress_bar)
-        left_pad = (padding + 1) // 2
-        right_pad = padding - left_pad
-        lines.append(f"|{' ' * left_pad}{progress_bar}{' ' * right_pad}|")
+        lines.append(f'| STATUS :      {order_data.get("remaining_minutes", 10)} MINUTES TO CLAIM       |')
+        lines.append(f'|               {progress_bar:<30} |')
     
     # Only add call-to-action if order is not delivered
     if not order_data.get("delivered_by"):
@@ -156,10 +151,10 @@ def format_order_message(order_data):
         lines.append("| ---------------------------------------------- |")
     lines.append(border_bot)
     lines += [
-        "| /ORDER\tPLACE AN ORDER                   |",
-        "| /KARMA\tCHECK YOUR KARMA                 |",
-        "| /LEADERBOARD\tTOP KARMA EARNERS              |",
-        "| /REDEEM\tBONUS KARMA CODES                |",
+        "| /ORDER        PLACE AN ORDER                   |",
+        "| /KARMA        CHECK YOUR KARMA                 |",
+        "| /LEADERBOARD  TOP KARMA EARNERS                |",
+        "| /REDEEM       BONUS KARMA CODES                |",
         border_bot
     ]
     # Mini-map rendering
