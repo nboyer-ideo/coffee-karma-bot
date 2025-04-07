@@ -120,8 +120,8 @@ def format_order_message(order_data):
     lines.append(border_mid)
     lines.append(f'| REWARD :      {order_data["karma_cost"]} KARMA{" " * (32 - len(str(order_data["karma_cost"]) + " KARMA"))} |')
     if order_data.get("delivered_by"):
-        lines.append(f'| STATUS :      COMPLETED{" " * 22} |')
-        lines.append(f'|               DELIVERED BY {order_data["delivered_by"].upper():<22} |')
+        lines.append(f'| STATUS :      COMPLETED {" " * 21} |')
+        lines.append(f'|               DELIVERED BY {order_data["delivered_by"].upper():<19} |')
         lines.append("| ---------------------------------------------- |")
         karma_line = f"+{order_data['bonus_multiplier']} KARMA EARNED — TOTAL: {order_data['claimer_karma']}"
         total_width = 46
@@ -130,8 +130,8 @@ def format_order_message(order_data):
         lines.append(f"| {' ' * left_padding}{karma_line}{' ' * right_padding} |")
         lines.append("| ---------------------------------------------- |")
     elif order_data.get("claimed_by"):
-        lines.append(f'| STATUS :      CLAIMED BY {order_data["claimed_by"].upper():<22} |')
-        lines.append(f'|               WAITING TO BE DELIVERED         |')
+        lines.append(f'| STATUS :      CLAIMED BY {order_data["claimed_by"].upper():<21} |')
+        lines.append(f'|               WAITING TO BE DELIVERED          |')
     else:
         total_blocks = 20
         remaining = order_data.get("remaining_minutes", 10)
@@ -146,7 +146,7 @@ def format_order_message(order_data):
     if not order_data.get("delivered_by"):
         lines.append("| ---------------------------------------------- |")
         if order_data.get("claimed_by"):
-            lines.append("|  ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓ |")
+            lines.append("|     ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓       |")
         else:
             lines.append("|      ↓ CLICK BELOW TO CLAIM THIS ORDER ↓       |")
         lines.append("| ---------------------------------------------- |")
