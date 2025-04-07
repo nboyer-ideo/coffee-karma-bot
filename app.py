@@ -790,6 +790,9 @@ def handle_modal_submission(ack, body, client):
         "claimed": False,
         "requester_real_name": order_data["requester_real_name"],
         "recipient_real_name": order_data["recipient_real_name"],
+        "location": location,
+        "notes": notes,
+        "karma_cost": karma_cost,
     }
     update_countdown(client, 10, order_ts, order_channel,
         user_id, gifted_id, drink, location, notes, karma_cost
@@ -1041,6 +1044,9 @@ def handle_mark_delivered(ack, body, client):
             claimer_name = order_extras.get(order_ts, {}).get("claimer_real_name", "")
             if not claimer_id:
                 print("⚠️ claimer_id missing for order_ts", order_ts)
+            location = order_extras.get(order_ts, {}).get("location", "")
+            notes = order_extras.get(order_ts, {}).get("notes", "")
+            karma_cost = order_extras.get(order_ts, {}).get("karma_cost", 1)
 
             deliverer_id = safe_body.get("user", {}).get("id")
             text_blocks = original_message.get("blocks", [])
