@@ -538,6 +538,7 @@ def handle_modal_submission(ack, body, client):
     drink = drink_detail
     location = values["location"]["input"]["selected_option"]["value"]
     notes = values["notes"]["input"]["value"] if "notes" in values and "input" in values["notes"] else ""
+    notes = notes[:30]
     gifted_id = values["gift_to"]["input"]["selected_user"] if "gift_to" in values and "input" in values["gift_to"] else None
     
     
@@ -1097,7 +1098,15 @@ def handle_mark_delivered(ack, body, client):
                 f"{order_text}\n\n✅ *DROP COMPLETED*\n"
                 f"💥 <@{claimer_id}> EARNED +{bonus_multiplier} KARMA (TOTAL: *{points}*)"
             )
-            drink = order_data.get("drink", "your drink")
+            drink = ""
+            # Extract drink details from message blocks
+            for block in original_message.get("blocks", []):
+                if block.get("type") == "section" and "text" in block:
+                    block_text = block["text"]["text"]
+                    drink_match = re.search(r"DRINK: (.+)", block_text)
+                    if drink_match:
+                        drink = drink_match.group(1).strip()
+                    break
 
             order_data = {
                 "order_id": order_ts,
