@@ -415,7 +415,7 @@ def handle_order(ack, body, client):
                     "type": "input",
                     "block_id": "drink_detail",
                     "label": {"type": "plain_text", "text": "What exactly do you want?"},
-                    "element": {"type": "plain_text_input", "action_id": "input", "max_length": 25}
+                    "element": {"type": "plain_text_input", "action_id": "input", "max_length": 30}
                 },
                 {
                     "type": "input",
@@ -509,7 +509,7 @@ def handle_order(ack, body, client):
                     "block_id": "notes",
                     "optional": True,
                     "label": {"type": "plain_text", "text": "Extra details (if it matters)"},
-                    "element": {"type": "plain_text_input", "action_id": "input", "max_length": 40}
+                    "element": {"type": "plain_text_input", "action_id": "input", "max_length": 30}
                 }
             ]
         }
@@ -1097,6 +1097,7 @@ def handle_mark_delivered(ack, body, client):
                 f"{order_text}\n\n✅ *DROP COMPLETED*\n"
                 f"💥 <@{claimer_id}> EARNED +{bonus_multiplier} KARMA (TOTAL: *{points}*)"
             )
+            drink = order_data.get("drink", "your drink")
 
             order_data = {
                 "order_id": order_ts,
