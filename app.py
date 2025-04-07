@@ -1242,18 +1242,18 @@ def handle_leaderboard_command(ack, body, client):
             return "THE PARCHED"
     
     header = "+===================[ THE BREW SCROLL ]===================+"
-    title =  "| RANK |        NAME        | KARMA |         TITLE       |"
+    title = "| RANK |        NAME        | KARMA |         TITLE       |"
     divider = "|------|--------------------|-------|---------------------|"
     footer = "+=========================================================+"
     commands = "|      /ORDER     /KARMA     /LEADERBOARD     /REDEEM     |"
     
     lines = [header, title, divider]
     for i, row in enumerate(leaderboard, start=1):
-        rank = f"{i}".center(5)
-        name = row['Name'].upper()[:20].ljust(20)
-        karma = f"{row['Karma']}".center(7)
-        title_str = get_title(row['Karma'])[:21].ljust(21)
-        lines.append(f"|{rank}| {name} |{karma}| {title_str} |")
+        rank = f"{i}"
+        name = row['Name'].upper()[:20]
+        karma = f"{row['Karma']}"
+        title_str = get_title(row['Karma'])[:21]
+        lines.append(f"| {rank:<4} | {name:<20} | {karma:^7} | {title_str:<21} |")
     lines.append(footer)
     lines.append(commands)
     lines.append(footer)
