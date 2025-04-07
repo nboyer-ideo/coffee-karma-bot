@@ -33,9 +33,9 @@ def wrap_line(label, value, width=50):
         centered = value.upper().center(width - 4)
         return [f"| {centered} |"]
     label = label.lstrip()
-    # Pad label to fixed width for alignment; assuming fixed width of 15 characters for label
-    padded_label = label.ljust(15)
-    full = f"{padded_label}: {value}".upper()
+    # Pad label to fixed width for alignment; using fixed column start for values
+    label = label.rstrip(":")
+    full = f"{label.upper():<9}:\t{value}".upper()
     full = strip_formatting(full).replace("|", "")  # remove stray pipe characters
     max_content = width - 4  # leave 1 space padding on both sides for proper border alignment
     words = full.split()
@@ -156,10 +156,10 @@ def format_order_message(order_data):
         lines.append("| ---------------------------------------------- |")
     lines.append(border_bot)
     lines += [
-        "| /ORDER          PLACE AN ORDER                 |",
-        "| /KARMA          CHECK YOUR KARMA               |",
-        "| /LEADERBOARD    TOP KARMA EARNERS              |",
-        "| /REDEEM         BONUS KARMA CODES              |",
+        "| /ORDER\tPLACE AN ORDER                   |",
+        "| /KARMA\tCHECK YOUR KARMA                 |",
+        "| /LEADERBOARD\tTOP KARMA EARNERS              |",
+        "| /REDEEM\tBONUS KARMA CODES                |",
         border_bot
     ]
     # Mini-map rendering
