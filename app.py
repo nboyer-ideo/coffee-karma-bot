@@ -138,8 +138,8 @@ def format_order_message(order_data):
         filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
         empty_blocks = total_blocks - filled_blocks
         progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
-        lines.append(f'| STATUS :      {order_data.get("remaining_minutes", 10)} MINUTES TO CLAIM       {" " * 7}|')
-        lines.append(f'|               {progress_bar:<30}  |')
+        lines.append(f'| STATUS :      {order_data.get("remaining_minutes", 10)} MINUTES TO CLAIM{" " * (21 - len(str(order_data.get("remaining_minutes", 10))))} |')
+        lines.append(f'|               {progress_bar:<31} |')
     
     # Only add call-to-action if order is not delivered
     if not order_data.get("delivered_by"):
@@ -147,7 +147,7 @@ def format_order_message(order_data):
         if order_data.get("claimed_by"):
             lines.append("|  ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓ |")
         else:
-            lines.append("|       ↓ CLICK BELOW TO CLAIM THIS ORDER ↓       |")
+            lines.append("|      ↓ CLICK BELOW TO CLAIM THIS ORDER ↓       |")
         lines.append("| ---------------------------------------------- |")
     lines.append(border_bot)
     lines += [
