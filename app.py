@@ -322,18 +322,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 
         original_text = current_message["messages"][0].get("text", "")
         print(f"📝 Original message text (repr): {repr(original_text)}")
-        print("🧪 Performing regex substitution to update countdown text")
-
-        new_text = re.sub(
-            r"(?:⏳|:hourglass_flowing_sand:)\s*\d+\s*MINUTES\s*TO\s*CLAIM\s*OR\s*IT\s*DIES",
-            f"⏳ {remaining} MINUTES TO CLAIM OR IT DIES",
-            original_text,
-            flags=re.IGNORECASE
-        )
-        print(f"🆕 Updated text:\n{new_text}")
-
-        if original_text == new_text:
-            print("⚠️ Regex replacement did not change the text")
+        print(f"📤 Sending updated Slack message with remaining_minutes = {remaining}")
 
         print("📤 Sending updated message to Slack regardless of text match")
         print(f"🧾 Updated blocks:\n{updated_blocks}")
@@ -821,6 +810,10 @@ def handle_cancel_order(ack, body, client):
     order_ts = message["ts"]
     extras = order_extras.get(order_ts, {})
     original_user_id = extras.get("requester_id")
+    if not original_user_id:
+        original_user_id = re.search(r"FROM <@([A-Z0-9]+)>", original_text or "")
+        if original_user_id:
+            original_user_id = original_user_id.group(1)
 
     if user_id != original_user_id:
         client.chat_postEphemeral(
