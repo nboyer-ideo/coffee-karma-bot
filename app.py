@@ -1222,7 +1222,7 @@ def handle_karma_command(ack, body, client):
 def handle_leaderboard_command(ack, body, client):
     ack()
     leaderboard = get_leaderboard()
-    
+ 
     def get_title(karma):
         if karma >= 20:
             return "CAFE SHADE MYSTIC"
@@ -1240,26 +1240,26 @@ def handle_leaderboard_command(ack, body, client):
             return "THE INITIATE"
         else:
             return "THE PARCHED"
-    
+ 
     header = "+===================[ THE BREW SCROLL ]===================+"
     title = "| RANK |        NAME        | KARMA |         TITLE       |"
     divider = "|------|--------------------|-------|---------------------|"
     footer = "+=========================================================+"
     commands = "|      /ORDER     /KARMA     /LEADERBOARD     /REDEEM     |"
-    
+ 
     lines = [header, title, divider]
     for i, row in enumerate(leaderboard, start=1):
-        rank = f"{i}"
-        name = row['Name'].upper()[:20]
-        karma = f"{row['Karma']}"
-        title_str = get_title(row['Karma'])[:21]
-        lines.append(f"| {rank:<4} | {name:<20} | {karma:^7} | {title_str:<21} |")
+        rank = f"{i:^6}"
+        name = f"{row['Name'].upper():<20}"[:20]
+        karma = f"{row['Karma']:^7}"
+        title_str = f"{get_title(row['Karma']):<21}"[:21]
+        lines.append(f"| {rank} | {name} | {karma} | {title_str} |")
     lines.append(footer)
     lines.append(commands)
     lines.append(footer)
-    
+ 
     leaderboard_text = "```" + "\n".join(lines) + "```"
-    
+ 
     client.chat_postMessage(
         channel=body["channel_id"],
         text="Koffee Karma Leaderboard",
