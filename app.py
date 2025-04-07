@@ -139,7 +139,7 @@ def format_order_message(order_data):
         progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
         status_line = f'{order_data.get("remaining_minutes", 10)} MINUTES TO CLAIM'
         lines.append(f'| STATUS :      {status_line:<32} |')
-        lines.append(f'|               {progress_bar:<33} |')
+        lines.append(f'|               {progress_bar:<32} |')
     
     # Only add call-to-action if order is not delivered
     if not order_data.get("delivered_by"):
