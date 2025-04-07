@@ -270,6 +270,3 @@ def refresh_titles():
         worksheet.update_cell(i + 2, 4, current_title)
     print("✅ All titles refreshed based on current Karma.")
 
-
-# TEMP: Refresh all leaderboard titles on next deploy
-refresh_titles()
