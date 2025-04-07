@@ -33,7 +33,7 @@ def wrap_line(label, value, width=42):
         centered = value.upper().center(width - 4)
         return [f"| {centered} |"]
     full = f"{label}: {value}".upper()
-    full = strip_formatting(full)
+    full = strip_formatting(full).replace("|", "")  # remove stray pipe characters
     max_content = width - 4  # leave 1 space padding on both sides for proper border alignment
     words = full.split()
     lines = []
@@ -180,6 +180,44 @@ def format_order_message(order_data):
             merged_lines.append(f"{left}  {right}")
         lines = merged_lines
  
+    # Define button elements based on order claim status
+    elements = []
+    if order_data.get("claimed_by"):
+        elements.append({
+            "type": "button",
+            "action_id": "mark_delivered",
+            "text": {
+                "type": "plain_text",
+                "text": "MARK AS DELIVERED",
+                "emoji": True
+            },
+            "style": "primary",
+            "value": order_data["order_id"]
+        })
+    else:
+        elements.append({
+            "type": "button",
+            "action_id": "claim_order",
+            "text": {
+                "type": "plain_text",
+                "text": "CLAIM THIS MISSION",
+                "emoji": True
+            },
+            "style": "default",
+            "value": order_data["order_id"]
+        })
+        elements.append({
+            "type": "button",
+            "action_id": "cancel_order",
+            "text": {
+                "type": "plain_text",
+                "text": "CANCEL",
+                "emoji": True
+            },
+            "style": "danger",
+            "value": f"{order_data['order_id']}|{order_data.get('requester_id')}"
+        })
+
     return [
         {
             "type": "section",
@@ -192,29 +230,7 @@ def format_order_message(order_data):
         {
             "type": "actions",
             "block_id": "buttons_block",
-            "elements": [
-                {
-                    "type": "button",
-                    "action_id": "claim_order",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "CLAIM THIS MISSION",
-                        "emoji": True
-                    },
-                    "value": f"{order_data['requester_id']}|{order_data['drink']}|{order_data['location']}"
-                },
-                {
-                    "type": "button",
-                    "action_id": "cancel_order",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "CANCEL",
-                        "emoji": True
-                    },
-                    "style": "danger",
-                    "value": f"cancel|{order_data['requester_id']}|{order_data['drink']}"
-                }
-            ]
+            "elements": elements
         }
     ]
 
