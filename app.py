@@ -1253,7 +1253,7 @@ def handle_leaderboard_command(ack, body, client):
         name = row['Name'].upper().ljust(20)[:20]
         karma = str(row['Karma']).center(7)
         title_str = get_title(row['Karma']).ljust(21)[:21]
-        lines.append(f"| {rank} | {name} | {karma} | {title_str} |")
+        lines.append(f"|{rank}|{name}|{karma}|{title_str}|")
     lines.append(footer)
     lines.append(commands)
     lines.append(footer)
