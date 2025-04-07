@@ -1249,11 +1249,11 @@ def handle_leaderboard_command(ack, body, client):
     
     lines = [header, title, divider]
     for i, row in enumerate(leaderboard, start=1):
-        rank = f"{i}".center(4)
+        rank = f"{i}".center(5)
         name = row['Name'].upper()[:20].ljust(20)
-        karma = f"{row['Karma']}".center(5)
+        karma = f"{row['Karma']}".center(7)
         title_str = get_title(row['Karma'])[:21].ljust(21)
-        lines.append(f"|  {rank} | {name} |  {karma} | {title_str} |")
+        lines.append(f"|{rank}| {name} |{karma}| {title_str} |")
     lines.append(footer)
     lines.append(commands)
     lines.append(footer)
