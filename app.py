@@ -1085,20 +1085,31 @@ def handle_mark_delivered(ack, body, client):
                 f"💥 <@{claimer_id}> EARNED +{bonus_multiplier} KARMA (TOTAL: *{points}*)"
             )
 
+            order_data = {
+                "order_id": order_ts,
+                "delivered_by": claimer_name,
+                "requester_id": requester_id,
+                "requester_real_name": order_extras.get(order_ts, {}).get("requester_real_name", ""),
+                "recipient_real_name": order_extras.get(order_ts, {}).get("recipient_real_name", ""),
+                "claimer_real_name": order_extras.get(order_ts, {}).get("claimer_real_name", ""),
+                "claimer_id": claimer_id,
+                "recipient_id": recipient_id,
+                "drink": drink,
+                "location": location,
+                "notes": notes,
+                "karma_cost": karma_cost,
+                "bonus_multiplier": bonus_multiplier,
+                "claimer_karma": get_karma(claimer_id),
+                "status": "delivered",
+                "time_delivered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            updated_blocks = format_order_message(order_data)
+
             safe_client.chat_update(
                 channel=safe_body["channel"]["id"],
                 ts=original_message["ts"],
                 text=new_text,
-                blocks=[
-                    {"type": "divider"},
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": new_text
-                        }
-                    }
-                ]
+                blocks=updated_blocks
             )
             safe_client.chat_postMessage(
                 channel=safe_body["channel"]["id"],
