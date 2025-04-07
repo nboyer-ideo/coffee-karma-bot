@@ -927,36 +927,53 @@ def handle_claim_order(ack, body, client):
         claimer_name=claimer_name,
         claimed_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     )
+    gifted_id = None
+    # Removed recipient_id initialization to avoid unbound variable issues
+    match = re.search(r"FROM <@([A-Z0-9]+)>", order_text)
+    if match:
+        requester_id = match.group(1)
+    else:
+        requester_id = user_id  # fallback if not found
+    order_extras[order_ts]["recipient_id"] = gifted_id if gifted_id else user_id
+    order_extras[order_ts]["requester_id"] = requester_id
     order_data = {
         "order_id": order_ts,
-        "claimed_by": claimer_name,
         "requester_real_name": order_extras.get(order_ts, {}).get("requester_real_name"),
         "recipient_real_name": order_extras.get(order_ts, {}).get("recipient_real_name"),
         "recipient_id": order_extras.get(order_ts, {}).get("recipient_id", user_id),
-        "requester_id": requester_id,
         "drink": drink,
         "location": location,
         "notes": notes,
         "karma_cost": karma_cost,
         "claimer_karma": get_karma(user_id),
-        "bonus_multiplier": ""
+        "claimer_name": claimer_name,
+        "claimed_by": claimer_name,
+        "requester_id": requester_id,
+        "bonus_multiplier": "",
+        "channel_id": body["channel"]["id"],
     }
+    print("🔍 order_extras for this order:")
+    for k, v in order_extras.get(order_ts, {}).items():
+        print(f"  {k}: {v}")
     updated_blocks = format_order_message(order_data)
-    client.chat_update(
-        channel=body["channel"]["id"],
-        ts=body["message"]["ts"],
-        blocks=updated_blocks
-    )
+    print("📤 Blocks being sent to Slack:")
+    import pprint
+    pprint.pprint(updated_blocks)
+    try:
+        client.chat_update(
+            channel=body["channel"]["id"],
+            ts=body["message"]["ts"],
+            blocks=updated_blocks
+        )
+        print("✅ Slack message successfully updated.")
+    except Exception as e:
+        print("🚨 Failed to update Slack message:", e)
 
     print(f"📬 Sending DM to claimer (user_id: {user_id}) with message: You took the mission. Don't forget to hit 'MARK AS DELIVERED' once the goods are dropped.")
     client.chat_postMessage(
         channel=user_id,
         text="You took the mission. Don't forget to hit 'MARK AS DELIVERED' once the goods are dropped."
     )
-    requester_id = None
-    match = re.search(r"FROM <@([A-Z0-9]+)>", order_text)
-    if match:
-        requester_id = match.group(1)
     if requester_id:
         print(f"📬 Sending DM to requester (user_id: {requester_id}) with message: ☕️ Your order was claimed by <@{user_id}>. Hold tight — delivery is on the way.")
         client.chat_postMessage(
@@ -1056,6 +1073,11 @@ def handle_mark_delivered(ack, body, client):
             points = add_karma(claimer_id, bonus_multiplier)
             print(f"☚️ +{bonus_multiplier} point(s) for {claimer_id}. Total: {points}")
 
+            # Debug: Print order_extras for current order_ts
+            print("🧪 DEBUG — order_extras[order_ts]:")
+            for k, v in order_extras.get(order_ts, {}).items():
+                print(f"{k}: {v}")
+
             new_text = (
                 f"{order_text}\n\n✅ *DROP COMPLETED*\n"
                 f"💥 <@{claimer_id}> EARNED +{bonus_multiplier} KARMA (TOTAL: *{points}*)"
@@ -1069,17 +1091,27 @@ def handle_mark_delivered(ack, body, client):
                 "recipient_real_name": order_extras.get(order_ts, {}).get("recipient_real_name", ""),
                 "claimer_real_name": order_extras.get(order_ts, {}).get("claimer_real_name", ""),
                 "claimer_id": claimer_id,
+                "claimer_name": claimer_name,
+                "claimed_by": claimer_name,
+                "claimer_karma": get_karma(claimer_id),
                 "recipient_id": recipient_id,
                 "drink": drink,
                 "location": location,
                 "notes": notes,
                 "karma_cost": karma_cost,
                 "bonus_multiplier": bonus_multiplier,
-                "claimer_karma": get_karma(claimer_id),
                 "status": "delivered",
                 "time_delivered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             }
+
+            # Debug: Print order_data before formatting message
+            print("🧪 DEBUG — order_data being passed to format_order_message:")
+            for k, v in order_data.items():
+                print(f"{k}: {v}")
             updated_blocks = format_order_message(order_data)
+            print("🧪 DEBUG — Updated blocks after mark_delivered formatting:")
+            import pprint
+            pprint.pprint(updated_blocks)
 
             safe_client.chat_update(
                 channel=safe_body["channel"]["id"],
@@ -1113,6 +1145,7 @@ def handle_mark_delivered(ack, body, client):
                 delivered_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 bonus_multiplier=bonus_multiplier
             )
+            print("📨 Attempting to update Slack message with updated_blocks")
             print("✅ All steps completed successfully")
 
         except Exception as e:
