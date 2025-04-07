@@ -932,7 +932,7 @@ def handle_claim_order(ack, body, client):
         "claimed_by": claimer_name,
         "requester_real_name": order_extras.get(order_ts, {}).get("requester_real_name"),
         "recipient_real_name": order_extras.get(order_ts, {}).get("recipient_real_name"),
-        "recipient_id": gifted_id if gifted_id else user_id,
+        "recipient_id": order_extras.get(order_ts, {}).get("recipient_id", user_id),
         "requester_id": requester_id,
         "drink": drink,
         "location": location,
