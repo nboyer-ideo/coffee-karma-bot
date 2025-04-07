@@ -407,7 +407,7 @@ def handle_order(ack, body, client):
                                 "value": "drip"
                             },
                         {
-                                "text": {"type": "plain_text", "text": "Espresso Drink (latte, cappuccino) — 3 Karma"},
+                            "text": {"type": "plain_text", "text": "Espresso Drink (latte, cappuccino) — UNAVAILABLE ☕🚫"},
                                 "value": "espresso"
                         }
                         ]
@@ -522,6 +522,13 @@ def handle_modal_submission(ack, body, client):
     ack()
     values = body["view"]["state"]["values"]
     drink_value = values["drink_category"]["input"]["selected_option"]["value"]
+    if drink_value == "espresso":
+        client.chat_postEphemeral(
+            channel=user_id,
+            user=user_id,
+            text="🚫 Espresso orders are temporarily unavailable — the machine's down. Choose something else while we fix it up."
+        )
+        return
     user_id = body["user"]["id"]
     drink_detail = values["drink_detail"]["input"]["value"]
     drink_map = {
