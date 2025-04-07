@@ -879,34 +879,6 @@ def handle_claim_order(ack, body, client):
     order_text = re.sub(r"\n*⚠️ This mission’s still unclaimed\..*", "", order_text, flags=re.MULTILINE)
     order_text = re.sub(r"\n*📸 \*Flex the drop\..*", "", order_text, flags=re.MULTILINE)
     
-    print("🔍 Order text before chat_update:", order_text)
-    client.chat_update(
-        channel=body["channel"]["id"],
-        ts=body["message"]["ts"],
-        text=f"{order_text}\n\n☚️ CLAIMED BY <@{user_id}>",
-        blocks=[
-            {"type": "divider"},
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"{order_text}\n\n☚️ CLAIMED BY <@{user_id}>"
-                }
-            },
-            {
-                "type": "actions",
-                "elements": [
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "MARK AS DELIVERED"},
-                        "style": "primary",
-                        "value": f"{user_id}",
-                        "action_id": "mark_delivered"
-                    }
-                ]
-            }
-        ]
-    )
     order_ts = body["message"]["ts"]
     # Extract original values to reconstruct terminal
     drink = location = notes = ""
@@ -930,7 +902,6 @@ def handle_claim_order(ack, body, client):
     if order_ts not in order_extras:
         order_extras[order_ts] = {"claimer_id": None, "active": True, "claimed": False}
     order_extras[order_ts]["claimer_id"] = user_id
-    order_extras[order_ts]["claimer_real_name"] = claimer_name
     order_extras[order_ts]["active"] = False
     order_extras[order_ts]["claimed"] = True
     
@@ -946,6 +917,7 @@ def handle_claim_order(ack, body, client):
         claimer_name = user_info["user"]["real_name"]
     except Exception as e:
         print("⚠️ Failed to fetch claimer real name for update:", e)
+    order_extras[order_ts]["claimer_real_name"] = claimer_name
     
     update_order_status(
         order_id=order_ts,
@@ -959,6 +931,8 @@ def handle_claim_order(ack, body, client):
         "claimed_by": claimer_name,
         "requester_real_name": order_extras.get(order_ts, {}).get("requester_real_name"),
         "recipient_real_name": order_extras.get(order_ts, {}).get("recipient_real_name"),
+        "recipient_id": gifted_id if gifted_id else user_id,
+        "requester_id": requester_id,
         "drink": drink,
         "location": location,
         "notes": notes,
@@ -1030,6 +1004,7 @@ def handle_mark_delivered(ack, body, client):
             original_message = safe_body.get("message", {})
             order_ts = original_message.get("ts")
             claimer_id = order_extras.get(order_ts, {}).get("claimer_id")
+            claimer_name = order_extras.get(order_ts, {}).get("claimer_real_name", "")
             if not claimer_id:
                 print("⚠️ claimer_id missing for order_ts", order_ts)
 
