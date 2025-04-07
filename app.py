@@ -105,23 +105,23 @@ def format_order_message(order_data):
         *wrap_line("", "KOFFEE KARMA TERMINAL", width=50),
     ]
     lines.append(border_mid)
-    lines.append(f'| DROP ID :     {order_data["order_id"]:<30} |')
+    lines.append(f'| DROP ID :     {order_data["order_id"]:<32} |')
     requester_display = order_data.get("requester_real_name") or f"<@{order_data['requester_id']}>"
     recipient_display = order_data.get("recipient_real_name") or f"<@{order_data['recipient_id']}>"
     if order_data.get("requester_id") == order_data.get("recipient_id"):
         recipient_display += " (Self)"
     else:
         recipient_display += " (Gift)"
-    lines.append(f'| FROM :        {requester_display:<30} |')
-    lines.append(f'| TO :          {recipient_display:<30} |')
-    lines.append(f'| DRINK :       {order_data["drink"]:<30} |')
-    lines.append(f'| LOCATION :    {order_data["location"]:<30} |')
-    lines.append(f'| NOTES :       {(order_data["notes"] or "NONE"):<30} |')
+    lines.append(f'| FROM :        {requester_display:<32} |')
+    lines.append(f'| TO :          {recipient_display:<32} |')
+    lines.append(f'| DRINK :       {order_data["drink"]:<32} |')
+    lines.append(f'| LOCATION :    {order_data["location"]:<32} |')
+    lines.append(f'| NOTES :       {(order_data["notes"] or "NONE"):<32} |')
     lines.append(border_mid)
-    lines.append(f'| REWARD :      {order_data["karma_cost"]} KARMA{" " * (30 - len(str(order_data["karma_cost"]) + " KARMA"))} |')
+    lines.append(f'| REWARD :      {order_data["karma_cost"]} KARMA{" " * (32 - len(str(order_data["karma_cost"]) + " KARMA"))} |')
     if order_data.get("delivered_by"):
-        lines += wrap_line("   STATUS", "COMPLETED", width=50)
-        lines += wrap_line("", f"   DELIVERED BY {order_data['delivered_by'].upper()}", width=50)
+        lines.append(f'| STATUS :      COMPLETED{" " * 22} |')
+        lines.append(f'|               DELIVERED BY {order_data["delivered_by"].upper():<22} |')
         lines.append("| ---------------------------------------------- |")
         karma_line = f"+{order_data['bonus_multiplier']} KARMA EARNED — TOTAL: {order_data['claimer_karma']}"
         total_width = 46
@@ -130,16 +130,16 @@ def format_order_message(order_data):
         lines.append(f"| {' ' * left_padding}{karma_line}{' ' * right_padding} |")
         lines.append("| ---------------------------------------------- |")
     elif order_data.get("claimed_by"):
-        lines += wrap_line("   STATUS", f"CLAIMED BY {order_data['claimed_by'].upper()}", width=50)
-        lines += wrap_line("", " WAITING TO BE DELIVERED", width=50)
+        lines.append(f'| STATUS :      CLAIMED BY {order_data["claimed_by"].upper():<22} |')
+        lines.append(f'|               WAITING TO BE DELIVERED       |')
     else:
         total_blocks = 20
         remaining = order_data.get("remaining_minutes", 10)
         filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
         empty_blocks = total_blocks - filled_blocks
         progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
-        lines.append(f'| STATUS :      {order_data.get("remaining_minutes", 10)} MINUTES TO CLAIM       |')
-        lines.append(f'|               {progress_bar:<30} |')
+        lines.append(f'| STATUS :      {order_data.get("remaining_minutes", 10)} MINUTES TO CLAIM       {" " * 7}|')
+        lines.append(f'|               {progress_bar:<30}  |')
     
     # Only add call-to-action if order is not delivered
     if not order_data.get("delivered_by"):
@@ -147,7 +147,7 @@ def format_order_message(order_data):
         if order_data.get("claimed_by"):
             lines.append("|  ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓ |")
         else:
-            lines.append("|  ↓ CLICK BELOW TO CLAIM THIS ORDER ↓ |")
+            lines.append("|       ↓ CLICK BELOW TO CLAIM THIS ORDER ↓       |")
         lines.append("| ---------------------------------------------- |")
     lines.append(border_bot)
     lines += [
