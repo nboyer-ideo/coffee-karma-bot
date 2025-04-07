@@ -131,14 +131,12 @@ def format_order_message(order_data):
         lines.append(f"| {' ' * left_padding}{karma_line}{' ' * right_padding} |")
         lines.append("| ---------------------------------------------- |")
     elif order_data.get("claimed_by"):
-        lines.append(f'| STATUS :      CLAIMED BY {order_data["claimed_by"].upper():<22} |')
-        lines.append(border_mid)
+        lines.append(f'| STATUS :      CLAIMED BY {order_data["claimed_by"].upper():<22}   |')
         lines.append(f'| DRINK :       {order_data["drink"].upper():<32} |')
         lines.append(f'| LOCATION :    {order_data["location"].upper():<32} |')
-        lines.append(border_mid)
         lines.append(f'|               WAITING TO BE DELIVERED           |')
         lines.append("| ---------------------------------------------- |")
-        lines.append("|      ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓     |")
+        lines.append("|  ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓         |")
         lines.append("| ---------------------------------------------- |")
     else:
         total_blocks = 20
@@ -205,6 +203,34 @@ def format_order_message(order_data):
             "style": "danger",
             "value": f"{order_data['order_id']}|{order_data.get('requester_id')}"
         })
+
+    # Insert corrected mini-map logic before constructing blocks
+    if order_data.get("location"):
+        mini_map = build_mini_map(order_data["location"])
+ 
+        # Add header for map panel
+        map_title = "+--------------------------+"
+        padded_map = [f"{line:<26}"[:26] for line in mini_map]
+        map_lines = [map_title, "|         LION MAP         |", map_title]
+        map_lines += [f"|{line}|" for line in padded_map]
+        map_lines.append("+--------------------------+")
+        map_legend = [
+            "| ✗ = DRINK LOCATION       |",
+            "| ☕ = CAFÉ                 |",
+            "| ▯ = ELEVATOR             |",
+            "| ≋ = BATHROOM             |",
+            "+--------------------------+"
+        ]
+        map_lines.extend(map_legend)
+ 
+        # Merge lines side-by-side
+        merged_lines = []
+        max_lines = max(len(lines), len(map_lines))
+        for i in range(max_lines):
+            left = lines[i] if i < len(lines) else " " * 50
+            right = map_lines[i] if i < len(map_lines) else ""
+            merged_lines.append(f"{left}  {right}")
+        lines = merged_lines
 
     blocks = [
         {
@@ -1430,30 +1456,3 @@ if __name__ == "__main__":
     
     threading.Thread(target=run_schedule, daemon=True).start()
     flask_app.run(host="0.0.0.0", port=port, threaded=True)
-    # Mini-map rendering
-    if order_data.get("location"):
-        mini_map = build_mini_map(order_data["location"])
- 
-        # Add header for map panel
-        map_title = "+--------------------------+"
-        padded_map = [f"{line:<26}"[:26] for line in mini_map]
-        map_lines = [map_title, "|         LION MAP         |", map_title]
-        map_lines += [f"|{line}|" for line in padded_map]
-        map_lines.append("+--------------------------+")
-        map_legend = [
-            "| ✗ = DRINK LOCATION       |",
-            "| ☕ = CAFÉ                 |",
-            "| ▯ = ELEVATOR             |",
-            "| ≋ = BATHROOM             |",
-            "+--------------------------+"
-        ]
-        map_lines.extend(map_legend)
- 
-        # Merge lines side by side
-        merged_lines = []
-        max_lines = max(len(lines), len(map_lines))
-        for i in range(max_lines):
-            left = lines[i] if i < len(lines) else " " * 42
-            right = map_lines[i] if i < len(map_lines) else ""
-            merged_lines.append(f"{left}  {right}")
-        lines = merged_lines
