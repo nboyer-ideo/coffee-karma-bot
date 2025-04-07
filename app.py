@@ -521,6 +521,7 @@ def handle_order(ack, body, client):
 def handle_modal_submission(ack, body, client):
     ack()
     values = body["view"]["state"]["values"]
+    user_id = body["user"]["id"]
     drink_value = values["drink_category"]["input"]["selected_option"]["value"]
     if drink_value == "espresso":
         client.chat_postEphemeral(
@@ -529,7 +530,6 @@ def handle_modal_submission(ack, body, client):
             text="🚫 Espresso orders are temporarily unavailable — the machine's down. Choose something else while we fix it up."
         )
         return
-    user_id = body["user"]["id"]
     drink_detail = values["drink_detail"]["input"]["value"]
     drink_map = {
         "water": 1,
