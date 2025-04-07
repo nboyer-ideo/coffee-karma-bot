@@ -1250,9 +1250,9 @@ def handle_leaderboard_command(ack, body, client):
     lines = [header, title, divider]
     for i, row in enumerate(leaderboard, start=1):
         rank = str(i).center(6)
-        name = row['Name'].upper().ljust(20)[:20]
+        name = (" " + row['Name'].upper()).ljust(20)[:20]
         karma = str(row['Karma']).center(7)
-        title_str = get_title(row['Karma']).ljust(21)[:21]
+        title_str = (" " + get_title(row['Karma'])).ljust(21)[:21]
         lines.append(f"|{rank}|{name}|{karma}|{title_str}|")
     lines.append(footer)
     lines.append(commands)
