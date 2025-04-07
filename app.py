@@ -120,7 +120,9 @@ def format_order_message(order_data):
         lines += wrap_line("  STATUS", "COMPLETED")
         lines += wrap_line("", f"DELIVERED BY {order_data['delivered_by'].upper()}")
         lines.append("|  ------------------------------------  |")
-        lines.append(f"|       +{order_data['bonus_multiplier']} KARMA EARNED — TOTAL: {order_data['claimer_karma']}       |")
+        karma_line = f"+{order_data['bonus_multiplier']} KARMA EARNED — TOTAL: {order_data['claimer_karma']}"
+        padding = 38 - len(karma_line)
+        lines.append(f"|  {karma_line}{' ' * padding}|")
         lines.append("|  ------------------------------------  |")
     elif order_data.get("claimed_by"):
         lines += wrap_line("  STATUS", f"CLAIMED BY {order_data['claimed_by'].upper()}")
@@ -1215,7 +1217,7 @@ def handle_leaderboard_command(ack, body, client):
     
     lines = [header, title, divider]
     for i, row in enumerate(leaderboard, start=1):
-        rank = f"{i}".center(6)
+        rank = f"{i}".center(5)
         name = row['Name'].upper()[:26].ljust(26)
         karma = f"{row['Karma']}".center(15)
         lines.append(f"|  {rank} | {name} | {karma} |")
