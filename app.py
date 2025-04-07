@@ -28,7 +28,7 @@ countdown_timers = {}
 
 from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma
  
-def wrap_line(label, value, width=51):
+def wrap_line(label, value, width=50):
     if not label and value:
         centered = value.upper().center(width - 4)
         return [f"| {centered} |"]
@@ -97,43 +97,43 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
 def format_order_message(order_data):
     print(f"📨 format_order_message called with order_data: {order_data}")
     print(f"🧪 format_order_message FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
-    border_top = "+-------------------------------------------------+"
-    border_mid = "+-------------------------------------------------+"
-    border_bot = "+-------------------------------------------------+"
+    border_top = "+------------------------------------------------+"
+    border_mid = "+------------------------------------------------+"
+    border_bot = "+------------------------------------------------+"
     lines = [
         border_top,
-        *wrap_line("", "KOFFEE KARMA TERMINAL", width=51),
+        *wrap_line("", "KOFFEE KARMA TERMINAL", width=50),
     ]
     lines.append(border_mid)
-    lines += wrap_line("   DROP ID", order_data["order_id"], width=51)
+    lines += wrap_line("   DROP ID", order_data["order_id"], width=50)
     requester_display = order_data.get("requester_real_name") or f"<@{order_data['requester_id']}>"
     recipient_display = order_data.get("recipient_real_name") or f"<@{order_data['recipient_id']}>"
     if order_data.get("requester_id") == order_data.get("recipient_id"):
         recipient_display += " (Self)"
     else:
         recipient_display += " (Gift)"
-    lines += wrap_line("   FROM", requester_display, width=51)
-    lines += wrap_line("   TO", recipient_display, width=51)
-    lines += wrap_line("   DRINK", order_data["drink"], width=51)
-    lines += wrap_line("   LOCATION", order_data["location"], width=51)
-    lines += wrap_line("   NOTES", order_data["notes"] or "NONE", width=51)
+    lines += wrap_line("   FROM", requester_display, width=50)
+    lines += wrap_line("   TO", recipient_display, width=50)
+    lines += wrap_line("   DRINK", order_data["drink"], width=50)
+    lines += wrap_line("   LOCATION", order_data["location"], width=50)
+    lines += wrap_line("   NOTES", order_data["notes"] or "NONE", width=50)
     lines.append(border_mid)
-    lines += wrap_line("   REWARD", f"{order_data['karma_cost']} KARMA", width=51)
+    lines += wrap_line("   REWARD", f"{order_data['karma_cost']} KARMA", width=50)
     if order_data.get("delivered_by"):
-        lines += wrap_line("   STATUS", "COMPLETED", width=51)
-        lines += wrap_line("", f"   DELIVERED BY {order_data['delivered_by'].upper()}", width=51)
-        lines.append("|  ---------------------------------------------  |")
+        lines += wrap_line("   STATUS", "COMPLETED", width=50)
+        lines += wrap_line("", f"   DELIVERED BY {order_data['delivered_by'].upper()}", width=50)
+        lines.append("| ---------------------------------------------- |")
         karma_line = f"+{order_data['bonus_multiplier']} KARMA EARNED — TOTAL: {order_data['claimer_karma']}"
-        total_width = 45
+        total_width = 46
         left_padding = (total_width - len(karma_line)) // 2
         right_padding = total_width - len(karma_line) - left_padding
-        lines.append(f"|  {' ' * left_padding}{karma_line}{' ' * right_padding}  |")
-        lines.append("|  ---------------------------------------------  |")
+        lines.append(f"| {' ' * left_padding}{karma_line}{' ' * right_padding} |")
+        lines.append("| ---------------------------------------------- |")
     elif order_data.get("claimed_by"):
-        lines += wrap_line("   STATUS", f"CLAIMED BY {order_data['claimed_by'].upper()}", width=51)
-        lines += wrap_line("", " WAITING TO BE DELIVERED", width=51)
+        lines += wrap_line("   STATUS", f"CLAIMED BY {order_data['claimed_by'].upper()}", width=50)
+        lines += wrap_line("", " WAITING TO BE DELIVERED", width=50)
     else:
-        lines += wrap_line("   STATUS", f"{order_data.get('remaining_minutes', 10)} MINUTES TO CLAIM", width=51)
+        lines += wrap_line("   STATUS", f"{order_data.get('remaining_minutes', 10)} MINUTES TO CLAIM", width=50)
         total_blocks = 20
         remaining = order_data.get("remaining_minutes", 10)
         filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
@@ -148,18 +148,18 @@ def format_order_message(order_data):
     
     # Only add call-to-action if order is not delivered
     if not order_data.get("delivered_by"):
-        lines.append("|  ------------------------------------  |")
+        lines.append("| ---------------------------------------------- |")
         if order_data.get("claimed_by"):
             lines.append("|  ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓ |")
         else:
-            lines.append("|   ↓ CLICK BELOW TO CLAIM THIS ORDER ↓  |")
-        lines.append("|  ------------------------------------  |")
+            lines.append("|  ↓ CLICK BELOW TO CLAIM THIS ORDER ↓ |")
+        lines.append("| ---------------------------------------------- |")
     lines.append(border_bot)
     lines += [
-        "| /ORDER          PLACE AN ORDER         |",
-        "| /KARMA          CHECK YOUR KARMA       |",
-        "| /LEADERBOARD    TOP KARMA EARNERS      |",
-        "| /REDEEM         BONUS KARMA CODES      |",
+        "| /ORDER          PLACE AN ORDER                 |",
+        "| /KARMA          CHECK YOUR KARMA               |",
+        "| /LEADERBOARD    TOP KARMA EARNERS              |",
+        "| /REDEEM         BONUS KARMA CODES              |",
         border_bot
     ]
     # Mini-map rendering
