@@ -97,9 +97,9 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
 def format_order_message(order_data):
     print(f"📨 format_order_message called with order_data: {order_data}")
     print(f"🧪 format_order_message FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
-    border_top = "+----------------------------------------+"
-    border_mid = "+----------------------------------------+"
-    border_bot = "+----------------------------------------+"
+    border_top = "+-------------------------------------------------+"
+    border_mid = "+-------------------------------------------------+"
+    border_bot = "+-------------------------------------------------+"
     lines = [
         border_top,
         *wrap_line("", "KOFFEE KARMA TERMINAL", width=51),
@@ -122,13 +122,13 @@ def format_order_message(order_data):
     if order_data.get("delivered_by"):
         lines += wrap_line("   STATUS", "COMPLETED", width=51)
         lines += wrap_line("", f"   DELIVERED BY {order_data['delivered_by'].upper()}", width=51)
-        lines.append("|  ------------------------------------  |")
+        lines.append("|  ---------------------------------------------  |")
         karma_line = f"+{order_data['bonus_multiplier']} KARMA EARNED — TOTAL: {order_data['claimer_karma']}"
-        total_width = 38
+        total_width = 45
         left_padding = (total_width - len(karma_line)) // 2
         right_padding = total_width - len(karma_line) - left_padding
         lines.append(f"|  {' ' * left_padding}{karma_line}{' ' * right_padding}  |")
-        lines.append("|  ------------------------------------  |")
+        lines.append("|  ---------------------------------------------  |")
     elif order_data.get("claimed_by"):
         lines += wrap_line("   STATUS", f"CLAIMED BY {order_data['claimed_by'].upper()}", width=51)
         lines += wrap_line("", " WAITING TO BE DELIVERED", width=51)
