@@ -137,13 +137,14 @@ def format_order_message(order_data):
         padding = 42 - 4 - len(progress_bar)
         lines.append(f"|{' ' * 9}{progress_bar}{' ' * 9}|")
     
-    # lines.append(border_mid)
-    lines.append("|  ------------------------------------  |")
-    if order_data.get("claimed_by"):
-        lines.append("|  ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓ |")
-    else:
-        lines.append("|   ↓ CLICK BELOW TO CLAIM THIS ORDER ↓  |")
-    lines.append("|  ------------------------------------  |")
+    # Only add call-to-action if order is not delivered
+    if not order_data.get("delivered_by"):
+        lines.append("|  ------------------------------------  |")
+        if order_data.get("claimed_by"):
+            lines.append("|  ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓ |")
+        else:
+            lines.append("|   ↓ CLICK BELOW TO CLAIM THIS ORDER ↓  |")
+        lines.append("|  ------------------------------------  |")
     lines.append(border_bot)
     lines += [
         "| /ORDER          PLACE AN ORDER         |",
@@ -182,7 +183,9 @@ def format_order_message(order_data):
  
     # Define button elements based on order claim status
     elements = []
-    if order_data.get("claimed_by"):
+    if order_data.get("delivered_by"):
+        pass  # Do not add any buttons
+    elif order_data.get("claimed_by"):
         elements.append({
             "type": "button",
             "action_id": "mark_delivered",
