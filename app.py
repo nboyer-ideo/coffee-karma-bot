@@ -28,11 +28,14 @@ countdown_timers = {}
 
 from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma
  
-def wrap_line(label, value, width=42):
+def wrap_line(label, value, width=51):
     if not label and value:
         centered = value.upper().center(width - 4)
         return [f"| {centered} |"]
-    full = f"{label}: {value}".upper()
+    label = label.lstrip()
+    # Pad label to fixed width for alignment; assuming fixed width of 15 characters for label
+    padded_label = label.ljust(15)
+    full = f"{padded_label}: {value}".upper()
     full = strip_formatting(full).replace("|", "")  # remove stray pipe characters
     max_content = width - 4  # leave 1 space padding on both sides for proper border alignment
     words = full.split()
@@ -99,26 +102,26 @@ def format_order_message(order_data):
     border_bot = "+----------------------------------------+"
     lines = [
         border_top,
-        *wrap_line("", "KOFFEE KARMA TERMINAL"),
+        *wrap_line("", "KOFFEE KARMA TERMINAL", width=51),
     ]
     lines.append(border_mid)
-    lines += wrap_line("  DROP ID", order_data["order_id"])
+    lines += wrap_line("   DROP ID", order_data["order_id"], width=51)
     requester_display = order_data.get("requester_real_name") or f"<@{order_data['requester_id']}>"
     recipient_display = order_data.get("recipient_real_name") or f"<@{order_data['recipient_id']}>"
     if order_data.get("requester_id") == order_data.get("recipient_id"):
         recipient_display += " (Self)"
     else:
         recipient_display += " (Gift)"
-    lines += wrap_line("  FROM", requester_display)
-    lines += wrap_line("  TO", recipient_display)
-    lines += wrap_line("  DRINK", order_data["drink"])
-    lines += wrap_line("  LOCATION", order_data["location"])
-    lines += wrap_line("  NOTES", order_data["notes"] or "NONE")
+    lines += wrap_line("   FROM", requester_display, width=51)
+    lines += wrap_line("   TO", recipient_display, width=51)
+    lines += wrap_line("   DRINK", order_data["drink"], width=51)
+    lines += wrap_line("   LOCATION", order_data["location"], width=51)
+    lines += wrap_line("   NOTES", order_data["notes"] or "NONE", width=51)
     lines.append(border_mid)
-    lines += wrap_line("  REWARD", f"{order_data['karma_cost']} KARMA")
+    lines += wrap_line("   REWARD", f"{order_data['karma_cost']} KARMA", width=51)
     if order_data.get("delivered_by"):
-        lines += wrap_line("  STATUS", "COMPLETED")
-        lines += wrap_line("", f" DELIVERED BY {order_data['delivered_by'].upper()}")
+        lines += wrap_line("   STATUS", "COMPLETED", width=51)
+        lines += wrap_line("", f"   DELIVERED BY {order_data['delivered_by'].upper()}", width=51)
         lines.append("|  ------------------------------------  |")
         karma_line = f"+{order_data['bonus_multiplier']} KARMA EARNED — TOTAL: {order_data['claimer_karma']}"
         total_width = 38
@@ -127,10 +130,10 @@ def format_order_message(order_data):
         lines.append(f"|  {' ' * left_padding}{karma_line}{' ' * right_padding}  |")
         lines.append("|  ------------------------------------  |")
     elif order_data.get("claimed_by"):
-        lines += wrap_line("  STATUS", f"CLAIMED BY {order_data['claimed_by'].upper()}")
-        lines += wrap_line("", " WAITING TO BE DELIVERED")
+        lines += wrap_line("   STATUS", f"CLAIMED BY {order_data['claimed_by'].upper()}", width=51)
+        lines += wrap_line("", " WAITING TO BE DELIVERED", width=51)
     else:
-        lines += wrap_line("  STATUS", f"{order_data.get('remaining_minutes', 10)} MINUTES TO CLAIM")
+        lines += wrap_line("   STATUS", f"{order_data.get('remaining_minutes', 10)} MINUTES TO CLAIM", width=51)
         total_blocks = 20
         remaining = order_data.get("remaining_minutes", 10)
         filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
@@ -139,7 +142,9 @@ def format_order_message(order_data):
         progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
         print(f"📊 New progress bar string: {progress_bar}")
         padding = 42 - 4 - len(progress_bar)
-        lines.append(f"|{' ' * 9}{progress_bar}{' ' * 9}|")
+        left_pad = (padding + 1) // 2
+        right_pad = padding - left_pad
+        lines.append(f"|{' ' * left_pad}{progress_bar}{' ' * right_pad}|")
     
     # Only add call-to-action if order is not delivered
     if not order_data.get("delivered_by"):
