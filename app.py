@@ -131,6 +131,7 @@ def format_order_message(order_data):
         lines.append("| ---------------------------------------------- |")
     elif order_data.get("claimed_by"):
         lines.append(f'| STATUS :      CLAIMED BY {order_data["claimed_by"].upper():<22} |')
+        lines.append(f'|               WAITING TO BE DELIVERED         |')
     else:
         total_blocks = 20
         remaining = order_data.get("remaining_minutes", 10)
