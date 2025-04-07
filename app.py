@@ -112,9 +112,9 @@ def format_order_message(order_data):
         recipient_display += " (Self)"
     else:
         recipient_display += " (Gift)"
-    lines.append(f'| FROM :        {requester_display:<32} |')
-    lines.append(f'| TO :          {recipient_display:<32} |')
-    lines.append(f'| DRINK :       {order_data["drink"]:<32} |')
+    lines.append(f'| FROM :        {requester_display.upper():<32} |')
+    lines.append(f'| TO :          {recipient_display.upper():<32} |')
+    lines.append(f'| DRINK :       {order_data["drink"].upper():<32} |')
     lines.append(f'| LOCATION :    {order_data["location"]:<32} |')
     lines.append(f'| NOTES :       {(order_data["notes"] or "NONE"):<32} |')
     lines.append(border_mid)
@@ -138,7 +138,8 @@ def format_order_message(order_data):
         filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
         empty_blocks = total_blocks - filled_blocks
         progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
-        lines.append(f'| STATUS :      {order_data.get("remaining_minutes", 10)} MINUTES TO CLAIM{" " * (21 - len(str(order_data.get("remaining_minutes", 10))))} |')
+        status_line = f'{order_data.get("remaining_minutes", 10)} MINUTES TO CLAIM'
+        lines.append(f'| STATUS :      {status_line:<30} |')
         lines.append(f'|               {progress_bar:<31} |')
     
     # Only add call-to-action if order is not delivered
