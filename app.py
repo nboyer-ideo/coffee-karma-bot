@@ -795,6 +795,7 @@ def handle_modal_submission(ack, body, client):
         "claimed": False,
         "requester_real_name": order_data["requester_real_name"],
         "recipient_real_name": order_data["recipient_real_name"],
+        "requester_id": user_id,
         "location": location,
         "notes": notes,
         "karma_cost": karma_cost,
