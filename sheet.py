@@ -50,7 +50,7 @@ def add_karma(user_id, points_to_add=1):
         if row["Slack ID"] == user_id:
             new_total = int(row["Karma"]) + points_to_add
             print(f"📈 Updating karma for {user_id} to {new_total}")
-            worksheet.update_cell(i + 2, 2, new_total)
+            worksheet.update_cell(i + 2, 3, new_total)
             worksheet.update_cell(i + 2, 4, get_title(new_total))
             print("✅ Karma updated in sheet.")
             return new_total
