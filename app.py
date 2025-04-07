@@ -875,6 +875,17 @@ def handle_cancel_order(ack, body, client):
 def handle_claim_order(ack, body, client):
     ack()
     user_id = body["user"]["id"]
+    # Prevent users from claiming their own orders, except for admin
+    ADMIN_IDS = {"U02EY5S5J0M"}
+    extras = order_extras.get(body["message"]["ts"], {})
+    requester_id = extras.get("requester_id")
+    if requester_id == user_id and user_id not in ADMIN_IDS:
+        client.chat_postEphemeral(
+            channel=body["channel"]["id"],
+            user=user_id,
+            text="🚫 You can’t claim your own drop. Wait for someone else to step up."
+        )
+        return
     original_message = body["message"]
     order_text = ""
     for block in original_message.get("blocks", []):
