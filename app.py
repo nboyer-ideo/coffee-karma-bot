@@ -118,7 +118,7 @@ def format_order_message(order_data):
     lines += wrap_line("  REWARD", f"{order_data['karma_cost']} KARMA")
     if order_data.get("delivered_by"):
         lines += wrap_line("  STATUS", "COMPLETED")
-        lines += wrap_line("", f"DELIVERED BY {order_data['delivered_by'].upper()}")
+        lines += wrap_line("", f" DELIVERED BY {order_data['delivered_by'].upper()}")
         lines.append("|  ------------------------------------  |")
         karma_line = f"+{order_data['bonus_multiplier']} KARMA EARNED — TOTAL: {order_data['claimer_karma']}"
         total_width = 38
@@ -128,7 +128,7 @@ def format_order_message(order_data):
         lines.append("|  ------------------------------------  |")
     elif order_data.get("claimed_by"):
         lines += wrap_line("  STATUS", f"CLAIMED BY {order_data['claimed_by'].upper()}")
-        lines += wrap_line("", "WAITING TO BE DELIVERED")
+        lines += wrap_line("", " WAITING TO BE DELIVERED")
     else:
         lines += wrap_line("  STATUS", f"{order_data.get('remaining_minutes', 10)} MINUTES TO CLAIM")
         total_blocks = 20
