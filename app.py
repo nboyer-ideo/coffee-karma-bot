@@ -146,7 +146,7 @@ def format_order_message(order_data):
     if not order_data.get("delivered_by"):
         lines.append("| ---------------------------------------------- |")
         if order_data.get("claimed_by"):
-        lines.append("|     ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓      |")
+            lines.append("|     ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓      |")
         else:
             lines.append("|      ↓ CLICK BELOW TO CLAIM THIS ORDER ↓       |")
         lines.append("| ---------------------------------------------- |")
