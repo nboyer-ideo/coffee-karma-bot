@@ -131,13 +131,15 @@ def format_order_message(order_data):
         lines.append(f"| {' ' * left_padding}{karma_line}{' ' * right_padding} |")
         lines.append("| ---------------------------------------------- |")
     elif order_data.get("claimed_by"):
-        lines.append(f'| STATUS :      CLAIMED BY {order_data["claimed_by"].upper():<22}   |')
+        lines.append(f'| STATUS :      CLAIMED BY {order_data["claimed_by"].upper():<22} |')
+        lines.append(f'| FROM :        {requester_display.upper():<32} |')
+        lines.append(f'| TO :          {recipient_display.upper():<32} |')
         lines.append(f'| DRINK :       {order_data["drink"].upper():<32} |')
         lines.append(f'| LOCATION :    {order_data["location"].upper():<32} |')
+        lines.append(f'| NOTES :       {(order_data["notes"] or "NONE").upper():<32} |')
+        lines.append(border_mid)
+        lines.append(f'| REWARD :      {order_data["karma_cost"]} KARMA{" " * (32 - len(str(order_data["karma_cost"]) + " KARMA"))} |')
         lines.append(f'|               WAITING TO BE DELIVERED           |')
-        lines.append("| ---------------------------------------------- |")
-        lines.append("|  ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓         |")
-        lines.append("| ---------------------------------------------- |")
     else:
         total_blocks = 20
         remaining = order_data.get("remaining_minutes", 10)
