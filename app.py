@@ -220,7 +220,7 @@ def format_order_message(order_data):
             "value": f"{order_data['order_id']}|{order_data.get('requester_id')}"
         })
 
-    return [
+    blocks = [
         {
             "type": "section",
             "block_id": "order_text_block",
@@ -228,13 +228,17 @@ def format_order_message(order_data):
                 "type": "mrkdwn",
                 "text": "```" + "\n".join(lines) + "```"
             }
-        },
-        {
+        }
+    ]
+
+    if elements:
+        blocks.append({
             "type": "actions",
             "block_id": "buttons_block",
             "elements": elements
-        }
-    ]
+        })
+
+    return blocks
 
 # Load secrets from .env
 from dotenv import load_dotenv
