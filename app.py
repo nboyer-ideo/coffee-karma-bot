@@ -1241,19 +1241,19 @@ def handle_leaderboard_command(ack, body, client):
         else:
             return "THE PARCHED"
     
-    header = "+========================[ HONOR BOARD ]=========================+"
-    title =  "| RANK  |        NAME         | KARMA |         TITLE          |"
-    divider = "|-------|---------------------|-------|-------------------------|"
-    footer = "+===============================================================+"
-    commands = "|   /ORDER  /KARMA  /LEADERBOARD  /REDEEM  || TOP UP OR DROP OUT.   |"
+    header = "+===================[ THE BREW SCROLL ]===================+"
+    title =  "| RANK |        NAME        | KARMA |         TITLE       |"
+    divider = "|------|--------------------|-------|---------------------|"
+    footer = "+=========================================================+"
+    commands = "|      /ORDER     /KARMA     /LEADERBOARD     /REDEEM     |"
     
     lines = [header, title, divider]
     for i, row in enumerate(leaderboard, start=1):
-        rank = f"{i}".center(6)
-        name = row['Name'].upper()[:21].ljust(21)
-        karma = f"{row['Karma']}".center(6)
-        title_str = get_title(row['Karma'])[:25].ljust(25)
-        lines.append(f"|  {rank} | {name} | {karma} | {title_str} |")
+        rank = f"{i}".center(4)
+        name = row['Name'].upper()[:20].ljust(20)
+        karma = f"{row['Karma']}".center(5)
+        title_str = get_title(row['Karma'])[:21].ljust(21)
+        lines.append(f"|  {rank} | {name} |  {karma} | {title_str} |")
     lines.append(footer)
     lines.append(commands)
     lines.append(footer)
