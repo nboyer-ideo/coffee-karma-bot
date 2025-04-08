@@ -276,6 +276,8 @@ def get_runner_capabilities(user_id):
     data = worksheet.get_all_records()
     for row in data:
         if row.get("Slack ID") == user_id:
+            if "Capabilities" not in row or not row["Capabilities"].strip():
+                return None
             return row
     return None
 
