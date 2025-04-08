@@ -721,15 +721,39 @@ def handle_modal_submission(ack, body, client):
         print("⚠️ runner_offer_metadata not defined — initializing.")
         runner_offer_metadata = {}
     if order_data["runner_id"]:
+        print(f"🔁 Reached fallback block — checking if runner_id exists in runner_offer_metadata")
+        print(f"🧪 runner_offer_metadata keys: {list(runner_offer_metadata.keys())}")
         if (not order_ts or not order_channel) and runner_offer_metadata.get(order_data["runner_id"]):
+            print("🧪 Fallback metadata found. Attempting to restore ts and channel...")
             fallback_metadata = runner_offer_metadata[order_data["runner_id"]]
             if not order_ts:
                 order_ts = fallback_metadata.get("ts", "")
         if not order_channel:
             order_channel = fallback_metadata.get("channel", "")
+        # Fallback results already logged above.
         if not order_ts or not order_channel:
+            print("🚨 Could not recover original /ready message from fallback metadata.")
             print(f"⚠️ Missing order_ts or order_channel for runner-initiated order — fallback failed.")
-    print(f"🧪 [MODAL SUBMIT] Post-fallback order_ts: {order_ts}, order_channel: {order_channel}")
+    # Post-fallback values already logged above.
+    # Fetch runner and requester real names and format order message before fallback check
+    from slack_sdk.web import WebClient
+    slack_token = os.environ.get("SLACK_BOT_TOKEN")
+    slack_client = WebClient(token=slack_token)
+    try:
+        runner_info = slack_client.users_info(user=order_data["runner_id"])
+        order_data["runner_name"] = runner_info["user"]["real_name"]
+        order_data["runner_real_name"] = runner_info["user"]["real_name"]
+        order_data["claimed_by"] = order_data["runner_real_name"]
+        formatted_blocks = format_order_message(order_data)
+    except Exception as e:
+        print("⚠️ Failed to fetch runner real name:", e)
+    try:
+        requester_info = slack_client.users_info(user=user_id)
+        order_data["requester_real_name"] = requester_info["user"]["real_name"]
+        order_data["claimed_by"] = order_data["runner_real_name"]
+    except Exception as e:
+        print("⚠️ Failed to fetch requester real name for runner-initiated order:", e)
+
     if not order_ts or not order_channel:
         client.chat_postEphemeral(
             channel=user_id,
@@ -738,24 +762,6 @@ def handle_modal_submission(ack, body, client):
         )
         print("🚨 [MODAL SUBMIT] Fallback failed — cannot update message.")
         return
-        gifted_id = gifted_id or ""
-        from slack_sdk.web import WebClient
-        slack_token = os.environ.get("SLACK_BOT_TOKEN")
-        slack_client = WebClient(token=slack_token)
-        try:
-            runner_info = slack_client.users_info(user=order_data["runner_id"])
-            order_data["runner_name"] = runner_info["user"]["real_name"]
-            order_data["runner_real_name"] = runner_info["user"]["real_name"]
-            order_data["claimed_by"] = order_data["runner_real_name"]
-            formatted_blocks = format_order_message(order_data)
-        except Exception as e:
-            print("⚠️ Failed to fetch runner real name:", e)
-        try:
-            requester_info = slack_client.users_info(user=user_id)
-            order_data["requester_real_name"] = requester_info["user"]["real_name"]
-            order_data["claimed_by"] = order_data["runner_real_name"]
-        except Exception as e:
-            print("⚠️ Failed to fetch requester real name for runner-initiated order:", e)
     if order_ts not in order_extras:
         order_extras[order_ts] = {}
     order_extras[order_ts]["runner_real_name"] = order_data["runner_real_name"]
