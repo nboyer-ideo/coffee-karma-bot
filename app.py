@@ -914,6 +914,15 @@ def handle_ready_command(ack, body, client):
     ack()
     text = body.get("text", "").strip().lower()
     if text == "settings":
+        from sheet import get_runner_capabilities
+        saved_caps = get_runner_capabilities(body["user_id"]).get("Capabilities", [])
+        cap_options = [
+            {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
+            {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip"},
+            {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"},
+            {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"}
+        ]
+        initial_options = [opt for opt in cap_options if opt["value"] in saved_caps]
         client.views_open(
             trigger_id=body["trigger_id"],
             view={
@@ -930,12 +939,8 @@ def handle_ready_command(ack, body, client):
                         "element": {
                             "type": "checkboxes",
                             "action_id": "input",
-                        "options": [
-                                {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
-                                {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip"},
-                                {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"},
-                                {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"}
-                            ]
+                            "initial_options": initial_options,
+                            "options": cap_options
                         }
                     }
                 ]
@@ -946,7 +951,7 @@ def handle_ready_command(ack, body, client):
     user_id = body["user_id"]
     # Check if runner capabilities exist in the sheet
     runner_capabilities = get_runner_capabilities(user_id)
-    if not runner_capabilities:
+    if not runner_capabilities.get("Capabilities"):
         client.views_open(
             trigger_id=body["trigger_id"],
             view={
