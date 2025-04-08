@@ -329,6 +329,32 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "time_delivered": "",
         "remaining_minutes": remaining
     }
+
+@app.action("location_select")
+def handle_location_select(ack, body, client):
+    ack()
+    user_id = body["user"]["id"]
+    trigger_id = body["trigger_id"]
+    selected_location = body["actions"][0]["selected_option"]["value"]
+
+    # Rebuild the modal with the new map based on selected location
+    modal = build_order_modal(trigger_id)
+    for block in modal["view"]["blocks"]:
+        if block.get("block_id") == "ascii_map_block":
+            from app import build_mini_map
+            ascii_map = "```" + "\n".join(build_mini_map(selected_location)) + "```"
+            block["text"]["text"] = ascii_map
+        elif block.get("block_id") == "location":
+            # Preserve the newly selected value
+            block["element"]["initial_option"] = {
+                "text": {"type": "plain_text", "text": selected_location},
+                "value": selected_location
+            }
+
+    client.views_update(
+        view_id=body["view"]["id"],
+        view=modal["view"]
+    )
         print(f"🧪 Names Debug — requester: {order_data['requester_real_name']}, recipient: {order_data['recipient_real_name']}")
         print("🛠️ Calling format_order_message with updated remaining time")
         updated_blocks = format_order_message(order_data)
@@ -504,6 +530,14 @@ def build_order_modal(trigger_id, runner_id=""):
                         ]
                     }
                 },
+        {
+            "type": "section",
+            "block_id": "ascii_map_block",
+            "text": {
+                "type": "mrkdwn",
+                "text": "```" + "\n".join(build_mini_map("4O")) + "```"
+            }
+        },
                 {
                     "type": "input",
                     "block_id": "drink_detail",
@@ -516,7 +550,7 @@ def build_order_modal(trigger_id, runner_id=""):
                     "label": {"type": "plain_text", "text": "Where’s it going?"},
                     "element": {
                         "type": "static_select",
-                        "action_id": "input",
+                        "action_id": "location_select",
                         "placeholder": {"type": "plain_text", "text": "Select a location"},
                         "options": [
                             {"text": {"type": "plain_text", "text": "4A"}, "value": "4A"},
@@ -639,6 +673,7 @@ def handle_modal_submission(ack, body, client):
     drink_map = {
         "water": 1,
         "drip": 2,
+        "tea": 2,
         "espresso": 3
     }
     karma_cost = drink_map[drink_value]
