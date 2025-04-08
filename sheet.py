@@ -43,7 +43,7 @@ def get_sheet():
 # Add or update Koffee Karma for a user
 def add_karma(user_id, points_to_add=1):
     print(f"📈 Adding {points_to_add} karma to {user_id}")
-    worksheet = get_sheet().worksheet("Leaderboard")
+    worksheet = get_sheet().worksheet("Player Data")
     print("🧮 Leaderboard worksheet loaded.")
     data = worksheet.get_all_records()
     for i, row in enumerate(data):
@@ -62,7 +62,7 @@ def add_karma(user_id, points_to_add=1):
 # Deduct Koffee Karma for a user
 def deduct_karma(user_id, points_to_deduct=1):
     print(f"📉 Deducting {points_to_deduct} karma from {user_id}")
-    worksheet = get_sheet().worksheet("Leaderboard")
+    worksheet = get_sheet().worksheet("Player Data")
     print("📉 Leaderboard worksheet loaded for deduction.")
     data = worksheet.get_all_records()
     for i, row in enumerate(data):
@@ -79,7 +79,7 @@ def deduct_karma(user_id, points_to_deduct=1):
 
 # Get current Koffee Karma balance
 def get_karma(user_id):
-    worksheet = get_sheet().worksheet("Leaderboard")
+    worksheet = get_sheet().worksheet("Player Data")
     data = worksheet.get_all_records()
     for row in data:
         if row["Slack ID"] == user_id:
@@ -87,14 +87,14 @@ def get_karma(user_id):
     return 0
 
 def get_leaderboard(top_n=5):
-    worksheet = get_sheet().worksheet("Leaderboard")
+    worksheet = get_sheet().worksheet("Player Data")
     data = worksheet.get_all_records()
     # Sort users by "Karma" (ensure header case matches Koffee Karma headers)
     sorted_users = sorted(data, key=lambda x: int(x.get("Karma", 0)), reverse=True)
     return sorted_users[:top_n]
 
 def reset_karma_sheet():
-    worksheet = get_sheet().worksheet("Leaderboard")
+    worksheet = get_sheet().worksheet("Player Data")
     data = worksheet.get_all_records()
     for i, row in enumerate(data):
         worksheet.update_cell(i + 2, 3, 0)
@@ -104,7 +104,7 @@ def ensure_user(user_id):
     slack_token = os.environ.get("SLACK_BOT_TOKEN")
     slack_client = WebClient(token=slack_token)
 
-    worksheet = get_sheet().worksheet("Leaderboard")
+    worksheet = get_sheet().worksheet("Player Data")
     data = worksheet.get_all_records()
     for row in data:
         if row.get("Slack ID") == user_id:
@@ -263,7 +263,7 @@ def update_order_status(order_id, status=None, runner_id=None, runner_name=None,
     return False
 
 def refresh_titles():
-    worksheet = get_sheet().worksheet("Leaderboard")
+    worksheet = get_sheet().worksheet("Player Data")
     data = worksheet.get_all_records()
     for i, row in enumerate(data):
         current_karma = int(row.get("Karma", 0))
@@ -272,7 +272,7 @@ def refresh_titles():
     print("✅ All titles refreshed based on current Karma.")
 
 def get_runner_capabilities(user_id):
-    worksheet = get_sheet().worksheet("Runner Settings")
+    worksheet = get_sheet().worksheet("Player Data")
     data = worksheet.get_all_records()
     for row in data:
         if row.get("Slack ID") == user_id:
@@ -280,12 +280,12 @@ def get_runner_capabilities(user_id):
     return None
 
 def save_runner_capabilities(user_id, name, capabilities):
-    worksheet = get_sheet().worksheet("Runner Settings")
+    worksheet = get_sheet().worksheet("Player Data")
     data = worksheet.get_all_records()
     for i, row in enumerate(data):
         if row.get("Slack ID") == user_id:
             worksheet.update_cell(i + 2, 2, name)
-            worksheet.update_cell(i + 2, 3, json.dumps(capabilities))
+            worksheet.update_cell(i + 2, 5, json.dumps(capabilities))
             return
-    worksheet.append_row([user_id, name, json.dumps(capabilities)])
+    worksheet.append_row([user_id, name, 3, get_title(3), json.dumps(capabilities)])
 
