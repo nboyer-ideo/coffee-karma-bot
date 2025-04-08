@@ -1019,6 +1019,22 @@ def handle_cancel_order(ack, body, client):
     )
     return
 
+@app.action("open_order_modal_for_runner")
+def handle_order_modal_for_runner(ack, body, client):
+    ack()
+    trigger_id = body["trigger_id"]
+    action_value = body["actions"][0]["value"]
+    try:
+        runner_data = json.loads(action_value)
+        runner_id = runner_data.get("runner_id", "")
+    except Exception as e:
+        print("⚠️ Failed to parse runner ID from action value:", e)
+        runner_id = ""
+    client.views_open(
+        trigger_id=trigger_id,
+        view=build_order_modal(trigger_id, runner_id)["view"]
+    )
+
 @app.action("claim_order")
 def handle_claim_order(ack, body, client):
     ack()
