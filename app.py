@@ -709,10 +709,10 @@ def handle_modal_submission(ack, body, client):
         "time_delivered": "",
         "remaining_minutes": 10
     }
+    if 'runner_offer_metadata' not in globals():
+        print("⚠️ runner_offer_metadata not defined — initializing.")
+        runner_offer_metadata = {}
     if order_data["runner_id"]:
-        if 'runner_offer_metadata' not in globals():
-            print("⚠️ runner_offer_metadata not defined — skipping fallback metadata step.")
-            runner_offer_metadata = {}
         if (not order_ts or not order_channel) and runner_offer_metadata.get(order_data["runner_id"]):
             fallback_metadata = runner_offer_metadata[order_data["runner_id"]]
             if not order_ts:
