@@ -637,6 +637,8 @@ def handle_modal_submission(ack, body, client):
         return
 
     runner_id = body["view"].get("private_metadata", "")
+    order_ts = ""
+    order_channel = ""
     if not runner_id:
         posted = client.chat_postMessage(
             channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
@@ -645,6 +647,11 @@ def handle_modal_submission(ack, body, client):
         )
         order_ts = posted["ts"]
         order_channel = posted["channel"]
+    else:
+        # Reuse the existing message posted by /ready
+        posted_ready = body.get("view", {}).get("root_view_id")
+        order_ts = body.get("container", {}).get("message_ts", "")
+        order_channel = body.get("container", {}).get("channel_id", "")
 
     context_line = random.choice([
         "*☕ Caffeine + Chaos* — IDE☕O forever.",
