@@ -777,15 +777,15 @@ def handle_modal_submission(ack, body, client):
         formatted_blocks = format_order_message(order_data)
         print(f"🧪 About to call chat_update with channel={order_channel} and ts={order_ts}")
         print(f"📣 Debug: channel for chat_update is {order_channel}")
-         if not order_channel:
-             print("⚠️ Missing order_channel — falling back to default channel.")
-             order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
-         print(f"⚙️ order_ts: {order_ts}")
-         print(f"⚙️ order_channel: {order_channel}")
-         print(f"📣 Attempting to update message {order_ts} in channel {order_channel}")
-         print(f"🧾 Blocks: {formatted_blocks}")
-         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
-         return
+        if not order_channel:
+            print("⚠️ Missing order_channel — falling back to default channel.")
+            order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
+        print(f"⚙️ order_ts: {order_ts}")
+        print(f"⚙️ order_channel: {order_channel}")
+        print(f"📣 Attempting to update message {order_ts} in channel {order_channel}")
+        print(f"🧾 Blocks: {formatted_blocks}")
+        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
+        return
     else:
         formatted_blocks = format_order_message(order_data)
         print(f"🧪 About to call chat_update with channel={order_channel} and ts={order_ts}")
