@@ -636,13 +636,14 @@ def handle_modal_submission(ack, body, client):
         )
         return
 
-    posted = client.chat_postMessage(
-        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text="New Koffee Karma order posted",
-        blocks=[]
-    )
-    order_ts = posted["ts"]
-    order_channel = posted["channel"]
+    if not runner_id:
+        posted = client.chat_postMessage(
+            channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+            text="New Koffee Karma order posted",
+            blocks=[]
+        )
+        order_ts = posted["ts"]
+        order_channel = posted["channel"]
 
     context_line = random.choice([
         "*☕ Caffeine + Chaos* — IDE☕O forever.",
@@ -787,8 +788,8 @@ def handle_modal_submission(ack, body, client):
         formatted_blocks = format_order_message(order_data)
         client.chat_update(
             channel=order_channel,
-            ts=order_ts,
-            text="New Koffee Karma order posted",
+            ts=order_ts,  # reuse the original /ready message timestamp
+            text="☕ Order claimed and posted.",
             blocks=formatted_blocks
         )
         return
@@ -809,13 +810,13 @@ def handle_ready_command(ack, body, client):
     karma_cost = ""
     posted_ready = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text=f"🖐️ <@{user_id}> is *ready to deliver* a drink in the next ~15 minutes.\nClick below to send a mission their way.",
+        text=f"🖐️ <@{user_id}> is *ready to deliver* a drink.\n*⏳ 10 minutes left to send them an order.*",
         blocks=[
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"🖐️ <@{user_id}> is *ready to deliver* a drink in the next ~15 minutes.\nClick below to send a mission their way."
+                    "text": f"🖐️ <@{user_id}> is *ready to deliver* a drink.\n*⏳ 10 minutes left to send them an order.*"
                 }
             },
             {
