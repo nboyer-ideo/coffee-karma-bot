@@ -652,6 +652,9 @@ def handle_modal_submission(ack, body, client):
         posted_ready = body.get("view", {}).get("root_view_id")
         order_ts = body.get("container", {}).get("message_ts", "")
         order_channel = body.get("container", {}).get("channel_id", "")
+        if not order_channel:
+            print("⚠️ order_channel is missing. Trying to fall back from view or other message context.")
+            order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")  # fallback to default channel
 
     context_line = random.choice([
         "*☕ Caffeine + Chaos* — IDE☕O forever.",
@@ -794,6 +797,7 @@ def handle_modal_submission(ack, body, client):
         order_data["claimed_by"] = order_data["runner_real_name"]
         order_data["status"] = "claimed"
         formatted_blocks = format_order_message(order_data)
+        print(f"🧪 About to call chat_update with channel={order_channel} and ts={order_ts}")
         client.chat_update(
             channel=order_channel,
             ts=order_ts,  # reuse the original /ready message timestamp
@@ -803,6 +807,7 @@ def handle_modal_submission(ack, body, client):
         return
     else:
         formatted_blocks = format_order_message(order_data)
+        print(f"🧪 About to call chat_update with channel={order_channel} and ts={order_ts}")
         client.chat_update(
             channel=order_channel,
             ts=order_ts,
