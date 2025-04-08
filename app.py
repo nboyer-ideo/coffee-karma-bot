@@ -793,6 +793,9 @@ def handle_modal_submission(ack, body, client):
 def handle_ready_command(ack, body, client):
     ack()
     user_id = body["user_id"]
+    location = ""
+    notes = ""
+    karma_cost = ""
     user_name = f"<@{user_id}>"
     runner_offer_claims[user_id] = None  # Mark this runner as available and unclaimed
     print(f"🆕 Runner offer posted by {user_id} — awaiting match.")
