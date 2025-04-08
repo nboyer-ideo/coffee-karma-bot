@@ -620,7 +620,9 @@ def handle_modal_submission(ack, body, client):
     location = values["location"]["input"]["selected_option"]["value"]
     notes = values["notes"]["input"]["value"] if "notes" in values and "input" in values["notes"] and values["notes"]["input"]["value"] else ""
     notes = notes[:30]
-    gifted_id = values["gift_to"]["input"]["selected_user"] if "gift_to" in values and "input" in values["gift_to"] else None
+    gifted_id = None
+    if "gift_to" in values and "input" in values["gift_to"]:
+        gifted_id = values["gift_to"]["input"].get("selected_user", None)
     
     
 
@@ -671,9 +673,10 @@ def handle_modal_submission(ack, body, client):
     order_data = {
         "order_id": "",
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "initiated_by": "runner" if runner_id else "requester",
         "requester_id": user_id,
         "requester_real_name": "",
-        "runner_id": "",
+        "runner_id": runner_id,
         "runner_name": "",
         "runner_real_name": "",
         "recipient_id": gifted_id if gifted_id else user_id,
@@ -690,6 +693,7 @@ def handle_modal_submission(ack, body, client):
         "remaining_minutes": 10
     }
     if order_data["runner_id"]:
+        gifted_id = gifted_id or ""
         try:
             runner_info = slack_client.users_info(user=order_data["runner_id"])
             order_data["runner_name"] = runner_info["user"]["real_name"]
@@ -787,12 +791,6 @@ def handle_ready_command(ack, body, client):
     ready_channel = posted_ready["channel"]
  
     
-    if gifted_id and gifted_id != user_id:
-        deduct_karma(gifted_id, karma_cost)
-        client.chat_postMessage(
-            channel=gifted_id,
-            text=f"🎁 You just got a delivery offer from <@{user_id}> and submitted your order. {karma_cost} Karma deducted from your account."
-        )
     
     # Log order with "time_ordered" as the timestamp key
     from sheet import log_order_to_sheet
@@ -1115,6 +1113,7 @@ def handle_claim_order(ack, body, client):
         "karma_cost": karma_cost,
         "runner_karma": get_karma(user_id),
         "runner_name": runner_name,
+        "runner_real_name": "",
         "claimed_by": runner_name,
         "requester_id": requester_id,
         "bonus_multiplier": "",
