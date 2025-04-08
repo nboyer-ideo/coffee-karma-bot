@@ -434,6 +434,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id):
         )
 
         import threading
+        sys.stdout.flush()
         threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id)).start()
 
     except Exception as e:
