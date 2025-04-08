@@ -888,37 +888,37 @@ def handle_ready_command(ack, body, client):
             order_channel = ready_channel
             order_ts = ready_ts
             current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
-                if order_extras.get(order_ts, {}).get("claimed", False):
-                    print(f"🔕 Skipping reminder — order {order_ts} already claimed.")
-                    return
-                if current_message["messages"]:
-                    msg_text = current_message["messages"][0].get("text", "")
-                    if any(phrase in msg_text for phrase in ["Claimed by", "Expired", "Canceled", "Order canceled by"]):
-                        return  # Skip reminder if already handled
+            if order_extras.get(order_ts, {}).get("claimed", False):
+                print(f"🔕 Skipping reminder — order {order_ts} already claimed.")
+                return
+            if current_message["messages"]:
+                msg_text = current_message["messages"][0].get("text", "")
+                if any(phrase in msg_text for phrase in ["Claimed by", "Expired", "Canceled", "Order canceled by"]):
+                    return  # Skip reminder if already handled
 
-                    # Insert the reminder block without collapsing formatting
-                    current_blocks = current_message["messages"][0].get("blocks", [])
+            # Insert the reminder block without collapsing formatting
+            current_blocks = current_message["messages"][0].get("blocks", [])
 
-                    reminder_block = {
-                        "type": "section",
-                        "block_id": "reminder_block",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": "*⚠️ STILL UNCLAIMED — CLOCK'S TICKING ⏳*"
-                        }
-                    }
+            reminder_block = {
+                "type": "section",
+                "block_id": "reminder_block",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*⚠️ STILL UNCLAIMED — CLOCK'S TICKING ⏳*"
+                }
+            }
 
-                    updated_blocks = current_blocks + [reminder_block]
+            updated_blocks = current_blocks + [reminder_block]
 
-                    # Commented out previous update that replaced the whole message text
-                    # order_extras[order_ts]["reminder_added"] = True
+            # Commented out previous update that replaced the whole message text
+            # order_extras[order_ts]["reminder_added"] = True
 
-                    client.chat_update(
-                        channel=order_channel,
-                        ts=order_ts,
-                        text=msg_text,
-                        blocks=updated_blocks
-                    )
+            client.chat_update(
+                channel=order_channel,
+                ts=order_ts,
+                text=msg_text,
+                blocks=updated_blocks
+            )
         except Exception as e:
             print("⚠️ Reminder ping failed:", e)
 
