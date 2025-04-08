@@ -132,7 +132,8 @@ def format_order_message(order_data):
         lines.append(f"| {' ' * left_padding}{karma_line}{' ' * right_padding} |")
         lines.append("| ---------------------------------------------- |")
     elif order_data.get("claimed_by"):
-        lines.append(f'| STATUS :      CLAIMED BY {order_data["claimed_by"].upper():<21} |')
+        claimed_name = order_data.get("runner_real_name") or order_data.get("claimed_by", "")
+        lines.append(f'| STATUS :      CLAIMED BY {claimed_name.upper():<21} |')
         lines.append(f'|               WAITING TO BE DELIVERED          |')
     else:
         total_blocks = 20
@@ -699,9 +700,30 @@ def handle_modal_submission(ack, body, client):
         try:
             runner_info = slack_client.users_info(user=order_data["runner_id"])
             order_data["runner_name"] = runner_info["user"]["real_name"]
+            order_data["runner_real_name"] = runner_info["user"]["real_name"]
+            order_data["claimed_by"] = order_data["runner_real_name"]
         except Exception as e:
             print("⚠️ Failed to fetch runner real name:", e)
+    if order_ts not in order_extras:
+        order_extras[order_ts] = {}
+    order_extras[order_ts]["runner_real_name"] = order_data["runner_real_name"]
     if order_data["runner_id"]:
+        try:
+            requester_info = slack_client.users_info(user=user_id)
+            order_data["requester_real_name"] = requester_info["user"]["real_name"]
+            order_data["claimed_by"] = order_data["runner_real_name"]
+        except Exception as e:
+            print("⚠️ Failed to fetch requester real name for runner-initiated order:", e)
+
+        if gifted_id:
+            try:
+                recipient_info = slack_client.users_info(user=gifted_id)
+                order_data["recipient_real_name"] = recipient_info["user"]["real_name"]
+            except Exception as e:
+                print("⚠️ Failed to fetch recipient real name for runner-initiated order:", e)
+        else:
+            order_data["recipient_real_name"] = order_data["requester_real_name"]
+
         if runner_offer_claims.get(order_data["runner_id"]):
             client.chat_postEphemeral(
                 channel=user_id,
@@ -730,6 +752,7 @@ def handle_modal_submission(ack, body, client):
 
     if runner_id:
         order_data["claimed_by"] = order_data.get("runner_name") or runner_id
+        order_data["runner_real_name"] = order_data.get("runner_real_name") or order_data.get("runner_name")
         order_data["runner_karma"] = get_karma(runner_id)
         formatted_blocks = format_order_message(order_data)
         client.chat_update(
