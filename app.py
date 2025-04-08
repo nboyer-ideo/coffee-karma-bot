@@ -350,11 +350,12 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             t.start()
             print("🌀 Countdown timer thread started")
 
+    e = None  # Declare e in outer scope
     except Exception as e:
         import traceback
         traceback.print_exc()
         print(f"🚨 Countdown exception traceback printed above for order {order_ts}")
-    print(f"🚨 update_countdown FAILED: {e}")
+        print(f"🚨 update_countdown FAILED: {e}")
 
 def update_ready_countdown(client, remaining, ts, channel, user_id):
     try:
@@ -748,18 +749,19 @@ def handle_modal_submission(ack, body, client):
         except Exception as e:
             print("⚠️ Failed to notify runner:", e)
 
-    if runner_id:
-        order_data["claimed_by"] = order_data.get("runner_name") or runner_id
-        order_data["runner_real_name"] = order_data.get("runner_real_name") or order_data.get("runner_name")
-        order_data["runner_karma"] = get_karma(runner_id)
-        formatted_blocks = format_order_message(order_data)
-        client.chat_update(
-            channel=order_channel,
-            ts=order_ts,
-            text="New Koffee Karma order posted",
-            blocks=formatted_blocks
-        )
-        return
+    # The following block has been commented out to keep the /ready message clean.
+    # if runner_id:
+    #     order_data["claimed_by"] = order_data.get("runner_name") or runner_id
+    #     order_data["runner_real_name"] = order_data.get("runner_real_name") or order_data.get("runner_name")
+    #     order_data["runner_karma"] = get_karma(runner_id)
+    #     formatted_blocks = format_order_message(order_data)
+    #     client.chat_update(
+    #         channel=order_channel,
+    #         ts=order_ts,
+    #         text="New Koffee Karma order posted",
+    #         blocks=formatted_blocks
+    #     )
+    #     return
 
     from slack_sdk import WebClient
     slack_token = os.environ.get("SLACK_BOT_TOKEN")
@@ -837,6 +839,10 @@ def handle_ready_command(ack, body, client):
     order_channel = posted_ready["channel"]
     runner_offer_claims[user_id] = None  # Mark this runner as available and unclaimed
     print(f"🆕 Runner offer posted by {user_id} — awaiting match.")
+    drink = ""
+    location = ""
+    notes = ""
+    karma_cost = ""
  
     
     
@@ -985,12 +991,7 @@ def handle_ready_command(ack, body, client):
         "notes": notes,
         "karma_cost": karma_cost,
     }
-    drink = ""
-    location = ""
-    notes = ""
-    karma_cost = ""
-    update_countdown(client, 10, order_ts, order_channel, user_id, None, drink, location, notes, karma_cost
-    )
+    update_ready_countdown(client, 10, order_ts, order_channel, user_id)
 
 
 @app.action("cancel_order")
