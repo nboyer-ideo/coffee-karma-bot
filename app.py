@@ -330,12 +330,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print("📤 Sending updated message to Slack regardless of text match")
         print(f"🧾 Updated blocks:\n{updated_blocks}")
         print(f"🧪 Sending to Slack with FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
-        client.chat_update(
-            channel=order_channel,
-            ts=order_ts,
-            text=original_text,
-            blocks=updated_blocks
-        )
+        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
         print("✅ Countdown block update pushed to Slack")
         print(f"📣 client.chat_update call completed for order {order_ts}")
 
@@ -359,19 +354,12 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 def update_ready_countdown(client, remaining, ts, channel, user_id):
     try:
         if remaining <= 0:
-            client.chat_update(
-                channel=channel,
-                ts=ts,
-                text=f"❌ Offer expired. <@{user_id}> is no longer available.",
-                blocks=[
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": f"❌ Offer expired. <@{user_id}> is no longer available."
-                        }
-                    }
-                ]
+            safe_chat_update(
+                client,
+                channel,
+                ts,
+                f"<@{user_id}> is ready to deliver — {remaining} minutes left.",
+                blocks
             )
             return
 
@@ -411,11 +399,12 @@ def update_ready_countdown(client, remaining, ts, channel, user_id):
             }
         ]
 
-        client.chat_update(
-            channel=channel,
-            ts=ts,
-            text=f"<@{user_id}> is ready to deliver — {remaining} minutes left.",
-            blocks=blocks
+        safe_chat_update(
+            client,
+            channel,
+            ts,
+            f"<@{user_id}> is ready to deliver — {remaining} minutes left.",
+            blocks
         )
 
         import threading
@@ -722,6 +711,7 @@ def handle_modal_submission(ack, body, client):
             order_data["runner_name"] = runner_info["user"]["real_name"]
             order_data["runner_real_name"] = runner_info["user"]["real_name"]
             order_data["claimed_by"] = order_data["runner_real_name"]
+            formatted_blocks = format_order_message(order_data)
         except Exception as e:
             print("⚠️ Failed to fetch runner real name:", e)
     if order_ts not in order_extras:
@@ -760,19 +750,6 @@ def handle_modal_submission(ack, body, client):
         except Exception as e:
             print("⚠️ Failed to notify runner:", e)
 
-    # The following block has been commented out to keep the /ready message clean.
-    # if runner_id:
-    #     order_data["claimed_by"] = order_data.get("runner_name") or runner_id
-    #     order_data["runner_real_name"] = order_data.get("runner_real_name") or order_data.get("runner_name")
-    #     order_data["runner_karma"] = get_karma(runner_id)
-    #     formatted_blocks = format_order_message(order_data)
-    #     client.chat_update(
-    #         channel=order_channel,
-    #         ts=order_ts,
-    #         text="New Koffee Karma order posted",
-    #         blocks=formatted_blocks
-    #     )
-    #     return
 
     from slack_sdk import WebClient
     slack_token = os.environ.get("SLACK_BOT_TOKEN")
@@ -802,12 +779,7 @@ def handle_modal_submission(ack, body, client):
         if not order_channel:
             print("⚠️ Missing order_channel — falling back to default channel.")
             order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
-        client.chat_update(
-            channel=order_channel,
-            ts=order_ts,  # reuse the original /ready message timestamp
-            text="☕ Order claimed and posted.",
-            blocks=formatted_blocks
-        )
+            safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
         return
     else:
         formatted_blocks = format_order_message(order_data)
@@ -816,12 +788,7 @@ def handle_modal_submission(ack, body, client):
         if not order_channel:
             print("⚠️ Missing order_channel — falling back to default channel.")
             order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
-        client.chat_update(
-            channel=order_channel,
-            ts=order_ts,
-            text="New Koffee Karma order posted",
-            blocks=formatted_blocks
-        )
+        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
 @app.command("/ready")
 def handle_ready_command(ack, body, client):
     ack()
@@ -916,11 +883,12 @@ def handle_ready_command(ack, body, client):
             else:
                 print(f"⚠️ No message found for order {order_ts}, skipping expiration.")
                 return
-            client.chat_update(
-                channel=order_channel,
-                ts=order_ts,
-                text="❌ *Expired.* No one stepped up.",
-                blocks=[
+            safe_chat_update(
+                client,
+                order_channel,
+                order_ts,
+                "❌ *Expired.* No one stepped up.",
+                [
                     {
                         "type": "section",
                         "text": {"type": "mrkdwn", "text": "❌ *Expired.* No one stepped up."}
@@ -999,11 +967,12 @@ def handle_ready_command(ack, body, client):
             # Commented out previous update that replaced the whole message text
             # order_extras[order_ts]["reminder_added"] = True
 
-            client.chat_update(
-                channel=order_channel,
-                ts=order_ts,
-                text=msg_text,
-                blocks=updated_blocks
+            safe_chat_update(
+                client,
+                order_channel,
+                order_ts,
+                msg_text,
+                updated_blocks
             )
         except Exception as e:
             print("⚠️ Reminder ping failed:", e)
@@ -1090,11 +1059,12 @@ def handle_cancel_order(ack, body, client):
     updated_text = f"{updated_text}\n\n❌ Order canceled by <@{user_id}>."
     from sheet import update_order_status
     update_order_status(order_ts, status="canceled")
-    client.chat_update(
-        channel=body["channel"]["id"],
-        ts=order_ts,
-        text=updated_text,
-        blocks=[
+    safe_chat_update(
+        client,
+        body["channel"]["id"],
+        order_ts,
+        updated_text,
+        [
             {
                 "type": "section",
                 "text": {"type": "mrkdwn", "text": f"❌ *Order canceled by <@{user_id}>.*"}
@@ -1111,11 +1081,12 @@ def handle_cancel_ready_offer(ack, body, client):
     channel_id = body["channel"]["id"]
 
     # Overwrite the message with cancellation confirmation
-    client.chat_update(
-        channel=channel_id,
-        ts=ts,
-        text=f"❌ Offer canceled by <@{user_id}>.",
-        blocks=[
+    safe_chat_update(
+        client,
+        channel_id,
+        ts,
+        f"❌ Offer canceled by <@{user_id}>.",
+        [
             {
                 "type": "section",
                 "text": {
@@ -1259,12 +1230,14 @@ def handle_claim_order(ack, body, client):
     import pprint
     pprint.pprint(updated_blocks)
     try:
-        client.chat_update(
-            channel=body["channel"]["id"],
-            ts=body["message"]["ts"],
-            blocks=updated_blocks
+        safe_chat_update(
+            client,
+            body["channel"]["id"],
+            body["message"]["ts"],
+            "New Koffee Karma order posted",
+            updated_blocks
         )
-        print("✅ Slack message successfully updated.")
+        print("✅ Slack message successfully updated via safe_chat_update.")
     except Exception as e:
         print("🚨 Failed to update Slack message:", e)
 
@@ -1398,12 +1371,7 @@ def handle_mark_delivered(ack, body, client):
             import pprint
             pprint.pprint(updated_blocks)
 
-            safe_client.chat_update(
-                channel=safe_body["channel"]["id"],
-                ts=original_message["ts"],
-                text=new_text,
-                blocks=updated_blocks
-            )
+            safe_chat_update(client, safe_body["channel"]["id"], original_message["ts"], new_text, updated_blocks)
             safe_client.chat_postMessage(
                 channel=safe_body["channel"]["id"],
                 thread_ts=original_message["ts"],
@@ -1710,11 +1678,12 @@ def handle_cancel_ready_offer(ack, body, client):
             text="❌ Only the runner who posted this offer can cancel it."
         )
         return
-    client.chat_update(
-        channel=body["channel"]["id"],
-        ts=body["message"]["ts"],
-        text=f"❌ Offer canceled by <@{user_id}>.",
-        blocks=[
+    safe_chat_update(
+        client,
+        body["channel"]["id"],
+        body["message"]["ts"],
+        f"❌ Offer canceled by <@{user_id}>.",
+        [
             {
                 "type": "section",
                 "text": {
