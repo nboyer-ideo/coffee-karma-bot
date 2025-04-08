@@ -725,10 +725,19 @@ def handle_modal_submission(ack, body, client):
             fallback_metadata = runner_offer_metadata[order_data["runner_id"]]
             if not order_ts:
                 order_ts = fallback_metadata.get("ts", "")
-            if not order_channel:
-                order_channel = fallback_metadata.get("channel", "")
+        if not order_channel:
+            order_channel = fallback_metadata.get("channel", "")
         if not order_ts or not order_channel:
             print(f"⚠️ Missing order_ts or order_channel for runner-initiated order — fallback failed.")
+    print(f"🧪 [MODAL SUBMIT] Post-fallback order_ts: {order_ts}, order_channel: {order_channel}")
+    if not order_ts or not order_channel:
+        client.chat_postEphemeral(
+            channel=user_id,
+            user=user_id,
+            text="🚨 Modal submitted, but we couldn’t find the original `/ready` message to update. Try again?"
+        )
+        print("🚨 [MODAL SUBMIT] Fallback failed — cannot update message.")
+        return
         gifted_id = gifted_id or ""
         from slack_sdk.web import WebClient
         slack_token = os.environ.get("SLACK_BOT_TOKEN")
