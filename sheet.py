@@ -277,9 +277,11 @@ def get_runner_capabilities(user_id):
     for row in data:
         if row.get("Slack ID") == user_id:
             if "Capabilities" not in row or not row["Capabilities"].strip():
-                return None
+                return {}
+            print(f"✅ Found runner capabilities for {user_id}: {row}")
             return row
-    return None
+    print(f"❌ No runner capabilities found for {user_id}")
+    return {}
 
 def save_runner_capabilities(user_id, name, capabilities):
     worksheet = get_sheet().worksheet("Player Data")

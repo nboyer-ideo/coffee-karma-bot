@@ -920,13 +920,6 @@ def handle_ready_command(ack, body, client):
     user_id = body["user_id"]
     # Check if runner capabilities exist in the sheet
     runner_capabilities = get_runner_capabilities(user_id)
-    real_name = runner_capabilities.get("Name", f"<@{user_id}>")
-    raw_caps = runner_capabilities.get("Capabilities", "[]") or "[]"
-    try:
-        capabilities = json.loads(raw_caps)
-    except json.JSONDecodeError:
-        capabilities = []
-    can_make_str = ", ".join([cap.upper() for cap in capabilities]) or "NONE"
     if not runner_capabilities:
         client.views_open(
             trigger_id=body["trigger_id"],
@@ -960,6 +953,46 @@ def handle_ready_command(ack, body, client):
             text="🛠️ Before you start running orders, let us know what drinks you can make. You can always update this later with /runner settings."
         )
         return
+    if runner_capabilities is None:
+        client.views_open(
+            trigger_id=body["trigger_id"],
+            view={
+                "type": "modal",
+                "callback_id": "runner_settings_modal",
+                "title": {"type": "plain_text", "text": "Runner Settings"},
+                "submit": {"type": "plain_text", "text": "Save"},
+                "close": {"type": "plain_text", "text": "Cancel"},
+                "blocks": [
+                    {
+                        "type": "input",
+                        "block_id": "capabilities",
+                        "label": {"type": "plain_text", "text": "Drinks you can make"},
+                        "element": {
+                            "type": "checkboxes",
+                            "action_id": "input",
+                            "options": [
+                                {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
+                                {"text": {"type": "plain_text", "text": "Drip Coffee / Tea"}, "value": "drip"},
+                                {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso"}
+                            ]
+                        }
+                    }
+                ]
+            }
+        )
+        client.chat_postEphemeral(
+            channel=user_id,
+            user=user_id,
+            text="🛠️ Before you start running orders, let us know what drinks you can make. You can always update this later with /runner settings."
+        )
+        return
+    real_name = runner_capabilities.get("Name", f"<@{user_id}>")
+    raw_caps = runner_capabilities.get("Capabilities", "[]") or "[]"
+    try:
+        capabilities = json.loads(raw_caps)
+    except json.JSONDecodeError:
+        capabilities = []
+    can_make_str = ", ".join([cap.upper() for cap in capabilities]) or "NONE"
     user_id = body["user_id"]
     location = ""
     notes = ""
