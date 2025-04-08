@@ -274,6 +274,22 @@ handler = SlackRequestHandler(app)
 import re
 import threading
 
+def safe_chat_update(client, channel, ts, text, blocks):
+    from slack_sdk.errors import SlackApiError
+    try:
+        response = client.chat_update(
+            channel=channel,
+            ts=ts,
+            text=text,
+            blocks=blocks
+        )
+        print("✅ Slack message successfully updated via safe_chat_update.")
+        return response
+    except SlackApiError as e:
+        print("🚨 Slack API error during chat_update:", e.response['error'])
+    except Exception as e:
+        print("🚨 General error in safe_chat_update:", e)
+
 def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
     import sys
     print("🔥 ENTERED update_countdown()")
@@ -744,7 +760,6 @@ def handle_modal_submission(ack, body, client):
         order_data["runner_name"] = runner_info["user"]["real_name"]
         order_data["runner_real_name"] = runner_info["user"]["real_name"]
         order_data["claimed_by"] = order_data["runner_real_name"]
-        formatted_blocks = format_order_message(order_data)
     except Exception as e:
         print("⚠️ Failed to fetch runner real name:", e)
     try:
@@ -753,6 +768,9 @@ def handle_modal_submission(ack, body, client):
         order_data["claimed_by"] = order_data["runner_real_name"]
     except Exception as e:
         print("⚠️ Failed to fetch requester real name for runner-initiated order:", e)
+
+    # Ensure formatted_blocks is initialized before fallback check
+    formatted_blocks = format_order_message(order_data)
 
     if not order_ts or not order_channel:
         client.chat_postEphemeral(
@@ -824,8 +842,16 @@ def handle_modal_submission(ack, body, client):
         print(f"⚙️ order_channel: {order_channel}")
         print(f"📣 Attempting to update message {order_ts} in channel {order_channel}")
         print(f"🧾 Blocks: {formatted_blocks}")
-        if not order_ts:
-            print("🚫 Cannot update Slack message: missing order_ts")
+        if not formatted_blocks:
+            print("🚫 No formatted_blocks returned from format_order_message")
+            return
+        if not order_ts or not order_channel:
+            print(f"🚨 Missing fallback data — order_ts: {order_ts}, order_channel: {order_channel}")
+            client.chat_postEphemeral(
+                channel=user_id,
+                user=user_id,
+                text="🚨 Modal submitted, but we couldn’t find the original `/ready` message to update."
+            )
             return
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
         return
@@ -840,8 +866,16 @@ def handle_modal_submission(ack, body, client):
         print(f"⚙️ order_channel: {order_channel}")
         print(f"📣 Attempting to update message {order_ts} in channel {order_channel}")
         print(f"🧾 Blocks: {formatted_blocks}")
-        if not order_ts:
-            print("🚫 Cannot update Slack message: missing order_ts")
+        if not formatted_blocks:
+            print("🚫 No formatted_blocks returned from format_order_message")
+            return
+        if not order_ts or not order_channel:
+            print(f"🚨 Missing fallback data — order_ts: {order_ts}, order_channel: {order_channel}")
+            client.chat_postEphemeral(
+                channel=user_id,
+                user=user_id,
+                text="🚨 Modal submitted, but we couldn’t find the original `/ready` message to update."
+            )
             return
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
 @app.command("/ready")
