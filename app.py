@@ -636,6 +636,14 @@ def handle_modal_submission(ack, body, client):
         )
         return
 
+    posted = client.chat_postMessage(
+        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+        text="New Koffee Karma order posted",
+        blocks=[]
+    )
+    order_ts = posted["ts"]
+    order_channel = posted["channel"]
+
     context_line = random.choice([
         "*☕ Caffeine + Chaos* — IDE☕O forever.",
         "*🥤 Caffeinate and dominate.*",
@@ -673,14 +681,6 @@ def handle_modal_submission(ack, body, client):
     import datetime
     # Ensure runner_id is defined to prevent NameError when building order_data
     runner_id = body["view"].get("private_metadata", "")
-    # Post a preliminary message to obtain the drop ID early
-    posted = client.chat_postMessage(
-        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text="New Koffee Karma order posted",
-        blocks=[]
-    )
-    order_ts = posted["ts"]
-    order_channel = posted["channel"]
     order_data = {
         "order_id": order_ts,
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -794,18 +794,15 @@ def handle_ready_command(ack, body, client):
     location = ""
     notes = ""
     karma_cost = ""
-    user_name = f"<@{user_id}>"
-    runner_offer_claims[user_id] = None  # Mark this runner as available and unclaimed
-    print(f"🆕 Runner offer posted by {user_id} — awaiting match.")
     posted_ready = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text=f"🖐️ {user_name} is *ready to deliver* a drink in the next ~15 minutes.\nClick below to send a mission their way.",
+        text=f"🖐️ <@{user_id}> is *ready to deliver* a drink in the next ~15 minutes.\nClick below to send a mission their way.",
         blocks=[
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"🖐️ {user_name} is *ready to deliver* a drink in the next ~15 minutes.\nClick below to send a mission their way."
+                    "text": f"🖐️ <@{user_id}> is *ready to deliver* a drink in the next ~15 minutes.\nClick below to send a mission their way."
                 }
             },
             {
@@ -836,8 +833,10 @@ def handle_ready_command(ack, body, client):
             }
         ]
     )
-    ready_ts = posted_ready["ts"]
-    ready_channel = posted_ready["channel"]
+    order_ts = posted_ready["ts"]
+    order_channel = posted_ready["channel"]
+    runner_offer_claims[user_id] = None  # Mark this runner as available and unclaimed
+    print(f"🆕 Runner offer posted by {user_id} — awaiting match.")
  
     
     
@@ -846,7 +845,7 @@ def handle_ready_command(ack, body, client):
     import datetime
     gifted_id = None
     order_data = {
-        "order_id": ready_ts,
+        "order_id": order_ts,
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "requester_id": user_id,
         "requester_real_name": "",
@@ -868,7 +867,7 @@ def handle_ready_command(ack, body, client):
 
     # Start countdown timer for order expiration
     import threading
-    def cancel_unclaimed_order():
+    def cancel_unclaimed_order(order_ts, order_channel):
         try:
             current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
             if current_message["messages"]:
@@ -928,13 +927,14 @@ def handle_ready_command(ack, body, client):
             print("⚠️ Failed to expire message:", e)
 
     print("⏰ Timer started for cancel_unclaimed_order (600s)")
-    threading.Timer(600, cancel_unclaimed_order).start()  # 10 minutes
+    threading.Timer(600, cancel_unclaimed_order, args=(order_ts, order_channel)).start()  # 10 minutes
     # Reminder ping halfway through if still unclaimed
-    def reminder_ping():
+    def reminder_ping(order_ts, order_channel):
         try:
-            order_channel = ready_channel
-            order_ts = ready_ts
-            current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+            if not order_channel or not order_ts:
+                print("⚠️ Missing order_channel or order_ts; skipping reminder_ping")
+                return
+        current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
             if order_extras.get(order_ts, {}).get("claimed", False):
                 print(f"🔕 Skipping reminder — order {order_ts} already claimed.")
                 return
@@ -970,12 +970,11 @@ def handle_ready_command(ack, body, client):
             print("⚠️ Reminder ping failed:", e)
 
     print("🔔 Timer started for reminder_ping (300s)")
-    threading.Timer(300, reminder_ping).start()  # 5-minute reminder
+    threading.Timer(300, reminder_ping, args=(order_ts, order_channel)).start()  # 5-minute reminder
 
 
     print("🔁 Kicking off countdown now...")
     print("🚀 Starting countdown thread via update_countdown() in handle_modal_submission")
-    order_ts = ready_ts
     order_extras[order_ts] = {
         "active": True,
         "claimed": False,
