@@ -276,12 +276,25 @@ def get_runner_capabilities(user_id):
     data = worksheet.get_all_records()
     for row in data:
         if row.get("Slack ID") == user_id:
-            if "Capabilities" not in row or not row["Capabilities"].strip():
-                return {}
+            capabilities_raw = row.get("Capabilities", "")
+            if not capabilities_raw or not isinstance(capabilities_raw, str):
+                capabilities_raw = "[]"
+            if capabilities_raw is None or not str(capabilities_raw).strip():
+                return {"Capabilities": []}
+            try:
+                row["Capabilities"] = json.loads(capabilities_raw)
+            except json.JSONDecodeError:
+                row["Capabilities"] = []
+            row["Capabilities"] = row.get("Capabilities", [])
+            if row["Capabilities"] is None:
+                row["Capabilities"] = []
             print(f"✅ Found runner capabilities for {user_id}: {row}")
+            if "Name" not in row or not row["Name"]:
+                row["Name"] = f"<@{user_id}>"
             return row
     print(f"❌ No runner capabilities found for {user_id}")
-    return {}
+    print(f"📭 Returning default capabilities for {user_id}")
+    return {"Name": f"<@{user_id}>", "Capabilities": []}
 
 def save_runner_capabilities(user_id, name, capabilities):
     worksheet = get_sheet().worksheet("Player Data")

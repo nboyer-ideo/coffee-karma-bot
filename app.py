@@ -905,10 +905,11 @@ def handle_ready_command(ack, body, client):
                         "element": {
                             "type": "checkboxes",
                             "action_id": "input",
-                            "options": [
+                        "options": [
                                 {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
-                                {"text": {"type": "plain_text", "text": "Drip Coffee / Tea"}, "value": "drip"},
-                                {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso"}
+                                {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip"},
+                                {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"},
+                                {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"}
                             ]
                         }
                     }
@@ -937,10 +938,11 @@ def handle_ready_command(ack, body, client):
                         "element": {
                             "type": "checkboxes",
                             "action_id": "input",
-                            "options": [
+                        "options": [
                                 {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
-                                {"text": {"type": "plain_text", "text": "Drip Coffee / Tea"}, "value": "drip"},
-                                {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso"}
+                                {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip"},
+                                {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"},
+                                {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"}
                             ]
                         }
                     }
@@ -970,10 +972,11 @@ def handle_ready_command(ack, body, client):
                         "element": {
                             "type": "checkboxes",
                             "action_id": "input",
-                            "options": [
+                        "options": [
                                 {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
                                 {"text": {"type": "plain_text", "text": "Drip Coffee / Tea"}, "value": "drip"},
-                                {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso"}
+                                {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"},
+                                {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"}
                             ]
                         }
                     }
@@ -992,7 +995,13 @@ def handle_ready_command(ack, body, client):
         capabilities = json.loads(raw_caps)
     except json.JSONDecodeError:
         capabilities = []
-    can_make_str = ", ".join([cap.upper() for cap in capabilities]) or "NONE"
+    pretty_caps = {
+        "water": "WATER",
+        "drip": "DRIP COFFEE",
+        "espresso_drinks": "ESPRESSO DRINKS",
+        "tea": "TEA"
+    }
+    can_make_str = ", ".join([pretty_caps.get(cap, cap.upper()) for cap in capabilities]) or "NONE"
     user_id = body["user_id"]
     location = ""
     notes = ""
@@ -1192,27 +1201,34 @@ def handle_ready_command(ack, body, client):
     print("🔔 Timer started for reminder_ping (300s)")
     threading.Timer(300, reminder_ping, args=(order_ts, order_channel)).start()  # 5-minute reminder
 
-@app.view("")
-def catch_all_views(ack, body, logger):
-    print("📩 CATCH-ALL VIEW SUBMISSION HANDLER HIT")
-    print(json.dumps(body, indent=2))
-    sys.stdout.flush()
+@app.view("runner_settings_modal")
+def handle_runner_settings_modal(ack, body, client):
     ack()
+    user_id = body["user"]["id"]
+    values = body["view"]["state"]["values"]
+    selected = []
+    if "capabilities" in values and "input" in values["capabilities"]:
+        selected = [opt["value"] for opt in values["capabilities"]["input"].get("selected_options", [])]
 
+    from sheet import save_runner_capabilities
+    from slack_sdk import WebClient
+    import os
+    slack_token = os.environ.get("SLACK_BOT_TOKEN")
+    slack_client = WebClient(token=slack_token)
+    try:
+        user_info = slack_client.users_info(user=user_id)
+        real_name = user_info["user"]["real_name"]
+    except Exception as e:
+        print("⚠️ Failed to fetch user real name for settings save:", e)
+        real_name = f"<@{user_id}>"
 
-    print("🔁 Kicking off countdown now...")
-    print("🚀 Starting countdown thread via update_countdown() in handle_modal_submission")
-    order_extras[order_ts] = {
-        "active": True,
-        "claimed": False,
-        "requester_real_name": order_data["requester_real_name"],
-        "recipient_real_name": order_data["recipient_real_name"],
-        "requester_id": user_id,
-        "location": location,
-        "notes": notes,
-        "karma_cost": karma_cost,
-    }
-    update_ready_countdown(client, 10, order_ts, order_channel, user_id)
+    save_runner_capabilities(user_id, real_name, selected)
+
+    client.chat_postEphemeral(
+        channel=user_id,
+        user=user_id,
+        text="✅ Your drink-making capabilities have been saved!"
+    )
 
 
 @app.action("cancel_order")
