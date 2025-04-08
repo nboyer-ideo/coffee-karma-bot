@@ -327,8 +327,10 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "time_claimed": "",
             "time_delivered": "",
-        "remaining_minutes": remaining
-    }
+            "remaining_minutes": remaining
+        }
+    except Exception as e:
+        print("⚠️ Error in update_countdown:", e)
 
 @app.action("location_select")
 def handle_location_select(ack, body, client):
