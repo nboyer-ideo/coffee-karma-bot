@@ -781,13 +781,25 @@ def handle_modal_submission(ack, body, client):
     else:
         order_data["recipient_real_name"] = order_data["requester_real_name"]
     
-    formatted_blocks = format_order_message(order_data)
-    client.chat_update(
-        channel=order_channel,
-        ts=order_ts,
-        text="New Koffee Karma order posted",
-        blocks=formatted_blocks
-    )
+    if order_data["runner_id"]:
+        order_data["claimed_by"] = order_data["runner_real_name"]
+        order_data["status"] = "claimed"
+        formatted_blocks = format_order_message(order_data)
+        client.chat_update(
+            channel=order_channel,
+            ts=order_ts,
+            text="New Koffee Karma order posted",
+            blocks=formatted_blocks
+        )
+        return
+    else:
+        formatted_blocks = format_order_message(order_data)
+        client.chat_update(
+            channel=order_channel,
+            ts=order_ts,
+            text="New Koffee Karma order posted",
+            blocks=formatted_blocks
+        )
 @app.command("/ready")
 def handle_ready_command(ack, body, client):
     ack()
