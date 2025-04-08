@@ -742,15 +742,15 @@ def handle_modal_submission(ack, body, client):
     if order_ts not in order_extras:
         order_extras[order_ts] = {}
     order_extras[order_ts]["runner_real_name"] = order_data["runner_real_name"]
-
-        if gifted_id:
-            try:
-                recipient_info = slack_client.users_info(user=gifted_id)
-                order_data["recipient_real_name"] = recipient_info["user"]["real_name"]
-            except Exception as e:
-                print("⚠️ Failed to fetch recipient real name for runner-initiated order:", e)
-        else:
-            order_data["recipient_real_name"] = order_data["requester_real_name"]
+    
+    if gifted_id:
+        try:
+            recipient_info = slack_client.users_info(user=gifted_id)
+            order_data["recipient_real_name"] = recipient_info["user"]["real_name"]
+        except Exception as e:
+            print("⚠️ Failed to fetch recipient real name for runner-initiated order:", e)
+    else:
+        order_data["recipient_real_name"] = order_data["requester_real_name"]
 
         if runner_offer_claims.get(order_data["runner_id"]):
             client.chat_postEphemeral(
