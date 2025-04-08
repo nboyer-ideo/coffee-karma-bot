@@ -327,8 +327,43 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "time_claimed": "",
             "time_delivered": "",
-            "remaining_minutes": remaining
+        "remaining_minutes": remaining
         }
+        print("🛠️ Calling format_order_message with updated remaining time")
+        updated_blocks = format_order_message(order_data)
+ 
+        current_blocks = current_message["messages"][0].get("blocks", [])
+        if any(block.get("block_id") == "reminder_block" for block in current_blocks):
+            updated_blocks.insert(0, {
+                "type": "section",
+                "block_id": "reminder_block",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*⚠️ STILL UNCLAIMED — CLOCK'S TICKING ⏳*"
+                }
+            })
+        print(f"🔍 Progress bar update should now be reflected in updated_blocks:\n{updated_blocks}")
+        print(f"📨 Message fetch result: {current_message}")
+ 
+        original_text = current_message["messages"][0].get("text", "")
+        print(f"📝 Original message text (repr): {repr(original_text)}")
+        print(f"📤 Sending updated Slack message with remaining_minutes = {remaining}")
+        print(f"🧾 Updated blocks:\n{updated_blocks}")
+        print(f"🧪 Sending to Slack with FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
+        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", updated_blocks)
+        print("✅ Countdown block update pushed to Slack")
+        print(f"📣 client.chat_update call completed for order {order_ts}")
+ 
+        if remaining > 1 and extras.get("active", True):
+            print(f"🕒 Scheduling next countdown tick — remaining: {remaining - 1}")
+            t = threading.Timer(60, update_countdown, args=(
+                client, remaining - 1, order_ts, order_channel,
+                user_id, gifted_id, drink, location, notes, karma_cost
+            ))
+            print("🌀 Starting new countdown thread with threading.Timer")
+            sys.stdout.flush()
+            t.start()
+            print("🌀 Countdown timer thread started")
     except Exception as e:
         print("⚠️ Error in update_countdown:", e)
 
@@ -357,51 +392,6 @@ def handle_location_select(ack, body, client):
         view_id=body["view"]["id"],
         view=modal["view"]
     )
-    print("🛠️ Calling format_order_message with updated remaining time")
-    current_blocks = current_message["messages"][0].get("blocks", [])
-        if any(block.get("block_id") == "reminder_block" for block in current_blocks):
-            updated_blocks.insert(0, {
-                "type": "section",
-                "block_id": "reminder_block",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "*⚠️ STILL UNCLAIMED — CLOCK'S TICKING ⏳*"
-                }
-            })
-        print(f"🔍 Progress bar update should now be reflected in updated_blocks:\n{updated_blocks}")
-        print(f"📨 Message fetch result: {current_message}")
-
-        if not current_message["messages"]:
-            print("❌ No messages found for countdown update")
-            return
-
-        original_text = current_message["messages"][0].get("text", "")
-        print(f"📝 Original message text (repr): {repr(original_text)}")
-        print(f"📤 Sending updated Slack message with remaining_minutes = {remaining}")
-
-        print("📤 Sending updated message to Slack regardless of text match")
-        print(f"🧾 Updated blocks:\n{updated_blocks}")
-        print(f"🧪 Sending to Slack with FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
-        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
-        print("✅ Countdown block update pushed to Slack")
-        print(f"📣 client.chat_update call completed for order {order_ts}")
-
-        if remaining > 1 and extras.get("active", True):
-            print(f"🕒 Scheduling next countdown tick — remaining: {remaining - 1}")
-            t = threading.Timer(60, update_countdown, args=(
-                client, remaining - 1, order_ts, order_channel,
-                user_id, gifted_id, drink, location, notes, karma_cost
-            ))
-            print("🌀 Starting new countdown thread with threading.Timer")
-            sys.stdout.flush()
-            t.start()
-            print("🌀 Countdown timer thread started")
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        print(f"🚨 Countdown exception traceback printed above for order {order_ts}")
-        print(f"🚨 update_countdown FAILED: {e}")
 
 def update_ready_countdown(client, remaining, ts, channel, user_id):
     try:
