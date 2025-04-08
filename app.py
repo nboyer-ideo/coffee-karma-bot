@@ -350,7 +350,6 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             t.start()
             print("🌀 Countdown timer thread started")
 
-    e = None  # Declare e in outer scope
     except Exception as e:
         import traceback
         traceback.print_exc()
