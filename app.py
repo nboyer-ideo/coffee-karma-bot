@@ -636,6 +636,7 @@ def handle_modal_submission(ack, body, client):
         )
         return
 
+    runner_id = body["view"].get("private_metadata", "")
     if not runner_id:
         posted = client.chat_postMessage(
             channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
