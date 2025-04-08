@@ -934,7 +934,7 @@ def handle_ready_command(ack, body, client):
             if not order_channel or not order_ts:
                 print("⚠️ Missing order_channel or order_ts; skipping reminder_ping")
                 return
-        current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+            current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
             if order_extras.get(order_ts, {}).get("claimed", False):
                 print(f"🔕 Skipping reminder — order {order_ts} already claimed.")
                 return
