@@ -179,7 +179,7 @@ def log_order_to_sheet(order_data):
     try:
         sheet = get_sheet()
         print("📝 Logging order data:", order_data)
-        worksheet = sheet.worksheet("Order Log")  # Headers: Order ID, Timestamp, Requester ID, Requester Name, Claimer ID, Claimer Name, Recipient ID, Recipient Name, Drink, Location, Notes, Karma Cost, Status, Bonus Multiplier, Ordered Time, Claimed Time, Delivered Time
+        worksheet = sheet.worksheet("Order Log")  # Headers: Order ID, Timestamp, Requester ID, Requester Name, Runner ID, Runner Name, Recipient ID, Recipient Name, Drink, Location, Notes, Karma Cost, Status, Bonus Multiplier, Ordered Time, Claimed Time, Delivered Time
         print("📒 Retrieved Order Log worksheet successfully.")
         print("🧾 Order Log worksheet loaded. Attempting to append row.")
         print("✅ Accessed Order Log worksheet")
@@ -200,21 +200,22 @@ def log_order_to_sheet(order_data):
             except Exception as e:
                 print("⚠️ Failed to fetch recipient real name:", e)
 
-        if not order_data.get("claimer_real_name") and order_data.get("claimer_id"):
+        if not order_data.get("runner_real_name") and order_data.get("runner_id"):
             try:
-                claimer_info = slack_client.users_info(user=order_data["claimer_id"])
-                order_data["claimer_real_name"] = claimer_info["user"]["real_name"]
+                runner_info = slack_client.users_info(user=order_data["runner_id"])
+                order_data["runner_real_name"] = runner_info["user"]["real_name"]
             except Exception as e:
-                print("⚠️ Failed to fetch claimer real name:", e)
+                print("⚠️ Failed to fetch runner real name:", e)
 
         try:
-            worksheet.append_row([
+        worksheet.append_row([
                 order_data.get("order_id", ""),
                 order_data.get("timestamp", ""),
+                "runner" if order_data.get("runner_id") else "requester",
                 order_data.get("requester_id", ""),
                 order_data.get("requester_real_name", ""),
-                order_data.get("claimer_id", ""),
-                order_data.get("claimer_real_name", ""),
+                order_data.get("runner_id", ""),
+                order_data.get("runner_name", ""),
                 order_data.get("recipient_id", ""),
                 order_data.get("recipient_real_name", ""),
                 order_data.get("drink", ""),
@@ -233,7 +234,7 @@ def log_order_to_sheet(order_data):
     except Exception as e:
         print("⚠️ Failed to log order to sheet:", e)
 
-def update_order_status(order_id, status=None, claimer_id=None, claimer_name=None, bonus_multiplier=None, claimed_time=None, delivered_time=None, requester_name=None, recipient_name=None):
+def update_order_status(order_id, status=None, runner_id=None, runner_name=None, bonus_multiplier=None, claimed_time=None, delivered_time=None, requester_name=None, recipient_name=None):
     try:
         sheet = get_sheet()
         worksheet = sheet.worksheet("Order Log")
@@ -242,10 +243,10 @@ def update_order_status(order_id, status=None, claimer_id=None, claimer_name=Non
             if str(row.get("Order ID")) == str(order_id):
                 if status is not None:
                     worksheet.update_cell(i + 2, 13, status)
-                if claimer_id is not None:
-                    worksheet.update_cell(i + 2, 5, claimer_id)
-                if claimer_name is not None:
-                    worksheet.update_cell(i + 2, 6, claimer_name)
+                if runner_id is not None:
+                    worksheet.update_cell(i + 2, 5, runner_id)
+                if runner_name is not None:
+                    worksheet.update_cell(i + 2, 6, runner_name)
                 if bonus_multiplier is not None:
                     worksheet.update_cell(i + 2, 14, bonus_multiplier)
                 if claimed_time is not None:

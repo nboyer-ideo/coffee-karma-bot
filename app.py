@@ -6,6 +6,7 @@ import time
 import random
 import requests
 import os
+import json
 import datetime
 import copy
 import re
@@ -23,6 +24,7 @@ def strip_formatting(s):
 order_extras = {}
 countdown_timers = {}  # order_ts -> remaining minutes
 countdown_timers = {}
+runner_offer_claims = {}  # key: runner_id, value: user_id of matched requester (or None if still open)
 
 
 
@@ -123,7 +125,7 @@ def format_order_message(order_data):
         lines.append(f'| STATUS :      COMPLETED {" " * 22} |')
         lines.append(f'|               DELIVERED BY {order_data["delivered_by"].upper():<19} |')
         lines.append("| ---------------------------------------------- |")
-        karma_line = f"+{order_data['bonus_multiplier']} KARMA EARNED — TOTAL: {order_data['claimer_karma']}"
+        karma_line = f"+{order_data['bonus_multiplier']} KARMA EARNED — TOTAL: {order_data['runner_karma']}"
         total_width = 46
         left_padding = (total_width - len(karma_line)) // 2
         right_padding = total_width - len(karma_line) - left_padding
@@ -285,8 +287,8 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "requester_id": user_id,
             "requester_real_name": extras.get("requester_real_name", ""),
-            "claimer_id": "",
-            "claimer_real_name": "",
+            "runner_id": "",
+            "runner_real_name": "",
             "recipient_id": gifted_id if gifted_id else user_id,
             "recipient_real_name": extras.get("recipient_real_name", ""),
             "drink": drink,
@@ -351,7 +353,75 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         import traceback
         traceback.print_exc()
         print(f"🚨 Countdown exception traceback printed above for order {order_ts}")
-        print(f"🚨 update_countdown FAILED: {e}")
+    print(f"🚨 update_countdown FAILED: {e}")
+
+def update_ready_countdown(client, remaining, ts, channel, user_id):
+    try:
+        if remaining <= 0:
+            client.chat_update(
+                channel=channel,
+                ts=ts,
+                text=f"❌ Offer expired. <@{user_id}> is no longer available.",
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"❌ Offer expired. <@{user_id}> is no longer available."
+                        }
+                    }
+                ]
+            )
+            return
+
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"🖐️ <@{user_id}> is *ready to deliver* a drink.\n*⏳ {remaining} minutes left to send them an order.*"
+                }
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "action_id": "open_order_modal_for_runner",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "ORDER NOW",
+                            "emoji": True
+                        },
+                        "value": json.dumps({"runner_id": user_id})
+                    },
+                    {
+                        "type": "button",
+                        "action_id": "cancel_ready_offer",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Cancel Offer",
+                            "emoji": True
+                        },
+                        "style": "danger",
+                        "value": user_id
+                    }
+                ]
+            }
+        ]
+
+        client.chat_update(
+            channel=channel,
+            ts=ts,
+            text=f"<@{user_id}> is ready to deliver — {remaining} minutes left.",
+            blocks=blocks
+        )
+
+        import threading
+        threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id)).start()
+
+    except Exception as e:
+        print("⚠️ Failed to update /ready countdown:", e)
 
 from flask import jsonify
 
@@ -377,17 +447,16 @@ def handle_app_home_opened_events(body, logger):
     # Silently ignore app_home_opened events to suppress 404 log messages
     pass
 
-@app.command("/order")
-def handle_order(ack, body, client):
-    ack()
-    client.views_open(
-        trigger_id=body["trigger_id"],
-        view={
+def build_order_modal(trigger_id, runner_id=""):
+    return {
+        "trigger_id": trigger_id,
+        "view": {
             "type": "modal",
             "callback_id": "koffee_request_modal",
             "title": {"type": "plain_text", "text": "Place Your Order"},
             "submit": {"type": "plain_text", "text": "Drop It"},
             "close": {"type": "plain_text", "text": "Nevermind"},
+            "private_metadata": runner_id,
             "blocks": [
                 {
                     "type": "input",
@@ -406,10 +475,10 @@ def handle_order(ack, body, client):
                                 "text": {"type": "plain_text", "text": "Drip Coffee / Tea — 2 Karma"},
                                 "value": "drip"
                             },
-                        {
-                            "text": {"type": "plain_text", "text": "Espresso Drink (latte, cappuccino) — UNAVAILABLE ☕🚫"},
+                            {
+                                "text": {"type": "plain_text", "text": "Espresso Drink (latte, cappuccino) — UNAVAILABLE ☕🚫"},
                                 "value": "espresso"
-                        }
+                            }
                         ]
                     }
                 },
@@ -499,11 +568,23 @@ def handle_order(ack, body, client):
                     "type": "input",
                     "block_id": "gift_to",
                     "optional": True,
-                    "label": { "type": "plain_text", "text": "Gift to (optional)" },
+                    "label": {"type": "plain_text", "text": "Gift to (optional)"},
                     "element": {
                         "type": "users_select",
                         "action_id": "input",
-                        "placeholder": { "type": "plain_text", "text": "Choose a coworker" }
+                        "placeholder": {"type": "plain_text", "text": "Choose a coworker"}
+                    }
+                },
+                {
+                    "type": "input",
+                    "block_id": "runner_id",
+                    "optional": True,
+                    "label": {"type": "plain_text", "text": "Runner ID (hidden)"},
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "input",
+                        "initial_value": runner_id,
+                        "dispatch_action": False
                     }
                 },
                 {
@@ -515,6 +596,14 @@ def handle_order(ack, body, client):
                 }
             ]
         }
+    }
+
+@app.command("/order")
+def handle_order(ack, body, client):
+    ack()
+    client.views_open(
+        trigger_id=body["trigger_id"],
+        view=build_order_modal(body["trigger_id"])["view"]
     )
 
 @app.view("koffee_request_modal")
@@ -529,6 +618,8 @@ def handle_modal_submission(ack, body, client):
             user=user_id,
             text="🚫 Espresso orders are temporarily unavailable — the machine's down. Choose something else while we fix it up."
         )
+        print("❌ Espresso order blocked due to machine downtime.")
+        print(f"⚠️ BLOCKED ORDER — {user_id} tried to order espresso while machine is down.")
         return
     drink_detail = values["drink_detail"]["input"]["value"]
     drink_map = {
@@ -594,8 +685,9 @@ def handle_modal_submission(ack, body, client):
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "requester_id": user_id,
         "requester_real_name": "",
-        "claimer_id": "",
-        "claimer_real_name": "",
+        "runner_id": "",
+        "runner_name": "",
+        "runner_real_name": "",
         "recipient_id": gifted_id if gifted_id else user_id,
         "recipient_real_name": "",
         "drink": drink,
@@ -607,8 +699,31 @@ def handle_modal_submission(ack, body, client):
         "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "time_claimed": "",
         "time_delivered": "",
+        "runner_id": values["runner_id"]["input"]["value"] if "runner_id" in values and "input" in values["runner_id"] else "",
         "remaining_minutes": 10
     }
+    if order_data["runner_id"]:
+        try:
+            runner_info = slack_client.users_info(user=order_data["runner_id"])
+            order_data["runner_name"] = runner_info["user"]["real_name"]
+        except Exception as e:
+            print("⚠️ Failed to fetch runner real name:", e)
+    if order_data["runner_id"]:
+        if runner_offer_claims.get(order_data["runner_id"]):
+            client.chat_postEphemeral(
+                channel=user_id,
+                user=user_id,
+                text="❌ That runner has already been matched with another order. Try again later."
+            )
+            return
+        runner_offer_claims[order_data["runner_id"]] = user_id
+        try:
+            client.chat_postMessage(
+                channel=order_data["runner_id"],
+                text="📬 Someone just responded to your `/ready` post. You’ve got a mission. Scope the thread for details."
+            )
+        except Exception as e:
+            print("⚠️ Failed to notify runner:", e)
     # Post a preliminary message to obtain the drop ID
     posted = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
@@ -646,16 +761,52 @@ def handle_modal_submission(ack, body, client):
         blocks=formatted_blocks
     )
  
+@app.command("/ready")
+def handle_ready_command(ack, body, client):
+    ack()
+    user_id = body["user_id"]
+    user_name = f"<@{user_id}>"
+    runner_offer_claims[user_id] = None  # Mark this runner as available and unclaimed
+    print(f"🆕 Runner offer posted by {user_id} — awaiting match.")
+    posted_ready = client.chat_postMessage(
+        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+        text=f"🖐️ {user_name} is *ready to deliver* a drink in the next ~15 minutes.\nClick below to send a mission their way.",
+        blocks=[
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"🖐️ {user_name} is *ready to deliver* a drink in the next ~15 minutes.\nClick below to send a mission their way."
+                }
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "action_id": "open_order_modal_for_runner",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "ORDER NOW",
+                            "emoji": True
+                        },
+                        "value": json.dumps({"runner_id": user_id})
+                    }
+                ]
+            }
+        ]
+    )
+    ready_ts = posted_ready["ts"]
+    ready_channel = posted_ready["channel"]
  
-    deduct_karma(user_id, karma_cost)
-
-    if gifted_id:
-        print(f"📬 Sending DM to gifted_id: {gifted_id} with message: 🎁 You’ve been gifted a drink order by <@{user_id}>. Let the koffee flow.")
+    
+    if gifted_id and gifted_id != user_id:
+        deduct_karma(gifted_id, karma_cost)
         client.chat_postMessage(
             channel=gifted_id,
-            text=f"🎁 You’ve been gifted a drink order by <@{user_id}>. Let the koffee flow."
+            text=f"🎁 You just got a delivery offer from <@{user_id}> and submitted your order. {karma_cost} Karma deducted from your account."
         )
-
+    
     # Log order with "time_ordered" as the timestamp key
     from sheet import log_order_to_sheet
     import datetime
@@ -664,8 +815,8 @@ def handle_modal_submission(ack, body, client):
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "requester_id": user_id,
         "requester_real_name": order_data.get("requester_real_name", ""),
-        "claimer_id": "",
-        "claimer_real_name": "",
+        "runner_id": "",
+        "runner_real_name": "",
         "recipient_id": gifted_id if gifted_id else user_id,
         "recipient_real_name": order_data.get("recipient_real_name", ""),
         "drink": drink,
@@ -925,10 +1076,10 @@ def handle_claim_order(ack, body, client):
     notes = extras.get("notes", "")
     karma_cost = extras.get("karma_cost", 1)
     if order_ts not in order_extras:
-        order_extras[order_ts] = {"claimer_id": None, "active": True, "claimed": False}
+        order_extras[order_ts] = {"runner_id": None, "active": True, "claimed": False}
         order_extras[order_ts]["location"] = location
         order_extras[order_ts]["notes"] = notes
-    order_extras[order_ts]["claimer_id"] = user_id
+    order_extras[order_ts]["runner_id"] = user_id
     order_extras[order_ts]["drink"] = drink
     order_extras[order_ts]["karma_cost"] = karma_cost
     order_extras[order_ts]["active"] = False
@@ -939,20 +1090,20 @@ def handle_claim_order(ack, body, client):
     slack_token = os.environ.get("SLACK_BOT_TOKEN")
     slack_client = WebClient(token=slack_token)
     
-    # Fetch claimer's real name
-    claimer_name = ""
+    # Fetch runner's real name
+    runner_name = ""
     try:
         user_info = slack_client.users_info(user=user_id)
-        claimer_name = user_info["user"]["real_name"]
+        runner_name = user_info["user"]["real_name"]
     except Exception as e:
-        print("⚠️ Failed to fetch claimer real name for update:", e)
-    order_extras[order_ts]["claimer_real_name"] = claimer_name
+        print("⚠️ Failed to fetch runner real name for update:", e)
+    order_extras[order_ts]["runner_real_name"] = runner_name
     
     update_order_status(
         order_id=order_ts,
         status="claimed",
-        claimer_id=user_id,
-        claimer_name=claimer_name,
+        runner_id=user_id,
+        runner_name=runner_name,
         claimed_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     )
     gifted_id = None
@@ -975,9 +1126,9 @@ def handle_claim_order(ack, body, client):
         "location": extras.get("location", ""),
         "notes": extras.get("notes", ""),
         "karma_cost": karma_cost,
-        "claimer_karma": get_karma(user_id),
-        "claimer_name": claimer_name,
-        "claimed_by": claimer_name,
+        "runner_karma": get_karma(user_id),
+        "runner_name": runner_name,
+        "claimed_by": runner_name,
         "requester_id": requester_id,
         "bonus_multiplier": "",
         "channel_id": body["channel"]["id"],
@@ -999,7 +1150,7 @@ def handle_claim_order(ack, body, client):
     except Exception as e:
         print("🚨 Failed to update Slack message:", e)
 
-    print(f"📬 Sending DM to claimer (user_id: {user_id}) with message: You took the mission. Don't forget to hit 'MARK AS DELIVERED' once the goods are dropped.")
+    print(f"📬 Sending DM to runner (user_id: {user_id}) with message: You took the mission. Don't forget to hit 'MARK AS DELIVERED' once the goods are dropped.")
     client.chat_postMessage(
         channel=user_id,
         text="You took the mission. Don't forget to hit 'MARK AS DELIVERED' once the goods are dropped."
@@ -1018,7 +1169,7 @@ def handle_claim_order(ack, body, client):
                 msg_text = current_message["messages"][0].get("text", "")
                 if re.search(r"drop completed", msg_text, re.IGNORECASE):
                     return  # Already completed
-            print(f"📬 Sending DM to claimer (user_id: {user_id}) with message: ⏰ Heads-up: Your claimed order is still marked as undelivered. Don’t forget to hit *MARK AS DELIVERED* once it’s done!")
+            print(f"📬 Sending DM to runner (user_id: {user_id}) with message: ⏰ Heads-up: Your claimed order is still marked as undelivered. Don’t forget to hit *MARK AS DELIVERED* once it’s done!")
             client.chat_postMessage(
                 channel=user_id,
                 text="⏰ Heads-up: Your claimed order is still marked as undelivered. Don’t forget to hit *MARK AS DELIVERED* once it’s done!"
@@ -1051,10 +1202,10 @@ def handle_mark_delivered(ack, body, client):
             print("📦 mark_delivered payload:", safe_body)
             original_message = safe_body.get("message", {})
             order_ts = original_message.get("ts")
-            claimer_id = order_extras.get(order_ts, {}).get("claimer_id")
-            claimer_name = order_extras.get(order_ts, {}).get("claimer_real_name", "")
-            if not claimer_id:
-                print("⚠️ claimer_id missing for order_ts", order_ts)
+            runner_id = order_extras.get(order_ts, {}).get("runner_id")
+            runner_name = order_extras.get(order_ts, {}).get("runner_real_name", "")
+            if not runner_id:
+                print("⚠️ runner_id missing for order_ts", order_ts)
             location = order_extras.get(order_ts, {}).get("location", "")
             notes = order_extras.get(order_ts, {}).get("notes", "")
             karma_cost = order_extras.get(order_ts, {}).get("karma_cost", 1)
@@ -1064,7 +1215,7 @@ def handle_mark_delivered(ack, body, client):
             requester_id = order_extras.get(order_ts, {}).get("requester_id")
             recipient_id = order_extras.get(order_ts, {}).get("recipient_id")
 
-            if not claimer_id or (deliverer_id != claimer_id and deliverer_id != recipient_id):
+            if not runner_id or (deliverer_id != runner_id and deliverer_id != recipient_id):
                 safe_client.chat_postEphemeral(
                     channel=safe_body["channel"]["id"],
                     user=deliverer_id,
@@ -1081,12 +1232,12 @@ def handle_mark_delivered(ack, body, client):
             order_text = re.sub(r"\n*⚠️ This mission’s still unclaimed\..*", "", order_text)
             order_text = re.sub(r"\n*📸 \*Flex the drop\..*", "", order_text)
 
-            # Removed redundant check since claimer_id is now validated above
+            # Removed redundant check since runner_id is now validated above
 
             bonus_multiplier = order_extras.get(order_ts, {}).get("bonus_multiplier", 1)
-            claimer_name = order_extras.get(order_ts, {}).get("claimer_real_name", "")
-            points = add_karma(claimer_id, bonus_multiplier)
-            print(f"☚️ +{bonus_multiplier} point(s) for {claimer_id}. Total: {points}")
+            runner_name = order_extras.get(order_ts, {}).get("runner_real_name", "")
+            points = add_karma(runner_id, bonus_multiplier)
+            print(f"☚️ +{bonus_multiplier} point(s) for {runner_id}. Total: {points}")
 
             # Debug: Print order_extras for current order_ts
             print("🧪 DEBUG — order_extras[order_ts]:")
@@ -1095,21 +1246,21 @@ def handle_mark_delivered(ack, body, client):
 
             new_text = (
                 f"{order_text}\n\n✅ *DROP COMPLETED*\n"
-                f"💥 <@{claimer_id}> EARNED +{bonus_multiplier} KARMA (TOTAL: *{points}*)"
+                f"💥 <@{runner_id}> EARNED +{bonus_multiplier} KARMA (TOTAL: *{points}*)"
             )
             drink = order_extras.get(order_ts, {}).get("drink", "")
 
             order_data = {
                 "order_id": order_ts,
-                "delivered_by": claimer_name,
+                "delivered_by": runner_name,
                 "requester_id": requester_id,
                 "requester_real_name": order_extras.get(order_ts, {}).get("requester_real_name", ""),
                 "recipient_real_name": order_extras.get(order_ts, {}).get("recipient_real_name", ""),
-                "claimer_real_name": order_extras.get(order_ts, {}).get("claimer_real_name", ""),
-                "claimer_id": claimer_id,
-                "claimer_name": claimer_name,
-                "claimed_by": claimer_name,
-                "claimer_karma": get_karma(claimer_id),
+                "runner_real_name": order_extras.get(order_ts, {}).get("runner_real_name", ""),
+                "runner_id": runner_id,
+                "runner_name": runner_name,
+                "claimed_by": runner_name,
+                "runner_karma": get_karma(runner_id),
                 "recipient_id": recipient_id,
                 "drink": drink,
                 "location": location,
@@ -1143,12 +1294,12 @@ def handle_mark_delivered(ack, body, client):
             if bonus_multiplier > 1:
                 safe_client.chat_postMessage(
                     channel=safe_body["channel"]["id"],
-                    text=f"🎉 *Bonus Karma!* <@{claimer_id}> earned *{bonus_multiplier}x* points for this drop. 🔥"
+                    text=f"🎉 *Bonus Karma!* <@{runner_id}> earned *{bonus_multiplier}x* points for this drop. 🔥"
                 )
 
-            print(f"📬 Sending DM to claimer (claimer_id: {claimer_id}) with message: Mission complete. +1 Koffee Karma. Balance: *{points}*. Stay sharp.")
+            print(f"📬 Sending DM to runner (runner_id: {runner_id}) with message: Mission complete. +1 Koffee Karma. Balance: *{points}*. Stay sharp.")
             safe_client.chat_postMessage(
-                channel=claimer_id,
+                channel=runner_id,
                 text=f"Mission complete. +1 Koffee Karma. Balance: *{points}*. Stay sharp."
             )
 
@@ -1429,3 +1580,29 @@ if __name__ == "__main__":
     
     threading.Thread(target=run_schedule, daemon=True).start()
     flask_app.run(host="0.0.0.0", port=port, threaded=True)
+@app.action("cancel_ready_offer")
+def handle_cancel_ready_offer(ack, body, client):
+    ack()
+    user_id = body["user"]["id"]
+    offer_user_id = body["actions"][0]["value"]
+    if user_id != offer_user_id:
+        client.chat_postEphemeral(
+            channel=body["channel"]["id"],
+            user=user_id,
+            text="❌ Only the runner who posted this offer can cancel it."
+        )
+        return
+    client.chat_update(
+        channel=body["channel"]["id"],
+        ts=body["message"]["ts"],
+        text=f"❌ Offer canceled by <@{user_id}>.",
+        blocks=[
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"❌ Offer canceled by <@{user_id}>."
+                }
+            }
+        ]
+    )
