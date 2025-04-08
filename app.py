@@ -975,6 +975,7 @@ def handle_ready_command(ack, body, client):
 
     print("🔁 Kicking off countdown now...")
     print("🚀 Starting countdown thread via update_countdown() in handle_modal_submission")
+    order_ts = ready_ts
     order_extras[order_ts] = {
         "active": True,
         "claimed": False,
