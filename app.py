@@ -985,8 +985,11 @@ def handle_ready_command(ack, body, client):
         "notes": notes,
         "karma_cost": karma_cost,
     }
-    update_countdown(client, 10, order_ts, order_channel,
-        user_id, gifted_id, drink, location, notes, karma_cost
+    drink = ""
+    location = ""
+    notes = ""
+    karma_cost = ""
+    update_countdown(client, 10, order_ts, order_channel, user_id, None, drink, location, notes, karma_cost
     )
 
 
