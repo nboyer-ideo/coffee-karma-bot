@@ -673,8 +673,16 @@ def handle_modal_submission(ack, body, client):
     import datetime
     # Ensure runner_id is defined to prevent NameError when building order_data
     runner_id = body["view"].get("private_metadata", "")
+    # Post a preliminary message to obtain the drop ID early
+    posted = client.chat_postMessage(
+        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+        text="New Koffee Karma order posted",
+        blocks=[]
+    )
+    order_ts = posted["ts"]
+    order_channel = posted["channel"]
     order_data = {
-        "order_id": "",
+        "order_id": order_ts,
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "initiated_by": "runner" if runner_id else "requester",
         "requester_id": user_id,
@@ -739,16 +747,6 @@ def handle_modal_submission(ack, body, client):
             )
         except Exception as e:
             print("⚠️ Failed to notify runner:", e)
-    # Post a preliminary message to obtain the drop ID
-    posted = client.chat_postMessage(
-        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text="New Koffee Karma order posted",
-        blocks=[]
-    )
-    order_ts = posted["ts"]
-    order_channel = posted["channel"]
-    # Set the correct Drop ID before rendering the message
-    order_data["order_id"] = order_ts
 
     if runner_id:
         order_data["claimed_by"] = order_data.get("runner_name") or runner_id
