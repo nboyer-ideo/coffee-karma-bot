@@ -357,8 +357,8 @@ def handle_location_select(ack, body, client):
         view_id=body["view"]["id"],
         view=modal["view"]
     )
-        print(f"🧪 Names Debug — requester: {order_data['requester_real_name']}, recipient: {order_data['recipient_real_name']}")
-        print("🛠️ Calling format_order_message with updated remaining time")
+    print(f"🧪 Names Debug — requester: {order_data['requester_real_name']}, recipient: {order_data['recipient_real_name']}")
+    print("🛠️ Calling format_order_message with updated remaining time")
         updated_blocks = format_order_message(order_data)
         current_blocks = current_message["messages"][0].get("blocks", [])
         if any(block.get("block_id") == "reminder_block" for block in current_blocks):
