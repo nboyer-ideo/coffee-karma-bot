@@ -577,17 +577,6 @@ def build_order_modal(trigger_id, runner_id=""):
                 },
                 {
                     "type": "input",
-                    "block_id": "runner_id",
-                    "optional": True,
-                    "label": {"type": "plain_text", "text": "Runner ID (hidden)"},
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "input",
-                        "initial_value": runner_id,
-                    }
-                },
-                {
-                    "type": "input",
                     "block_id": "notes",
                     "optional": True,
                     "label": {"type": "plain_text", "text": "Extra details (if it matters)"},
@@ -698,7 +687,6 @@ def handle_modal_submission(ack, body, client):
         "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "time_claimed": "",
         "time_delivered": "",
-        "runner_id": values["runner_id"]["input"]["value"] if "runner_id" in values and "input" in values["runner_id"] else "",
         "remaining_minutes": 10
     }
     if order_data["runner_id"]:
