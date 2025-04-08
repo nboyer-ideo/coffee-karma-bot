@@ -400,7 +400,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id):
                         "action_id": "cancel_ready_offer",
                         "text": {
                             "type": "plain_text",
-                            "text": "Cancel Offer",
+                            "text": "CANCEL",
                             "emoji": True
                         },
                         "style": "danger",
@@ -727,6 +727,19 @@ def handle_modal_submission(ack, body, client):
     order_channel = posted["channel"]
     # Set the correct Drop ID before rendering the message
     order_data["order_id"] = order_ts
+
+    if runner_id:
+        order_data["claimed_by"] = order_data.get("runner_name") or runner_id
+        order_data["runner_karma"] = get_karma(runner_id)
+        formatted_blocks = format_order_message(order_data)
+        client.chat_update(
+            channel=order_channel,
+            ts=order_ts,
+            text="New Koffee Karma order posted",
+            blocks=formatted_blocks
+        )
+        return
+
     from slack_sdk import WebClient
     slack_token = os.environ.get("SLACK_BOT_TOKEN")
     slack_client = WebClient(token=slack_token)
@@ -753,7 +766,6 @@ def handle_modal_submission(ack, body, client):
         text="New Koffee Karma order posted",
         blocks=formatted_blocks
     )
- 
 @app.command("/ready")
 def handle_ready_command(ack, body, client):
     ack()
@@ -784,6 +796,17 @@ def handle_ready_command(ack, body, client):
                             "emoji": True
                         },
                         "value": json.dumps({"runner_id": user_id})
+                    },
+                    {
+                        "type": "button",
+                        "action_id": "cancel_ready_offer",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "CANCEL",
+                            "emoji": True
+                        },
+                        "style": "danger",
+                        "value": user_id
                     }
                 ]
             }
@@ -1018,6 +1041,33 @@ def handle_cancel_order(ack, body, client):
         ]
     )
     return
+
+@app.action("cancel_ready_offer")
+def handle_cancel_ready_offer(ack, body, client):
+    ack()
+    user_id = body["user"]["id"]
+    ts = body["message"]["ts"]
+    channel_id = body["channel"]["id"]
+
+    # Overwrite the message with cancellation confirmation
+    client.chat_update(
+        channel=channel_id,
+        ts=ts,
+        text=f"❌ Offer canceled by <@{user_id}>.",
+        blocks=[
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"❌ *Offer canceled by <@{user_id}>.*"
+                }
+            }
+        ]
+    )
+
+    # Remove the runner's offer from the claims dictionary
+    if user_id in runner_offer_claims:
+        del runner_offer_claims[user_id]
 
 @app.action("open_order_modal_for_runner")
 def handle_order_modal_for_runner(ack, body, client):
