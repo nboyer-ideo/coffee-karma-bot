@@ -385,16 +385,21 @@ def update_ready_countdown(client, remaining, ts, channel, user_id):
                 channel,
                 ts,
                 f"<@{user_id}> is ready to deliver — {remaining} minutes left.",
-                blocks
+                []
             )
             return
+
+        total_blocks = 20
+        filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
+        empty_blocks = total_blocks - filled_blocks
+        progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
 
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"🖐️ <@{user_id}> is *ready to deliver* a drink.\n*⏳ {remaining} minutes left to send them an order.*"
+        "text": f"```+----------------------------------------+\n|       DRINK RUNNER AVAILABLE          |\n+----------------------------------------+\n| RUNNER: <@{user_id}>                     |\n| STATUS: READY TO DELIVER               |\n+----------------------------------------+\n| TIME LEFT ON SHIFT: {remaining} MINUTES         |\n|         {progress_bar.center(36)}         |\n|  ------------------------------------  |\n|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n|  ------------------------------------  |\n+----------------------------------------+```"
                 }
             },
             {
@@ -879,26 +884,58 @@ def handle_modal_submission(ack, body, client):
             )
             return
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
-@app.command("/ready")
+@app.command("/runner")
 def handle_ready_command(ack, body, client):
     ack()
+    text = body.get("text", "").strip().lower()
+    if text == "settings":
+        client.views_open(
+            trigger_id=body["trigger_id"],
+            view={
+                "type": "modal",
+                "callback_id": "runner_settings_modal",
+                "title": {"type": "plain_text", "text": "Runner Settings"},
+                "submit": {"type": "plain_text", "text": "Save"},
+                "close": {"type": "plain_text", "text": "Cancel"},
+                "blocks": [
+                    {
+                        "type": "input",
+                        "block_id": "capabilities",
+                        "label": {"type": "plain_text", "text": "Drinks you can make"},
+                        "element": {
+                            "type": "checkboxes",
+                            "action_id": "input",
+                            "options": [
+                                {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
+                                {"text": {"type": "plain_text", "text": "Drip Coffee / Tea"}, "value": "drip"},
+                                {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso"}
+                            ]
+                        }
+                    }
+                ]
+            }
+        )
+        return
     user_id = body["user_id"]
     location = ""
     notes = ""
     karma_cost = ""
+    # Replacing static block with countdown-rendered ready message
     posted_ready = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text=f"🖐️ <@{user_id}> is *ready to deliver* a drink.\n*⏳ 10 minutes left to send them an order.*",
+        text=f"🖐️ <@{user_id}> is *on the clock* as a runner.\n*⏳ 10 minutes left to send them an order.*",
         blocks=[
             {
                 "type": "section",
+                "block_id": "runner_text_block",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"🖐️ <@{user_id}> is *ready to deliver* a drink.\n*⏳ 10 minutes left to send them an order.*"
+                    "text": "```+----------------------------------------+\n|        DRINK RUNNER ON DUTY           |\n+----------------------------------------+\n| RUNNER: <@{user_id}>                     |\n| STATUS: READY TO DELIVER               |\n| CAN MAKE: DRIP, TEA                    |\n+----------------------------------------+\n| TIME LEFT ON SHIFT: 10 MINUTES         |\n|         [██████░░░░░░░░░░░░░░]         |\n|  ------------------------------------  |\n|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n|  ------------------------------------  |\n+----------------------------------------+```"
                 }
             },
             {
                 "type": "actions",
+                "block_id": "runner_buttons",
                 "elements": [
                     {
                         "type": "button",
@@ -1797,4 +1834,37 @@ def handle_cancel_ready_offer(ack, body, client):
                 }
             }
         ]
+    )
+@app.command("/runner_settings")
+def handle_runner_settings_command(ack, body, client):
+    ack()
+    trigger_id = body["trigger_id"]
+    user_id = body["user_id"]
+    client.views_open(
+        trigger_id=trigger_id,
+        view={
+            "type": "modal",
+            "callback_id": "runner_settings_modal",
+            "title": {"type": "plain_text", "text": "Runner Settings"},
+            "submit": {"type": "plain_text", "text": "Save"},
+            "close": {"type": "plain_text", "text": "Cancel"},
+            "blocks": [
+                {
+                    "type": "input",
+                    "block_id": "drink_capabilities",
+                    "element": {
+                        "type": "checkboxes",
+                        "action_id": "input",
+                        "options": [
+                            {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip"},
+                            {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"},
+                            {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso"},
+                            {"text": {"type": "plain_text", "text": "Sparkling/Still Water"}, "value": "water"}
+                        ]
+                    },
+                    "label": {"type": "plain_text", "text": "Drinks you can make"}
+                }
+            ],
+            "private_metadata": user_id
+        }
     )
