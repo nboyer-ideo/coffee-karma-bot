@@ -11,6 +11,12 @@ import datetime
 import copy
 import re
 import csv
+
+def safe_chat_update(client, channel, ts, text, blocks=None):
+    try:
+        client.chat_update(channel=channel, ts=ts, text=text, blocks=blocks)
+    except Exception as e:
+        print("⚠️ safe_chat_update failed:", e)
  
 cached_coordinates = None
 cached_map_template = None
