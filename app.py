@@ -740,7 +740,6 @@ def handle_modal_submission(ack, body, client):
         f"🎁 {karma_cost} KARMA REWARD"
     )
 
-    import datetime
     order_data = {
         "order_id": order_ts,
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -1099,7 +1098,6 @@ def handle_ready_command(ack, body, client):
     # Log order with "time_ordered" as the timestamp key
 from sheet import log_order_to_sheet
 from sheet import get_runner_capabilities
-    import datetime
     gifted_id = None
     order_data = {
         "order_id": order_ts,
