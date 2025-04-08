@@ -584,7 +584,6 @@ def build_order_modal(trigger_id, runner_id=""):
                         "type": "plain_text_input",
                         "action_id": "input",
                         "initial_value": runner_id,
-                        "dispatch_action": False
                     }
                 },
                 {
