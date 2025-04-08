@@ -358,8 +358,7 @@ def handle_location_select(ack, body, client):
         view=modal["view"]
     )
     print("🛠️ Calling format_order_message with updated remaining time")
-        updated_blocks = format_order_message(order_data)
-        current_blocks = current_message["messages"][0].get("blocks", [])
+    current_blocks = current_message["messages"][0].get("blocks", [])
         if any(block.get("block_id") == "reminder_block" for block in current_blocks):
             updated_blocks.insert(0, {
                 "type": "section",
