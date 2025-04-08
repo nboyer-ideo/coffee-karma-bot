@@ -921,7 +921,11 @@ def handle_ready_command(ack, body, client):
     # Check if runner capabilities exist in the sheet
     runner_capabilities = get_runner_capabilities(user_id)
     real_name = runner_capabilities.get("Name", f"<@{user_id}>")
-    capabilities = json.loads(runner_capabilities.get("Capabilities", "[]"))
+    raw_caps = runner_capabilities.get("Capabilities", "[]") or "[]"
+    try:
+        capabilities = json.loads(raw_caps)
+    except json.JSONDecodeError:
+        capabilities = []
     can_make_str = ", ".join([cap.upper() for cap in capabilities]) or "NONE"
     if not runner_capabilities:
         client.views_open(
