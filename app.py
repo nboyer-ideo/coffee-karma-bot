@@ -687,8 +687,6 @@ def handle_modal_submission(ack, body, client):
     )
 
     import datetime
-    # Ensure runner_id is defined to prevent NameError when building order_data
-    runner_id = body["view"].get("private_metadata", "")
     order_data = {
         "order_id": order_ts,
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -712,7 +710,21 @@ def handle_modal_submission(ack, body, client):
         "remaining_minutes": 10
     }
     if order_data["runner_id"]:
+        if 'runner_offer_metadata' not in globals():
+            print("⚠️ runner_offer_metadata not defined — skipping fallback metadata step.")
+            runner_offer_metadata = {}
+        if (not order_ts or not order_channel) and runner_offer_metadata.get(order_data["runner_id"]):
+            fallback_metadata = runner_offer_metadata[order_data["runner_id"]]
+            if not order_ts:
+                order_ts = fallback_metadata.get("ts", "")
+            if not order_channel:
+                order_channel = fallback_metadata.get("channel", "")
+        if not order_ts or not order_channel:
+            print(f"⚠️ Missing order_ts or order_channel for runner-initiated order — fallback failed.")
         gifted_id = gifted_id or ""
+        from slack_sdk.web import WebClient
+        slack_token = os.environ.get("SLACK_BOT_TOKEN")
+        slack_client = WebClient(token=slack_token)
         try:
             runner_info = slack_client.users_info(user=order_data["runner_id"])
             order_data["runner_name"] = runner_info["user"]["real_name"]
@@ -721,16 +733,15 @@ def handle_modal_submission(ack, body, client):
             formatted_blocks = format_order_message(order_data)
         except Exception as e:
             print("⚠️ Failed to fetch runner real name:", e)
-    if order_ts not in order_extras:
-        order_extras[order_ts] = {}
-    order_extras[order_ts]["runner_real_name"] = order_data["runner_real_name"]
-    if order_data["runner_id"]:
         try:
             requester_info = slack_client.users_info(user=user_id)
             order_data["requester_real_name"] = requester_info["user"]["real_name"]
             order_data["claimed_by"] = order_data["runner_real_name"]
         except Exception as e:
             print("⚠️ Failed to fetch requester real name for runner-initiated order:", e)
+    if order_ts not in order_extras:
+        order_extras[order_ts] = {}
+    order_extras[order_ts]["runner_real_name"] = order_data["runner_real_name"]
 
         if gifted_id:
             try:
@@ -758,16 +769,16 @@ def handle_modal_submission(ack, body, client):
             print("⚠️ Failed to notify runner:", e)
 
 
-    from slack_sdk import WebClient
-    slack_token = os.environ.get("SLACK_BOT_TOKEN")
-    slack_client = WebClient(token=slack_token)
-    
     try:
         user_info = slack_client.users_info(user=user_id)
         order_data["requester_real_name"] = user_info["user"]["real_name"]
     except Exception as e:
         print("⚠️ Failed to fetch requester real name:", e)
-    
+    # Ensure requester_real_name is added to order_extras early for countdown updates
+    if order_ts not in order_extras:
+        order_extras[order_ts] = {}
+    order_extras[order_ts]["requester_real_name"] = order_data["requester_real_name"]
+
     if gifted_id:
         try:
             recipient_info = slack_client.users_info(user=gifted_id)
@@ -790,6 +801,9 @@ def handle_modal_submission(ack, body, client):
         print(f"⚙️ order_channel: {order_channel}")
         print(f"📣 Attempting to update message {order_ts} in channel {order_channel}")
         print(f"🧾 Blocks: {formatted_blocks}")
+        if not order_ts:
+            print("🚫 Cannot update Slack message: missing order_ts")
+            return
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
         return
     else:
@@ -803,6 +817,9 @@ def handle_modal_submission(ack, body, client):
         print(f"⚙️ order_channel: {order_channel}")
         print(f"📣 Attempting to update message {order_ts} in channel {order_channel}")
         print(f"🧾 Blocks: {formatted_blocks}")
+        if not order_ts:
+            print("🚫 Cannot update Slack message: missing order_ts")
+            return
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
 @app.command("/ready")
 def handle_ready_command(ack, body, client):
@@ -852,6 +869,14 @@ def handle_ready_command(ack, body, client):
     )
     order_ts = posted_ready["ts"]
     order_channel = posted_ready["channel"]
+    global runner_offer_metadata
+    if 'runner_offer_metadata' not in globals():
+        print("⚠️ runner_offer_metadata not defined — initializing.")
+        runner_offer_metadata = {}
+    runner_offer_metadata[user_id] = {
+        "ts": order_ts,
+        "channel": order_channel
+    }
     runner_offer_claims[user_id] = None  # Mark this runner as available and unclaimed
     print(f"🆕 Runner offer posted by {user_id} — awaiting match.")
     drink = ""
@@ -1189,7 +1214,7 @@ def handle_claim_order(ack, body, client):
     order_extras[order_ts]["claimed"] = True
     
     from sheet import update_order_status
-    from slack_sdk import WebClient
+    from slack_sdk.web import WebClient
     slack_token = os.environ.get("SLACK_BOT_TOKEN")
     slack_client = WebClient(token=slack_token)
     
