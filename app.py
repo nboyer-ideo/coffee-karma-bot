@@ -12,6 +12,10 @@ import copy
 import re
 import csv
 
+# Global safety initialization
+if 'runner_offer_metadata' not in globals():
+    runner_offer_metadata = {}
+
 def safe_chat_update(client, channel, ts, text, blocks=None):
     try:
         client.chat_update(channel=channel, ts=ts, text=text, blocks=blocks)
@@ -593,6 +597,10 @@ def handle_order(ack, body, client):
 @app.view("koffee_request_modal")
 def handle_modal_submission(ack, body, client):
     ack()
+    global runner_offer_metadata
+    if 'runner_offer_metadata' not in globals():
+        print("⚠️ runner_offer_metadata not defined — initializing.")
+        runner_offer_metadata = {}
     values = body["view"]["state"]["values"]
     user_id = body["user"]["id"]
     drink_value = values["drink_category"]["input"]["selected_option"]["value"]
