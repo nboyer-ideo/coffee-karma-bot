@@ -798,6 +798,10 @@ def handle_modal_submission(ack, body, client):
         order_data["status"] = "claimed"
         formatted_blocks = format_order_message(order_data)
         print(f"🧪 About to call chat_update with channel={order_channel} and ts={order_ts}")
+        print(f"📣 Debug: channel for chat_update is {order_channel}")
+        if not order_channel:
+            print("⚠️ Missing order_channel — falling back to default channel.")
+            order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
         client.chat_update(
             channel=order_channel,
             ts=order_ts,  # reuse the original /ready message timestamp
@@ -808,6 +812,10 @@ def handle_modal_submission(ack, body, client):
     else:
         formatted_blocks = format_order_message(order_data)
         print(f"🧪 About to call chat_update with channel={order_channel} and ts={order_ts}")
+        print(f"📣 Debug: channel for chat_update is {order_channel}")
+        if not order_channel:
+            print("⚠️ Missing order_channel — falling back to default channel.")
+            order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
         client.chat_update(
             channel=order_channel,
             ts=order_ts,
