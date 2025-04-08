@@ -271,3 +271,21 @@ def refresh_titles():
         worksheet.update_cell(i + 2, 4, current_title)
     print("✅ All titles refreshed based on current Karma.")
 
+def get_runner_capabilities(user_id):
+    worksheet = get_sheet().worksheet("Runner Settings")
+    data = worksheet.get_all_records()
+    for row in data:
+        if row.get("Slack ID") == user_id:
+            return row
+    return None
+
+def save_runner_capabilities(user_id, name, capabilities):
+    worksheet = get_sheet().worksheet("Runner Settings")
+    data = worksheet.get_all_records()
+    for i, row in enumerate(data):
+        if row.get("Slack ID") == user_id:
+            worksheet.update_cell(i + 2, 2, name)
+            worksheet.update_cell(i + 2, 3, json.dumps(capabilities))
+            return
+    worksheet.append_row([user_id, name, json.dumps(capabilities)])
+

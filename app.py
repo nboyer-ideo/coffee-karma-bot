@@ -38,7 +38,7 @@ runner_offer_claims = {}  # key: runner_id, value: user_id of matched requester 
 
 
 
-from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma
+from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma, get_runner_capabilities
  
 def wrap_line(label, value, width=50):
     if not label and value:
@@ -916,6 +916,46 @@ def handle_ready_command(ack, body, client):
             }
         )
         return
+
+    user_id = body["user_id"]
+    # Check if runner capabilities exist in the sheet
+    runner_capabilities = get_runner_capabilities(user_id)
+    real_name = runner_capabilities.get("Name", f"<@{user_id}>")
+    capabilities = json.loads(runner_capabilities.get("Capabilities", "[]"))
+    can_make_str = ", ".join([cap.upper() for cap in capabilities]) or "NONE"
+    if not runner_capabilities:
+        client.views_open(
+            trigger_id=body["trigger_id"],
+            view={
+                "type": "modal",
+                "callback_id": "runner_settings_modal",
+                "title": {"type": "plain_text", "text": "Runner Settings"},
+                "submit": {"type": "plain_text", "text": "Save"},
+                "close": {"type": "plain_text", "text": "Cancel"},
+                "blocks": [
+                    {
+                        "type": "input",
+                        "block_id": "capabilities",
+                        "label": {"type": "plain_text", "text": "Drinks you can make"},
+                        "element": {
+                            "type": "checkboxes",
+                            "action_id": "input",
+                            "options": [
+                                {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
+                                {"text": {"type": "plain_text", "text": "Drip Coffee / Tea"}, "value": "drip"},
+                                {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso"}
+                            ]
+                        }
+                    }
+                ]
+            }
+        )
+        client.chat_postEphemeral(
+            channel=user_id,
+            user=user_id,
+            text="🛠️ Before you start running orders, let us know what drinks you can make. You can always update this later with /runner settings."
+        )
+        return
     user_id = body["user_id"]
     location = ""
     notes = ""
@@ -923,14 +963,14 @@ def handle_ready_command(ack, body, client):
     # Replacing static block with countdown-rendered ready message
     posted_ready = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text=f"🖐️ <@{user_id}> is *on the clock* as a runner.\n*⏳ 10 minutes left to send them an order.*",
+        text=f"🖐️ {real_name.upper()} is *on the clock* as a runner.\n*⏳ 10 minutes left to send them an order.*",
         blocks=[
             {
                 "type": "section",
                 "block_id": "runner_text_block",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "```+----------------------------------------+\n|        DRINK RUNNER ON DUTY           |\n+----------------------------------------+\n| RUNNER: <@{user_id}>                     |\n| STATUS: READY TO DELIVER               |\n| CAN MAKE: DRIP, TEA                    |\n+----------------------------------------+\n| TIME LEFT ON SHIFT: 10 MINUTES         |\n|         [██████░░░░░░░░░░░░░░]         |\n|  ------------------------------------  |\n|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n|  ------------------------------------  |\n+----------------------------------------+```"
+                    "text": f"```+----------------------------------------+\n|       DRINK RUNNER AVAILABLE          |\n+----------------------------------------+\n| RUNNER: {real_name.upper():<32}|\n| STATUS: READY TO DELIVER               |\n| CAN MAKE: {can_make_str:<32}|\n+----------------------------------------+\n| TIME LEFT ON SHIFT: 10 MINUTES         |\n|         [██████░░░░░░░░░░░░░░]         |\n|  ------------------------------------  |\n|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n|  ------------------------------------  |\n+----------------------------------------+```"
                 }
             },
             {
