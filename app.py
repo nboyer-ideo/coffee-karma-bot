@@ -670,6 +670,8 @@ def handle_modal_submission(ack, body, client):
     )
 
     import datetime
+    # Ensure runner_id is defined to prevent NameError when building order_data
+    runner_id = body["view"].get("private_metadata", "")
     order_data = {
         "order_id": "",
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
