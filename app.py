@@ -1078,7 +1078,7 @@ def handle_ready_command(ack, body, client):
     print("🔔 Timer started for reminder_ping (300s)")
     threading.Timer(300, reminder_ping, args=(order_ts, order_channel)).start()  # 5-minute reminder
 
-@app.view()
+@app.view("")
 def catch_all_views(ack, body, logger):
     print("📩 CATCH-ALL VIEW SUBMISSION HANDLER HIT")
     print(json.dumps(body, indent=2))
