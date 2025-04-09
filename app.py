@@ -88,7 +88,7 @@ def wrap_line(label, value, width=50):
     value_str = value.upper()
     max_content = width - 4
     label_with_colon = f"{label}:"
-    first_line_indent = f"| {label_with_colon:<13}"
+    first_line_indent = f"| {label_with_colon:<13} "
     wrapped_lines = []
 
     current_line = ""
@@ -110,6 +110,39 @@ def wrap_line(label, value, width=50):
             wrapped_lines.append(f"| {'':<13}{current_line:<{max_content - 13}} |")
 
     return wrapped_lines
+
+def wrap_line_runner(label, value, width=40):
+    """
+    Wrap a label and value to fit in a fixed-width terminal-style box (40 char wide).
+    Preserves left-alignment of values under the label.
+    """
+    lines = []
+    label = label.rstrip(":").upper()
+    value = value.upper()
+ 
+    label_prefix = f"| {label:<13}"
+    label_space = len(label_prefix)
+    available_space = width - label_space - 1  # subtract for trailing '|'
+    words = value.split()
+    current_line = ""
+ 
+    for word in words:
+        if len(current_line + (" " if current_line else "") + word) <= available_space:
+            current_line += (" " if current_line else "") + word
+        else:
+            if not lines:
+                lines.append(f"{label_prefix} {current_line:<{available_space}}|")
+            else:
+                lines.append(f"| {'':<13} {current_line:<{available_space}}|")
+            current_line = word
+ 
+    if current_line:
+        if not lines:
+            lines.append(f"{label_prefix} {current_line:<{available_space}}|")
+        else:
+            lines.append(f"| {'':<13} {current_line:<{available_space}}|")
+ 
+    return lines
 
 def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.json", map_file="lion_map_template.txt"):
     import json
@@ -481,8 +514,8 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                         "|         DRINK RUNNER AVAILABLE         |\n"
                         "+----------------------------------------+\n"
                         f"| RUNNER:       {real_name.upper():<24}|\n"
-                        + "\n".join(wrap_line("CAN MAKE:   ", can_make_str, width=50)) + "\n"
-                        + "\n".join(wrap_line("CAN'T MAKE: ", cannot_make_str, width=50)) + "\n"
+                        + "\n".join(wrap_line("CAN MAKE:", can_make_str, width=50)) + "\n"
+                        + "\n".join(wrap_line("CAN'T MAKE:", cannot_make_str, width=50)) + "\n"
                         # Removed hardcoded status line
                         "+----------------------------------------+\n"
                         f"| {f'TIME LEFT ON SHIFT: {remaining} MINUTES'.center(40)} |\n"
@@ -1323,8 +1356,8 @@ def handle_runner_settings_modal(ack, body, client):
     total_blocks = 20
     filled_blocks = total_blocks
     progress_bar = "[" + ("█" * filled_blocks) + ("░" * (total_blocks - filled_blocks)) + "]"
-    can_make_line = "\n".join(wrap_line("CAN MAKE:", can_make_str, width=40))
-    cant_make_line = "\n".join(wrap_line("CAN'T MAKE:", cannot_make_str, width=40))
+    can_make_line = "\n".join(wrap_line_runner("CAN MAKE:", can_make_str, width=40))
+    cant_make_line = "\n".join(wrap_line_runner("CAN'T MAKE:", cannot_make_str, width=40))
  
     posted_ready = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
@@ -1340,8 +1373,8 @@ def handle_runner_settings_modal(ack, body, client):
                         "|         DRINK RUNNER AVAILABLE         |\n"
                         "+----------------------------------------+\n"
                         f"| RUNNER:       {real_name.upper():<24}|\n"
-                        + "\n".join(wrap_line("CAN MAKE:   ", can_make_str, width=50)) + "\n"
-                        + "\n".join(wrap_line("CAN'T MAKE: ", cannot_make_str, width=50)) + "\n"
+                        + "\n".join(wrap_line("CAN MAKE:", can_make_str, width=50)) + "\n"
+                        + "\n".join(wrap_line("CAN'T MAKE:", cannot_make_str, width=50)) + "\n"
                         "+----------------------------------------+\n"
                         f"|     TIME LEFT ON SHIFT: {selected_time} MINUTES     |\n"
                         f"| {progress_bar.center(40)} |\n"
