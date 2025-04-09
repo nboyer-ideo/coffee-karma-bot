@@ -989,63 +989,63 @@ def handle_ready_command(ack, body, client):
     notes = ""
     karma_cost = ""
     # Replacing static block with countdown-rendered ready message
-    posted_ready = client.chat_postMessage(
-        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text=f"🖐️ {real_name.upper()} is *on the clock* as a runner.\n*⏳ 10 minutes left to send them an order.*",
-        blocks=[
-            {
-                "type": "section",
-                "block_id": "runner_text_block",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"```+----------------------------------------+\n|       DRINK RUNNER AVAILABLE          |\n+----------------------------------------+\n| RUNNER: {real_name.upper():<32}|\n| STATUS: READY TO DELIVER               |\n| CAN MAKE: {can_make_str:<32}|\n+----------------------------------------+\n| TIME LEFT ON SHIFT: 10 MINUTES         |\n|         [██████░░░░░░░░░░░░░░]         |\n|  ------------------------------------  |\n|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n|  ------------------------------------  |\n+----------------------------------------+```"
-                }
-            },
-            {
-                "type": "actions",
-                "block_id": "runner_buttons",
-                "elements": [
-                    {
-                        "type": "button",
-                        "action_id": "open_order_modal_for_runner",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "ORDER NOW",
-                            "emoji": True
-                        },
-                        "value": json.dumps({"runner_id": user_id})
-                    },
-                    {
-                        "type": "button",
-                        "action_id": "cancel_ready_offer",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "CANCEL",
-                            "emoji": True
-                        },
-                        "style": "danger",
-                        "value": user_id
-                    }
-                ]
-            }
-        ]
-    )
-    order_ts = posted_ready["ts"]
-    order_channel = posted_ready["channel"]
-    global runner_offer_metadata
-    if 'runner_offer_metadata' not in globals():
-        print("⚠️ runner_offer_metadata not defined — initializing.")
-        runner_offer_metadata = {}
-    runner_offer_metadata[user_id] = {
-        "ts": order_ts,
-        "channel": order_channel
-    }
-    runner_offer_claims[user_id] = None  # Mark this runner as available and unclaimed
-    print(f"🆕 Runner offer posted by {user_id} — awaiting match.")
-    drink = ""
-    location = ""
-    notes = ""
-    karma_cost = ""
+    # posted_ready = client.chat_postMessage(
+    #     channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+    #     text=f"🖐️ {real_name.upper()} is *on the clock* as a runner.\n*⏳ 10 minutes left to send them an order.*",
+    #     blocks=[
+    #         {
+    #             "type": "section",
+    #             "block_id": "runner_text_block",
+    #             "text": {
+    #                 "type": "mrkdwn",
+    #                 "text": f"```+----------------------------------------+\n|       DRINK RUNNER AVAILABLE          |\n+----------------------------------------+\n| RUNNER: {real_name.upper():<32}|\n| STATUS: READY TO DELIVER               |\n| CAN MAKE: {can_make_str:<32}|\n+----------------------------------------+\n| TIME LEFT ON SHIFT: 10 MINUTES         |\n|         [██████░░░░░░░░░░░░░░]         |\n|  ------------------------------------  |\n|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n|  ------------------------------------  |\n+----------------------------------------+```"
+    #             }
+    #         },
+    #         {
+    #             "type": "actions",
+    #             "block_id": "runner_buttons",
+    #             "elements": [
+    #                 {
+    #                     "type": "button",
+    #                     "action_id": "open_order_modal_for_runner",
+    #                     "text": {
+    #                         "type": "plain_text",
+    #                         "text": "ORDER NOW",
+    #                         "emoji": True
+    #                     },
+    #                     "value": json.dumps({"runner_id": user_id})
+    #                 },
+    #                 {
+    #                     "type": "button",
+    #                     "action_id": "cancel_ready_offer",
+    #                     "text": {
+    #                         "type": "plain_text",
+    #                         "text": "CANCEL",
+    #                         "emoji": True
+    #                     },
+    #                     "style": "danger",
+    #                     "value": user_id
+    #                 }
+    #             ]
+    #         }
+    #     ]
+    # )
+    # order_ts = posted_ready["ts"]
+    # order_channel = posted_ready["channel"]
+    # global runner_offer_metadata
+    # if 'runner_offer_metadata' not in globals():
+    #     print("⚠️ runner_offer_metadata not defined — initializing.")
+    #     runner_offer_metadata = {}
+    # runner_offer_metadata[user_id] = {
+    #     "ts": order_ts,
+    #     "channel": order_channel
+    # }
+    # runner_offer_claims[user_id] = None  # Mark this runner as available and unclaimed
+    # print(f"🆕 Runner offer posted by {user_id} — awaiting match.")
+    # drink = ""
+    # location = ""
+    # notes = ""
+    # karma_cost = ""
  
     
     
@@ -1071,7 +1071,7 @@ def handle_ready_command(ack, body, client):
         "time_claimed": "",
         "time_delivered": ""
     }
-    log_order_to_sheet(order_data)
+    # log_order_to_sheet(order_data)
     client.views_open(
         trigger_id=body["trigger_id"],
         view={
@@ -1103,7 +1103,7 @@ def handle_ready_command(ack, body, client):
                     "element": {
                         "type": "checkboxes",
                         "action_id": "input",
-                        "initial_options": initial_options,
+                        # "initial_options": initial_options,
                         "options": cap_options
                     }
                 }
