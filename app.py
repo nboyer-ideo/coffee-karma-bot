@@ -83,46 +83,33 @@ def wrap_line(label, value, width=50):
     if not label and value:
         centered = value.upper().center(width - 4)
         return [f"| {centered} |"]
-    
-    label = label.rstrip(":")
-    label_upper = label.upper()
-    label_width = len(label_upper)
-    indent_space = label_width + 1  # 1 space after label
+
+    label = label.rstrip(":").upper()
     value_str = value.upper()
-    
-    full_line = f"{label_upper}:{' '}{value_str}"
-    max_content = width - 4  # for borders and spaces
-    words = full_line.split()
-    
-    lines = []
+    max_content = width - 4
+    label_with_colon = f"{label}:"
+    first_line_indent = f"| {label_with_colon:<13}"
+    wrapped_lines = []
+
     current_line = ""
-    is_first_line = True
-
+    words = value_str.split()
     for word in words:
-        if is_first_line:
-            if len(current_line + (" " if current_line else "") + word) <= max_content:
-                current_line += (" " if current_line else "") + word
-            else:
-                lines.append(f"| {current_line:<{max_content}} |")
-                current_line = word
-                is_first_line = False
+        if len(current_line + (" " if current_line else "") + word) <= max_content - len(first_line_indent):
+            current_line += (" " if current_line else "") + word
         else:
-            indent = " " * indent_space
-            if len(indent + current_line + (" " if current_line else "") + word) <= max_content:
-                current_line += (" " if current_line else "") + word
+            if not wrapped_lines:
+                wrapped_lines.append(f"{first_line_indent}{current_line:<{max_content - len(first_line_indent)}} |")
             else:
-                lines.append(f"| {indent}{current_line:<{max_content - indent_space}} |")
-                current_line = word
+                wrapped_lines.append(f"| {'':<13}{current_line:<{max_content - 13}} |")
+            current_line = word
 
-    # Append final line
     if current_line:
-        if is_first_line:
-            lines.append(f"| {current_line:<{max_content}} |")
+        if not wrapped_lines:
+            wrapped_lines.append(f"{first_line_indent}{current_line:<{max_content - len(first_line_indent)}} |")
         else:
-            indent = " " * indent_space
-            lines.append(f"| {indent}{current_line:<{max_content - indent_space}} |")
-    
-    return lines
+            wrapped_lines.append(f"| {'':<13}{current_line:<{max_content - 13}} |")
+
+    return wrapped_lines
 
 def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.json", map_file="lion_map_template.txt"):
     import json
