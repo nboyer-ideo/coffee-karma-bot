@@ -83,25 +83,45 @@ def wrap_line(label, value, width=50):
     if not label and value:
         centered = value.upper().center(width - 4)
         return [f"| {centered} |"]
-    label = label.lstrip()
-    # Pad label to fixed width for alignment; using fixed column start for values
+    
     label = label.rstrip(":")
-    full = f"{label.upper():<11}{value}".upper()
-    full = strip_formatting(full).replace("|", "")  # remove stray pipe characters
-    max_content = width - 4  # leave 1 space padding on both sides for proper border alignment
-    words = full.split()
+    label_upper = label.upper()
+    label_width = len(label_upper)
+    indent_space = label_width + 1  # 1 space after label
+    value_str = value.upper()
+    
+    full_line = f"{label_upper}:{' '}{value_str}"
+    max_content = width - 4  # for borders and spaces
+    words = full_line.split()
+    
     lines = []
     current_line = ""
+    is_first_line = True
+
     for word in words:
-        if len(current_line + (" " if current_line else "") + word) <= max_content:
-            current_line += (" " if current_line else "") + word
+        if is_first_line:
+            if len(current_line + (" " if current_line else "") + word) <= max_content:
+                current_line += (" " if current_line else "") + word
+            else:
+                lines.append(f"| {current_line:<{max_content}} |")
+                current_line = word
+                is_first_line = False
         else:
-            padding = max_content - len(current_line)
-            lines.append(f"| {current_line}{' ' * padding} |")
-            current_line = word
+            indent = " " * indent_space
+            if len(indent + current_line + (" " if current_line else "") + word) <= max_content:
+                current_line += (" " if current_line else "") + word
+            else:
+                lines.append(f"| {indent}{current_line:<{max_content - indent_space}} |")
+                current_line = word
+
+    # Append final line
     if current_line:
-        padding = max_content - len(current_line)
-        lines.append(f"| {current_line}{' ' * padding} |")
+        if is_first_line:
+            lines.append(f"| {current_line:<{max_content}} |")
+        else:
+            indent = " " * indent_space
+            lines.append(f"| {indent}{current_line:<{max_content - indent_space}} |")
+    
     return lines
 
 def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.json", map_file="lion_map_template.txt"):
@@ -474,9 +494,9 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                         "|         DRINK RUNNER AVAILABLE         |\n"
                         "+----------------------------------------+\n"
                         f"| RUNNER:       {real_name.upper():<24}|\n"
-                        + "\n".join(wrap_line("CAN MAKE:", can_make_str, width=40)) + "\n"
-                        + "\n".join(wrap_line("CAN'T MAKE:", cannot_make_str, width=40)) + "\n"
-                        "| STATUS:       READY TO DELIVER         |\n"
+                        + "\n".join(wrap_line("CAN MAKE:   ", can_make_str, width=50)) + "\n"
+                        + "\n".join(wrap_line("CAN'T MAKE: ", cannot_make_str, width=50)) + "\n"
+                        # Removed hardcoded status line
                         "+----------------------------------------+\n"
                         f"| {f'TIME LEFT ON SHIFT: {remaining} MINUTES'.center(40)} |\n"
                         f"| {progress_bar.center(36)} |\n"
@@ -1333,9 +1353,8 @@ def handle_runner_settings_modal(ack, body, client):
                         "|         DRINK RUNNER AVAILABLE         |\n"
                         "+----------------------------------------+\n"
                         f"| RUNNER:       {real_name.upper():<24}|\n"
-                        "| STATUS:       READY TO DELIVER         |\n"
-                        + "\n".join(wrap_line("CAN MAKE:", can_make_str, width=40)) + "\n"
-                        + "\n".join(wrap_line("CAN'T MAKE:", cannot_make_str, width=40)) + "\n"
+                        + "\n".join(wrap_line("CAN MAKE:   ", can_make_str, width=50)) + "\n"
+                        + "\n".join(wrap_line("CAN'T MAKE: ", cannot_make_str, width=50)) + "\n"
                         "+----------------------------------------+\n"
                         f"|     TIME LEFT ON SHIFT: {selected_time} MINUTES     |\n"
                         f"| {progress_bar.center(40)} |\n"
