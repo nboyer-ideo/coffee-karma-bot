@@ -382,11 +382,12 @@ def handle_location_select(ack, body, client):
             ascii_map = "```" + "\n".join(build_mini_map(selected_location)) + "```"
             block["text"]["text"] = ascii_map
         elif block.get("block_id") == "location":
-            # Preserve the newly selected value
-            block["accessory"]["initial_option"] = {
-                "text": {"type": "plain_text", "text": selected_location},
-                "value": selected_location
-            }
+            # Preserve the newly selected value with safe check for accessory key
+            if "accessory" in block:
+                block["accessory"]["initial_option"] = {
+                    "text": {"type": "plain_text", "text": selected_location},
+                    "value": selected_location
+                }
 
     client.views_update(
         view_id=body["view"]["id"],
