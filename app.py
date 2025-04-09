@@ -912,7 +912,6 @@ def handle_ready_command(ack, body, client):
     ack()
     text = body.get("text", "").strip().lower()
     if text == "settings":
-        from sheet import get_runner_capabilities
         saved_caps = get_runner_capabilities(body["user_id"]).get("Capabilities", [])
         cap_options = [
             {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
