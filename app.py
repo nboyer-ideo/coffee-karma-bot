@@ -436,6 +436,18 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
     from sheet import get_runner_capabilities
     runner_capabilities = get_runner_capabilities(user_id)
     real_name = runner_capabilities.get("Name", f"<@{user_id}>")
+    pretty_caps = {
+        "water": "WATER",
+        "drip_coffee": "DRIP COFFEE",
+        "espresso_drinks": "ESPRESSO DRINKS",
+        "tea": "TEA"
+    }
+    saved_caps = runner_capabilities.get("Capabilities", [])
+    all_options = ["water", "tea", "drip_coffee", "espresso_drinks"]
+    can_make = [pretty_caps[c] for c in saved_caps if c in pretty_caps]
+    cannot_make = [pretty_caps[c] for c in all_options if c not in saved_caps]
+    can_make_str = ", ".join(can_make) if can_make else "NONE"
+    cannot_make_str = ", ".join(cannot_make) if cannot_make else "NONE"
     try:
         if remaining <= 0:
             safe_chat_update(
@@ -457,7 +469,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-        "text": f"```+----------------------------------------+\n|       DRINK RUNNER AVAILABLE          |\n+----------------------------------------+\n| RUNNER: {real_name.upper():<32}|\n| STATUS: READY TO DELIVER               |\n+----------------------------------------+\n| TIME LEFT ON SHIFT: {remaining} MINUTES         |\n|         {progress_bar.center(36)}         |\n|  ------------------------------------  |\n|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n|  ------------------------------------  |\n+----------------------------------------+```"
+        "text": f"```+----------------------------------------+\n|       DRINK RUNNER AVAILABLE          |\n+----------------------------------------+\n| RUNNER: {real_name.upper():<32}|\n| CAN MAKE: {can_make_str:<32}|\n| CAN'T MAKE: {cannot_make_str:<30}|\n| STATUS: READY TO DELIVER               |\n+----------------------------------------+\n| TIME LEFT ON SHIFT: {remaining} MINUTES         |\n|         {progress_bar.center(36)}         |\n|  ------------------------------------  |\n|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n|  ------------------------------------  |\n+----------------------------------------+```"
                 }
             },
             {
@@ -496,9 +508,9 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
             blocks
         )
 
-        import threading
-        sys.stdout.flush()
-        threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id, original_total_time)).start()
+        if remaining > 1:
+            import threading
+            threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id, original_total_time)).start()
 
     except Exception as e:
         print("⚠️ Failed to update /ready countdown:", e)
@@ -710,7 +722,11 @@ def handle_modal_submission(ack, body, client):
     }
     karma_cost = drink_map[drink_value]
     drink = drink_detail
-    location = values["location"]["input"]["selected_option"]["value"]
+    location = ""
+    if "location" in values:
+        location_block = values["location"]
+        if "location_select" in location_block and "selected_option" in location_block["location_select"]:
+            location = location_block["location_select"]["selected_option"]["value"]
     notes = values["notes"]["input"]["value"] if "notes" in values and "input" in values["notes"] and values["notes"]["input"]["value"] else ""
     notes = notes[:30]
     gifted_id = None
@@ -1249,6 +1265,26 @@ def handle_runner_settings_modal(ack, body, client):
         real_name = f"<@{user_id}>"
  
     save_runner_capabilities(user_id, real_name, selected)
+    from sheet import log_order_to_sheet
+    import datetime
+    log_order_to_sheet({
+        "order_id": f"runner_{user_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}",
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "initiated_by": "runner",
+        "requester_id": user_id,
+        "requester_real_name": real_name,
+        "runner_id": user_id,
+        "runner_name": real_name,
+        "status": "runner_available",
+        "drink": "",
+        "location": "",
+        "notes": "",
+        "karma_cost": "",
+        "bonus_multiplier": "",
+        "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "time_claimed": "",
+        "time_delivered": ""
+    })
  
     # post terminal message with the selected time and capabilities
     pretty_caps = {
@@ -1315,10 +1351,13 @@ def handle_runner_settings_modal(ack, body, client):
     import threading
     threading.Timer(60, update_ready_countdown, args=(client, selected_time - 1, order_ts, order_channel, user_id, selected_time)).start() 
 
+    msg = "✅ Your delivery offer is now live!"
+    if caps_changed:
+        msg = "✅ Your drink-making capabilities have been saved and your delivery offer is now live!"
     client.chat_postEphemeral(
         channel=user_id,
         user=user_id,
-        text="✅ Your drink-making capabilities have been saved and your shift is now live!"
+        text=msg
     )
 
 
