@@ -348,7 +348,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 
         current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
         order_data = {
-            "order_id": order_ts,
+            "order_id": "",
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "requester_id": user_id,
             "requester_real_name": extras.get("requester_real_name", ""),
@@ -781,7 +781,7 @@ def handle_modal_submission(ack, body, client):
     )
 
     order_data = {
-        "order_id": order_ts,
+        "order_id": "",
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "initiated_by": "runner" if runner_id else "requester",
         "requester_id": user_id,
@@ -1517,7 +1517,7 @@ def handle_claim_order(ack, body, client):
     order_extras[order_ts]["drink"] = drink
     order_extras[order_ts]["karma_cost"] = karma_cost
     order_data = {
-        "order_id": order_ts,
+        "order_id": "",
         "requester_real_name": order_extras.get(order_ts, {}).get("requester_real_name"),
         "recipient_real_name": order_extras.get(order_ts, {}).get("recipient_real_name"),
         "recipient_id": order_extras.get(order_ts, {}).get("recipient_id", user_id),
