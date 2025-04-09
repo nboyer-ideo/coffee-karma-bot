@@ -520,14 +520,6 @@ def build_order_modal(trigger_id, runner_id=""):
                         ]
                     }
                 },
-        {
-            "type": "section",
-            "block_id": "ascii_map_block",
-            "text": {
-                "type": "mrkdwn",
-                "text": "```" + "\n".join(build_mini_map("4O")) + "```"
-            }
-        },
                 {
                     "type": "input",
                     "block_id": "drink_detail",
@@ -608,6 +600,14 @@ def build_order_modal(trigger_id, runner_id=""):
                             {"text": {"type": "plain_text", "text": "Vista 2"}, "value": "Vista 2"},
                             {"text": {"type": "plain_text", "text": "Vista 3"}, "value": "Vista 3"}
                         ]
+                    }
+                },
+                {
+                    "type": "section",
+                    "block_id": "ascii_map_block",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "```" + "\n".join(build_mini_map("4O")) + "```"
                     }
                 },
                 {
@@ -1003,9 +1003,9 @@ def handle_ready_command(ack, body, client):
                             "action_id": "input",
                         "options": [
                                 {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
-                                {"text": {"type": "plain_text", "text": "Drip Coffee / Tea"}, "value": "drip"},
-                                {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"},
-                                {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"}
+                                {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"},
+                                {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip"},
+                                {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"}
                             ]
                         }
                     }
@@ -1019,11 +1019,12 @@ def handle_ready_command(ack, body, client):
         )
         return
     real_name = runner_capabilities.get("Name", f"<@{user_id}>")
-    raw_caps = runner_capabilities.get("Capabilities", "[]") or "[]"
-    try:
-        capabilities = json.loads(raw_caps)
-    except json.JSONDecodeError:
-        capabilities = []
+    capabilities = runner_capabilities.get("Capabilities", [])
+    if not isinstance(capabilities, list):
+        try:
+            capabilities = json.loads(capabilities)
+        except Exception:
+            capabilities = []
     pretty_caps = {
         "water": "WATER",
         "drip": "DRIP COFFEE",
