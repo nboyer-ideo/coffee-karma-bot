@@ -1053,7 +1053,7 @@ def handle_ready_command(ack, body, client):
     from sheet import log_order_to_sheet
     gifted_id = None
     order_data = {
-        "order_id": order_ts,
+        "order_id": "",
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "requester_id": user_id,
         "requester_real_name": "",
