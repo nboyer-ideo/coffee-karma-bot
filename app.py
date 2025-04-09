@@ -1241,6 +1241,7 @@ def handle_ready_command(ack, body, client):
 @app.view("runner_settings_modal")
 def handle_runner_settings_modal(ack, body, client):
     ack()
+    from app import wrap_line
     user_id = body["user"]["id"]
     values = body["view"]["state"]["values"]
  
@@ -1294,9 +1295,13 @@ def handle_runner_settings_modal(ack, body, client):
         "tea": "TEA"
     }
     can_make_str = ", ".join([pretty_caps.get(cap, cap.upper()) for cap in selected]) or "NONE"
+    all_options = ["water", "tea", "drip_coffee", "espresso_drinks"]
+    cannot_make = [pretty_caps[c] for c in all_options if c not in selected]
+    cannot_make_str = ", ".join(cannot_make) if cannot_make else "NONE"
     total_blocks = 20
     filled_blocks = total_blocks
     progress_bar = "[" + ("█" * filled_blocks) + ("░" * (total_blocks - filled_blocks)) + "]"
+    cant_make_line = "\n".join(wrap_line("CAN'T MAKE:", cannot_make_str, width=40))
  
     posted_ready = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
@@ -1307,7 +1312,22 @@ def handle_runner_settings_modal(ack, body, client):
                 "block_id": "runner_text_block",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"```+----------------------------------------+\n|       DRINK RUNNER AVAILABLE          |\n+----------------------------------------+\n| RUNNER: {real_name.upper():<32}|\n| STATUS: READY TO DELIVER               |\n| CAN MAKE: {can_make_str:<32}|\n+----------------------------------------+\n| TIME LEFT ON SHIFT: {selected_time} MINUTES         |\n|         {progress_bar.center(36)}         |\n|  ------------------------------------  |\n|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n|  ------------------------------------  |\n+----------------------------------------+```"
+                    "text": (
+                        "```+----------------------------------------+\n"
+                        f"| {' ' * ((40 - len('DRINK RUNNER AVAILABLE')) // 2)}DRINK RUNNER AVAILABLE{' ' * (((40 - len('DRINK RUNNER AVAILABLE')) // 2) + ((40 - len('DRINK RUNNER AVAILABLE')) % 2))} |\n"
+                        "+----------------------------------------+\n"
+                        f"| RUNNER: {real_name.upper():<32}|\n"
+                        "| STATUS: READY TO DELIVER               |\n"
+                        f"| CAN MAKE: {can_make_str:<32}|\n"
+                        f"{cant_make_line}\n"
+                        "+----------------------------------------+\n"
+                        f"| TIME LEFT ON SHIFT: {selected_time} MINUTES         |\n"
+                        f"| {' ' * ((40 - len(progress_bar)) // 2)}{progress_bar}{' ' * (((40 - len(progress_bar)) // 2) + ((40 - len(progress_bar)) % 2))} |\n"
+                        "|  ------------------------------------  |\n"
+                        "|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n"
+                        "|  ------------------------------------  |\n"
+                        "+----------------------------------------+```"
+                    )
                 }
             },
             {
