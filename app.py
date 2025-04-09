@@ -432,7 +432,7 @@ def handle_location_select(ack, body, client):
         view=modal["view"]
     )
 
-def update_ready_countdown(client, remaining, ts, channel, user_id):
+def update_ready_countdown(client, remaining, ts, channel, user_id, original_total_time):
     try:
         if remaining <= 0:
             safe_chat_update(
@@ -445,7 +445,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id):
             return
 
         total_blocks = 20
-        filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
+        filled_blocks = round((remaining / original_total_time) * total_blocks)
         empty_blocks = total_blocks - filled_blocks
         progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
 
@@ -495,7 +495,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id):
 
         import threading
         sys.stdout.flush()
-        threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id)).start()
+        threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id, original_total_time)).start()
 
     except Exception as e:
         print("⚠️ Failed to update /ready countdown:", e)
@@ -971,19 +971,14 @@ def handle_ready_command(ack, body, client):
         if opt["value"] in saved_caps:
             initial_options.append(opt)
     real_name = runner_capabilities.get("Name", f"<@{user_id}>")
-    capabilities = runner_capabilities.get("Capabilities", [])
-    if not isinstance(capabilities, list):
-        try:
-            capabilities = json.loads(capabilities)
-        except Exception:
-            capabilities = []
+    # Removed redundant capabilities reassignment block since saved_caps and initial_options are used.
     pretty_caps = {
         "water": "WATER",
         "drip_coffee": "DRIP COFFEE",
         "espresso_drinks": "ESPRESSO DRINKS",
         "tea": "TEA"
     }
-    can_make_str = ", ".join([pretty_caps.get(cap, cap.upper()) for cap in capabilities]) or "NONE"
+    can_make_str = ", ".join([pretty_caps.get(cap, cap.upper()) for cap in saved_caps]) or "NONE"
     user_id = body["user_id"]
     location = ""
     notes = ""
@@ -1103,7 +1098,7 @@ def handle_ready_command(ack, body, client):
                     "element": {
                         "type": "checkboxes",
                         "action_id": "input",
-                        # "initial_options": initial_options,
+                        "initial_options": initial_options,
                         "options": cap_options
                     }
                 }
@@ -1258,7 +1253,7 @@ def handle_runner_settings_modal(ack, body, client):
     can_make_str = ", ".join([pretty_caps.get(cap, cap.upper()) for cap in selected]) or "NONE"
     progress_bar = "[" + ("█" * (selected_time * 2)) + ("░" * (20 - selected_time * 2)) + "]"
  
-    client.chat_postMessage(
+    posted_ready = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
         text=f"🖐️ {real_name.upper()} is *on the clock* as a runner.\n*⏳ {selected_time} minutes left to send them an order.*",
         blocks=[
@@ -1299,11 +1294,75 @@ def handle_runner_settings_modal(ack, body, client):
             }
         ]
     )
- 
+    order_ts = posted_ready["ts"]
+    order_channel = posted_ready["channel"]
+    global runner_offer_metadata
+    if 'runner_offer_metadata' not in globals():
+        runner_offer_metadata = {}
+    runner_offer_metadata[user_id] = {
+        "ts": order_ts,
+        "channel": order_channel
+    }
+    import threading
+    threading.Timer(60, update_ready_countdown, args=(client, selected_time - 1, order_ts, order_channel, user_id, selected_time)).start() 
+
     client.chat_postEphemeral(
         channel=user_id,
         user=user_id,
         text="✅ Your drink-making capabilities have been saved and your shift is now live!"
+    )
+    from sheet import get_runner_capabilities
+    runner_capabilities = get_runner_capabilities(user_id)
+    real_name = runner_capabilities.get("Name", f"<@{user_id}>")
+    pretty_caps = {
+        "water": "WATER",
+        "drip_coffee": "DRIP COFFEE",
+        "espresso_drinks": "ESPRESSO DRINKS",
+        "tea": "TEA"
+    }
+    can_make_str = ", ".join([pretty_caps.get(cap, cap.upper()) for cap in selected]) or "NONE"
+    progress_bar = "[" + ("█" * (selected_time * 2)) + ("░" * (20 - selected_time * 2)) + "]"
+    
+    client.chat_postMessage(
+        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+        text=f"🖐️ {real_name.upper()} is *on the clock* as a runner.\n*⏳ {selected_time} minutes left to send them an order.*",
+        blocks=[
+            {
+                "type": "section",
+                "block_id": "runner_text_block",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"```+----------------------------------------+\n|       DRINK RUNNER AVAILABLE          |\n+----------------------------------------+\n| RUNNER: {real_name.upper():<32}|\n| STATUS: READY TO DELIVER               |\n| CAN MAKE: {can_make_str:<32}|\n+----------------------------------------+\n| TIME LEFT ON SHIFT: {selected_time} MINUTES         |\n|         {progress_bar.center(36)}         |\n|  ------------------------------------  |\n|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n|  ------------------------------------  |\n+----------------------------------------+```"
+                }
+            },
+            {
+                "type": "actions",
+                "block_id": "runner_buttons",
+                "elements": [
+                    {
+                        "type": "button",
+                        "action_id": "open_order_modal_for_runner",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "ORDER NOW",
+                            "emoji": True
+                        },
+                        "value": json.dumps({"runner_id": user_id})
+                    },
+                    {
+                        "type": "button",
+                        "action_id": "cancel_ready_offer",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "CANCEL",
+                            "emoji": True
+                        },
+                        "style": "danger",
+                        "value": user_id
+                    }
+                ]
+            }
+        ]
     )
 
 
