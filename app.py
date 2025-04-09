@@ -646,7 +646,7 @@ def build_order_modal(trigger_id, runner_id=""):
                     "block_id": "ascii_map_block",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "```" + format_full_map_with_legend(build_mini_map("4O")) + "```"
+                        "text": "```" + format_full_map_with_legend(build_mini_map("")) + "```"
                     }
                 },
                 {
