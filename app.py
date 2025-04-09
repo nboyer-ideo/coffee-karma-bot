@@ -131,16 +131,16 @@ def wrap_line_runner(label, value, width=40):
             current_line += (" " if current_line else "") + word
         else:
             if not lines:
-                lines.append(f"{label_prefix} {current_line:<{available_space}}|")
+                lines.append(f"{label_prefix} {current_line.rstrip():<{available_space}}|")
             else:
-                lines.append(f"| {'':<13} {current_line:<{available_space}}|")
+                lines.append(f"| {'':<13} {current_line.rstrip():<{available_space}}|")
             current_line = word
  
     if current_line:
         if not lines:
-            lines.append(f"{label_prefix} {current_line:<{available_space}}|")
+            lines.append(f"{label_prefix} {current_line.rstrip():<{available_space}}|")
         else:
-            lines.append(f"| {'':<13} {current_line:<{available_space}}|")
+            lines.append(f"| {'':<13} {current_line.rstrip():<{available_space}}|")
  
     return lines
 
@@ -513,9 +513,9 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                         "```+----------------------------------------+\n"
                         "|         DRINK RUNNER AVAILABLE         |\n"
                         "+----------------------------------------+\n"
-                        f"| RUNNER:       {real_name.upper():<24}|\n"
-                        + "\n".join(wrap_line("CAN MAKE:", can_make_str, width=50)) + "\n"
-                        + "\n".join(wrap_line("CAN'T MAKE:", cannot_make_str, width=50)) + "\n"
+                        f"| RUNNER:       {real_name.upper():<25}|\n"
+                        + "\n".join(wrap_line_runner("CAN MAKE:", can_make_str, width=40)) + "\n"
+                        + "\n".join(wrap_line_runner("CAN'T MAKE:", cannot_make_str, width=40)) + "\n"
                         # Removed hardcoded status line
                         "+----------------------------------------+\n"
                         f"| {f'TIME LEFT ON SHIFT: {remaining} MINUTES'.center(40)} |\n"
@@ -1373,8 +1373,8 @@ def handle_runner_settings_modal(ack, body, client):
                         "|         DRINK RUNNER AVAILABLE         |\n"
                         "+----------------------------------------+\n"
                         f"| RUNNER:       {real_name.upper():<24}|\n"
-                        + "\n".join(wrap_line("CAN MAKE:", can_make_str, width=50)) + "\n"
-                        + "\n".join(wrap_line("CAN'T MAKE:", cannot_make_str, width=50)) + "\n"
+                        + "\n".join(wrap_line_runner("CAN MAKE:", can_make_str, width=40)) + "\n"
+                        + "\n".join(wrap_line_runner("CAN'T MAKE:", cannot_make_str, width=40)) + "\n"
                         "+----------------------------------------+\n"
                         f"|     TIME LEFT ON SHIFT: {selected_time} MINUTES     |\n"
                         f"| {progress_bar.center(40)} |\n"
