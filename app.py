@@ -1510,3 +1510,4 @@ def handle_cancel_order(ack, body, client):
                 "text": {"type": "mrkdwn", "text": f"❌ *Order canceled by <@{user_id}>.*"}
             }
         ]
+    )
