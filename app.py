@@ -383,7 +383,7 @@ def handle_location_select(ack, body, client):
             block["text"]["text"] = ascii_map
         elif block.get("block_id") == "location":
             # Preserve the newly selected value
-            block["element"]["initial_option"] = {
+            block["accessory"]["initial_option"] = {
                 "text": {"type": "plain_text", "text": selected_location},
                 "value": selected_location
             }
