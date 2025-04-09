@@ -1096,8 +1096,7 @@ def handle_ready_command(ack, body, client):
     
     
     # Log order with "time_ordered" as the timestamp key
-from sheet import log_order_to_sheet
-from sheet import get_runner_capabilities
+    from sheet import log_order_to_sheet
     gifted_id = None
     order_data = {
         "order_id": order_ts,
