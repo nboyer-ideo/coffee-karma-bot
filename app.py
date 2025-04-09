@@ -527,14 +527,14 @@ def build_order_modal(trigger_id, runner_id=""):
                     "element": {"type": "plain_text_input", "action_id": "input", "max_length": 30}
                 },
                 {
-                    "type": "input",
+                    "type": "section",
                     "block_id": "location",
-                    "label": {"type": "plain_text", "text": "Where’s it going?"},
-                    "element": {
+                    "text": {"type": "mrkdwn", "text": "*Where’s it going?*"},
+                    "accessory": {
                         "type": "static_select",
                         "action_id": "location_select",
                         "placeholder": {"type": "plain_text", "text": "Select a location"},
-                        "options": [
+                        "options": [ 
                             {"text": {"type": "plain_text", "text": "4A"}, "value": "4A"},
                             {"text": {"type": "plain_text", "text": "4B"}, "value": "4B"},
                             {"text": {"type": "plain_text", "text": "4C"}, "value": "4C"},
