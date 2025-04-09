@@ -1247,6 +1247,8 @@ def handle_ready_command(ack, body, client):
             print("⚠️ Failed to expire message:", e)
 
     print("⏰ Timer started for cancel_unclaimed_order (600s)")
+    order_ts = ""
+    order_channel = ""
     threading.Timer(600, cancel_unclaimed_order, args=(order_ts, order_channel)).start()  # 10 minutes
     # Reminder ping halfway through if still unclaimed
     def reminder_ping(order_ts, order_channel):
