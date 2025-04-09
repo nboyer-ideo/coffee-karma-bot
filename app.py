@@ -11,6 +11,7 @@ import datetime
 import copy
 import re
 import csv
+from sheet import get_runner_capabilities
 
 # Global safety initialization
 if 'runner_offer_metadata' not in globals():
@@ -912,6 +913,7 @@ def handle_ready_command(ack, body, client):
     ack()
     text = body.get("text", "").strip().lower()
     if text == "settings":
+        # Removed unnecessary import of get_runner_capabilities line in settings block
         saved_caps = get_runner_capabilities(body["user_id"]).get("Capabilities", [])
         cap_options = [
             {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
