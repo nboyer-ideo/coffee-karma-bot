@@ -950,113 +950,16 @@ def handle_modal_submission(ack, body, client):
 @app.command("/runner")
 def handle_ready_command(ack, body, client):
     ack()
-    text = body.get("text", "").strip().lower()
-    if text == "settings":
-        # Removed unnecessary import of get_runner_capabilities line in settings block
-        saved_caps = get_runner_capabilities(body["user_id"]).get("Capabilities", [])
-        cap_options = [
-            {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
-            {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip"},
-            {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"},
-            {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"}
-        ]
-        initial_options = [opt for opt in cap_options if opt["value"] in saved_caps]
-        client.views_open(
-            trigger_id=body["trigger_id"],
-            view={
-                "type": "modal",
-                "callback_id": "runner_settings_modal",
-                "title": {"type": "plain_text", "text": "Runner Settings"},
-                "submit": {"type": "plain_text", "text": "Save"},
-                "close": {"type": "plain_text", "text": "Cancel"},
-                "blocks": [
-                    {
-                        "type": "input",
-                        "block_id": "capabilities",
-                        "label": {"type": "plain_text", "text": "Drinks you can make"},
-                        "element": {
-                            "type": "checkboxes",
-                            "action_id": "input",
-                            "initial_options": initial_options,
-                            "options": cap_options
-                        }
-                    }
-                ]
-            }
-        )
-        return
-
     user_id = body["user_id"]
-    # Check if runner capabilities exist in the sheet
     runner_capabilities = get_runner_capabilities(user_id)
-    if not runner_capabilities.get("Capabilities"):
-        client.views_open(
-            trigger_id=body["trigger_id"],
-            view={
-                "type": "modal",
-                "callback_id": "runner_settings_modal",
-                "title": {"type": "plain_text", "text": "Runner Settings"},
-                "submit": {"type": "plain_text", "text": "Save"},
-                "close": {"type": "plain_text", "text": "Cancel"},
-                "blocks": [
-                    {
-                        "type": "input",
-                        "block_id": "capabilities",
-                        "label": {"type": "plain_text", "text": "Drinks you can make"},
-                        "element": {
-                            "type": "checkboxes",
-                            "action_id": "input",
-                        "options": [
-                                {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
-                                {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip"},
-                                {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"},
-                                {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"}
-                            ]
-                        }
-                    }
-                ]
-            }
-        )
-        client.chat_postEphemeral(
-            channel=user_id,
-            user=user_id,
-            text="🛠️ Before you start running orders, let us know what drinks you can make. You can always update this later with /runner settings."
-        )
-        return
-    if runner_capabilities is None:
-        client.views_open(
-            trigger_id=body["trigger_id"],
-            view={
-                "type": "modal",
-                "callback_id": "runner_settings_modal",
-                "title": {"type": "plain_text", "text": "Runner Settings"},
-                "submit": {"type": "plain_text", "text": "Save"},
-                "close": {"type": "plain_text", "text": "Cancel"},
-                "blocks": [
-                    {
-                        "type": "input",
-                        "block_id": "capabilities",
-                        "label": {"type": "plain_text", "text": "Drinks you can make"},
-                        "element": {
-                            "type": "checkboxes",
-                            "action_id": "input",
-                        "options": [
-                                {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
-                                {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"},
-                                {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip"},
-                                {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"}
-                            ]
-                        }
-                    }
-                ]
-            }
-        )
-        client.chat_postEphemeral(
-            channel=user_id,
-            user=user_id,
-            text="🛠️ Before you start running orders, let us know what drinks you can make. You can always update this later with /runner settings."
-        )
-        return
+    saved_caps = runner_capabilities.get("Capabilities", [])
+    cap_options = [
+        {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
+        {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"},
+        {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip"},
+        {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"}
+    ]
+    initial_options = [opt for opt in cap_options if opt["value"] in saved_caps]
     real_name = runner_capabilities.get("Name", f"<@{user_id}>")
     capabilities = runner_capabilities.get("Capabilities", [])
     if not isinstance(capabilities, list):
@@ -1159,6 +1062,44 @@ def handle_ready_command(ack, body, client):
         "time_delivered": ""
     }
     log_order_to_sheet(order_data)
+    client.views_open(
+        trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "callback_id": "runner_settings_modal",
+            "title": {"type": "plain_text", "text": "Runner Availability"},
+            "submit": {"type": "plain_text", "text": "Go Live"},
+            "close": {"type": "plain_text", "text": "Cancel"},
+            "blocks": [
+                {
+                    "type": "input",
+                    "block_id": "time_available",
+                    "label": {"type": "plain_text", "text": "How much time do you have?"},
+                    "element": {
+                        "type": "static_select",
+                        "action_id": "input",
+                        "placeholder": {"type": "plain_text", "text": "Select time"},
+                        "options": [
+                            {"text": {"type": "plain_text", "text": "5 minutes"}, "value": "5"},
+                            {"text": {"type": "plain_text", "text": "10 minutes"}, "value": "10"},
+                            {"text": {"type": "plain_text", "text": "15 minutes"}, "value": "15"}
+                        ]
+                    }
+                },
+                {
+                    "type": "input",
+                    "block_id": "capabilities",
+                    "label": {"type": "plain_text", "text": "Drinks you can make"},
+                    "element": {
+                        "type": "checkboxes",
+                        "action_id": "input",
+                        "initial_options": initial_options,
+                        "options": cap_options
+                    }
+                }
+            ]
+        }
+    )
 
     # Start countdown timer for order expiration
     import threading
@@ -1274,10 +1215,15 @@ def handle_runner_settings_modal(ack, body, client):
     ack()
     user_id = body["user"]["id"]
     values = body["view"]["state"]["values"]
+ 
     selected = []
     if "capabilities" in values and "input" in values["capabilities"]:
         selected = [opt["value"] for opt in values["capabilities"]["input"].get("selected_options", [])]
-
+ 
+    selected_time = 10  # default
+    if "time_available" in values and "input" in values["time_available"]:
+        selected_time = int(values["time_available"]["input"].get("selected_option", {}).get("value", 10))
+ 
     from sheet import save_runner_capabilities
     from slack_sdk import WebClient
     import os
@@ -1289,13 +1235,65 @@ def handle_runner_settings_modal(ack, body, client):
     except Exception as e:
         print("⚠️ Failed to fetch user real name for settings save:", e)
         real_name = f"<@{user_id}>"
-
+ 
     save_runner_capabilities(user_id, real_name, selected)
-
+ 
+    # post terminal message with the selected time and capabilities
+    pretty_caps = {
+        "water": "WATER",
+        "drip": "DRIP COFFEE",
+        "espresso_drinks": "ESPRESSO DRINKS",
+        "tea": "TEA"
+    }
+    can_make_str = ", ".join([pretty_caps.get(cap, cap.upper()) for cap in selected]) or "NONE"
+    progress_bar = "[" + ("█" * (selected_time * 2)) + ("░" * (20 - selected_time * 2)) + "]"
+ 
+    client.chat_postMessage(
+        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+        text=f"🖐️ {real_name.upper()} is *on the clock* as a runner.\n*⏳ {selected_time} minutes left to send them an order.*",
+        blocks=[
+            {
+                "type": "section",
+                "block_id": "runner_text_block",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"```+----------------------------------------+\n|       DRINK RUNNER AVAILABLE          |\n+----------------------------------------+\n| RUNNER: {real_name.upper():<32}|\n| STATUS: READY TO DELIVER               |\n| CAN MAKE: {can_make_str:<32}|\n+----------------------------------------+\n| TIME LEFT ON SHIFT: {selected_time} MINUTES         |\n|         {progress_bar.center(36)}         |\n|  ------------------------------------  |\n|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n|  ------------------------------------  |\n+----------------------------------------+```"
+                }
+            },
+            {
+                "type": "actions",
+                "block_id": "runner_buttons",
+                "elements": [
+                    {
+                        "type": "button",
+                        "action_id": "open_order_modal_for_runner",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "ORDER NOW",
+                            "emoji": True
+                        },
+                        "value": json.dumps({"runner_id": user_id})
+                    },
+                    {
+                        "type": "button",
+                        "action_id": "cancel_ready_offer",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "CANCEL",
+                            "emoji": True
+                        },
+                        "style": "danger",
+                        "value": user_id
+                    }
+                ]
+            }
+        ]
+    )
+ 
     client.chat_postEphemeral(
         channel=user_id,
         user=user_id,
-        text="✅ Your drink-making capabilities have been saved!"
+        text="✅ Your drink-making capabilities have been saved and your shift is now live!"
     )
 
 
