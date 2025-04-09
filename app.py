@@ -469,7 +469,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-        "text": f"```+----------------------------------------+\n|       DRINK RUNNER AVAILABLE          |\n+----------------------------------------+\n| RUNNER: {real_name.upper():<32}|\n| CAN MAKE: {can_make_str:<32}|\n| CAN'T MAKE: {cannot_make_str:<30}|\n| STATUS: READY TO DELIVER               |\n+----------------------------------------+\n| TIME LEFT ON SHIFT: {remaining} MINUTES         |\n|         {progress_bar.center(36)}         |\n|  ------------------------------------  |\n|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n|  ------------------------------------  |\n+----------------------------------------+```"
+        "text": f"```+----------------------------------------+\n|       DRINK RUNNER AVAILABLE          |\n+----------------------------------------+\n| RUNNER: {real_name.upper():<32}|\n" + "\n".join(wrap_line(\"CAN MAKE:\", can_make_str, width=40)) + f"\n| CAN'T MAKE: {cannot_make_str:<30}|\n| STATUS: READY TO DELIVER               |\n+----------------------------------------+\n| TIME LEFT ON SHIFT: {remaining} MINUTES         |\n|         {progress_bar.center(36)}         |\n|  ------------------------------------  |\n|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n|  ------------------------------------  |\n+----------------------------------------+```"
                 }
             },
             {
@@ -1301,6 +1301,7 @@ def handle_runner_settings_modal(ack, body, client):
     total_blocks = 20
     filled_blocks = total_blocks
     progress_bar = "[" + ("█" * filled_blocks) + ("░" * (total_blocks - filled_blocks)) + "]"
+    can_make_line = "\n".join(wrap_line("CAN MAKE:", can_make_str, width=40))
     cant_make_line = "\n".join(wrap_line("CAN'T MAKE:", cannot_make_str, width=40))
  
     posted_ready = client.chat_postMessage(
@@ -1314,15 +1315,15 @@ def handle_runner_settings_modal(ack, body, client):
                     "type": "mrkdwn",
                     "text": (
                         "```+----------------------------------------+\n"
-                        f"| {' ' * ((40 - len('DRINK RUNNER AVAILABLE')) // 2)}DRINK RUNNER AVAILABLE{' ' * (((40 - len('DRINK RUNNER AVAILABLE')) // 2) + ((40 - len('DRINK RUNNER AVAILABLE')) % 2))} |\n"
+                        "|         DRINK RUNNER AVAILABLE         |\n"
                         "+----------------------------------------+\n"
                         f"| RUNNER: {real_name.upper():<32}|\n"
                         "| STATUS: READY TO DELIVER               |\n"
-                        f"| CAN MAKE: {can_make_str:<32}|\n"
+                        "" + can_make_line + "\n"
                         f"{cant_make_line}\n"
                         "+----------------------------------------+\n"
                         f"| TIME LEFT ON SHIFT: {selected_time} MINUTES         |\n"
-                        f"| {' ' * ((40 - len(progress_bar)) // 2)}{progress_bar}{' ' * (((40 - len(progress_bar)) // 2) + ((40 - len(progress_bar)) % 2))} |\n"
+                        f"| {progress_bar.center(40)} |\n"
                         "|  ------------------------------------  |\n"
                         "|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n"
                         "|  ------------------------------------  |\n"
