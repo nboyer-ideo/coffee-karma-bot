@@ -951,14 +951,21 @@ def handle_modal_submission(ack, body, client):
 def handle_ready_command(ack, body, client):
     ack()
     user_id = body["user_id"]
-    runner_capabilities = get_runner_capabilities(user_id)
-    saved_caps = runner_capabilities.get("Capabilities", [])
     cap_options = [
         {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
         {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"},
-        {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip"},
+        {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip_coffee"},
         {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"}
     ]
+    runner_capabilities = get_runner_capabilities(user_id)
+    raw_caps = runner_capabilities.get("Capabilities", [])
+    if not isinstance(raw_caps, list):
+        try:
+            raw_caps = json.loads(raw_caps)
+        except Exception:
+            raw_caps = []
+    valid_cap_values = {opt["value"] for opt in cap_options}
+    saved_caps = [cap for cap in raw_caps if cap in valid_cap_values]
     initial_options = []
     for opt in cap_options:
         if opt["value"] in saved_caps:
@@ -972,7 +979,7 @@ def handle_ready_command(ack, body, client):
             capabilities = []
     pretty_caps = {
         "water": "WATER",
-        "drip": "DRIP COFFEE",
+        "drip_coffee": "DRIP COFFEE",
         "espresso_drinks": "ESPRESSO DRINKS",
         "tea": "TEA"
     }
@@ -1244,7 +1251,7 @@ def handle_runner_settings_modal(ack, body, client):
     # post terminal message with the selected time and capabilities
     pretty_caps = {
         "water": "WATER",
-        "drip": "DRIP COFFEE",
+        "drip_coffee": "DRIP COFFEE",
         "espresso_drinks": "ESPRESSO DRINKS",
         "tea": "TEA"
     }
