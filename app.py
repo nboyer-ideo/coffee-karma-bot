@@ -13,6 +13,44 @@ import re
 import csv
 from sheet import get_runner_capabilities
 
+def format_full_map_with_legend(mini_map_lines):
+    legend_lines = [
+        "+--------------------------+",
+        "|         LEGEND           |",
+        "+--------------------------+",
+        "| ✗ = DRINK LOCATION       |",
+        "| ☕ = CAFÉ                 |",
+        "| ▯ = ELEVATOR             |",
+        "| ≋ = BATHROOM             |",
+        "+--------------------------+",
+        "|                          |",
+        "| Use the dropdown above   |",
+        "| to pick your delivery    |",
+        "| spot in the studio. The  |",
+        "| ✗ in the map shows where |",
+        "| your drink will arrive.  |",
+        "|                          |",
+        "|                          |",
+        "+--------------------------+"
+    ]
+
+    padded_map = [f"{line:<26}"[:26] for line in mini_map_lines]
+    map_header = [
+        "+--------------------------+",
+        "|         LION MAP         |",
+        "+--------------------------+"
+    ]
+    map_footer = ["+--------------------------+"]
+    full_map = map_header + [f"|{line}|" for line in padded_map] + map_footer
+
+    merged_lines = []
+    max_len = max(len(full_map), len(legend_lines))
+    for i in range(max_len):
+        left = full_map[i] if i < len(full_map) else " " * 28
+        right = legend_lines[i] if i < len(legend_lines) else ""
+        merged_lines.append(f"{left}  {right}")
+    return "\n".join(merged_lines)
+
 # Global safety initialization
 if 'runner_offer_metadata' not in globals():
     runner_offer_metadata = {}
@@ -608,7 +646,7 @@ def build_order_modal(trigger_id, runner_id=""):
                     "block_id": "ascii_map_block",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "```" + "\n".join(build_mini_map("4O")) + "```"
+                        "text": "```" + format_full_map_with_legend(build_mini_map("4O")) + "```"
                     }
                 },
                 {
