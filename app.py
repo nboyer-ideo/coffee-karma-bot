@@ -416,8 +416,8 @@ def handle_location_select(ack, body, client):
     modal = build_order_modal(trigger_id)
     for block in modal["view"]["blocks"]:
         if block.get("block_id") == "ascii_map_block":
-            from app import build_mini_map
-            ascii_map = "```" + "\n".join(build_mini_map(selected_location)) + "```"
+            from app import build_mini_map, format_full_map_with_legend
+            ascii_map = "```" + format_full_map_with_legend(build_mini_map(selected_location)) + "```"
             block["text"]["text"] = ascii_map
         elif block.get("block_id") == "location":
             # Preserve the newly selected value with safe check for accessory key
