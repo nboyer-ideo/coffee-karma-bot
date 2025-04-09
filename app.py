@@ -13,6 +13,17 @@ import re
 import csv
 from sheet import get_runner_capabilities
 
+def box_label(label, value, width=40):
+    """
+    Return a single line like: | LABEL:       VALUE               |
+    Pads everything to ensure right border lines up.
+    """
+    label = label.rstrip(":").upper()
+    label_prefix = f"| {label:<13}"  # 13-character label field
+    value_field = f"{value}".upper()
+    space = width - len(label_prefix) - 2  # 2 for trailing ' |'
+    return f"{label_prefix} {value_field:<{space}} |"
+
 def format_full_map_with_legend(mini_map_lines):
     legend_lines = [
         "+--------------------------+",
@@ -110,6 +121,33 @@ def wrap_line(label, value, width=50):
             wrapped_lines.append(f"| {'':<13}{current_line:<{max_content - 13}} |")
 
     return wrapped_lines
+
+def terminal_box_line(text="", label=None, value=None, width=40, align="left", border=True):
+    """
+    General-purpose formatter for fixed-width terminal boxes.
+    Supports:
+    - plain text lines (centered or left)
+    - label/value pairs with alignment
+    - optional border padding
+    """
+    if label is not None and value is not None:
+        # Label/Value pair line
+        label = label.rstrip(":").upper()
+        label_prefix = f"{label}:"
+        left = f"{label_prefix:<13} {value.upper()}"
+        content = left if align == "label" else f"{label_prefix} {value.upper()}"
+    else:
+        content = text.upper()
+
+    if align == "center":
+        content = content.center(width - 4)  # 4 for borders and space padding
+    elif align == "left" and label is None:
+        content = f"{content:<{width - 4}}"
+
+    if border:
+        return f"| {content} |"
+    else:
+        return f"  {content}  "
 
 def wrap_line_runner(label, value, width=40):
     """
@@ -513,16 +551,16 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                         "```+----------------------------------------+\n"
                         "|         DRINK RUNNER AVAILABLE         |\n"
                         "+----------------------------------------+\n"
-                        f"| RUNNER:       {real_name.upper():<25}|\n"
-                        + "\n".join(wrap_line("CAN MAKE:", can_make_str, width=50)) + "\n"
-                        + "\n".join(wrap_line("CAN'T MAKE:", cannot_make_str, width=50)) + "\n"
+                        terminal_box_line(label="Runner", value=real_name.upper(), width=40, align="label") + "\n"
+                        + terminal_box_line(label="CAN MAKE:", value=can_make_str, width=40) + "\n"
+                        + terminal_box_line(label="CAN'T MAKE:", value=cannot_make_str, width=40) + "\n"
                         # Removed hardcoded status line
                         "+----------------------------------------+\n"
-                        f"| {f'TIME LEFT ON SHIFT: {remaining} MINUTES'.center(40)} |\n"
-                        f"| {progress_bar.center(40)} |\n"
-                        "|  ------------------------------------  |\n"
-                        "|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n"
-                        "|  ------------------------------------  |\n"
+                        terminal_box_line(text=f"TIME LEFT ON SHIFT: {remaining} MINUTES", width=40, align="center") + "\n"
+                        terminal_box_line(text=progress_bar, width=40, align="center") + "\n"
+                        terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
+                        terminal_box_line(text="↓ CLICK BELOW TO PLACE AN ORDER ↓", width=40, align="center") + "\n"
+                        terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
                         "+----------------------------------------+```"
                     )
                 }
@@ -1358,8 +1396,8 @@ def handle_runner_settings_modal(ack, body, client):
     total_blocks = 20
     filled_blocks = total_blocks
     progress_bar = "[" + ("█" * filled_blocks) + ("░" * (total_blocks - filled_blocks)) + "]"
-    can_make_line = "\n".join(wrap_line_runner("CAN MAKE:", can_make_str, width=40))
-    cant_make_line = "\n".join(wrap_line_runner("CAN'T MAKE:", cannot_make_str, width=40))
+    can_make_line = terminal_box_line(label="CAN MAKE:", value=can_make_str, width=40)
+    cant_make_line = terminal_box_line(label="CAN'T MAKE:", value=cannot_make_str, width=40)
  
     posted_ready = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
@@ -1374,15 +1412,15 @@ def handle_runner_settings_modal(ack, body, client):
                         "```+----------------------------------------+\n"
                         "|         DRINK RUNNER AVAILABLE         |\n"
                         "+----------------------------------------+\n"
-                        f"| RUNNER:       {real_name.upper():<24}|\n"
-                        + "\n".join(wrap_line("CAN MAKE:", can_make_str, width=50)) + "\n"
-                        + "\n".join(wrap_line("CAN'T MAKE:", cannot_make_str, width=50)) + "\n"
+                        terminal_box_line(label="Runner", value=real_name.upper(), width=40, align="label") + "\n"
+                        + terminal_box_line(label="CAN MAKE:", value=can_make_str, width=40) + "\n"
+                        + terminal_box_line(label="CAN'T MAKE:", value=cannot_make_str, width=40) + "\n"
                         "+----------------------------------------+\n"
-                        f"|     TIME LEFT ON SHIFT: {selected_time} MINUTES     |\n"
-                        f"| {progress_bar.center(40)} |\n"
-                        "|  ------------------------------------  |\n"
-                        "|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n"
-                        "|  ------------------------------------  |\n"
+                        terminal_box_line(text=f"TIME LEFT ON SHIFT: {selected_time} MINUTES", width=40, align="center") + "\n"
+                        terminal_box_line(text=progress_bar, width=40, align="center") + "\n"
+                        terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
+                        terminal_box_line(text="↓ CLICK BELOW TO PLACE AN ORDER ↓", width=40, align="center") + "\n"
+                        terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
                         "+----------------------------------------+```"
                     )
                 }
