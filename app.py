@@ -549,19 +549,19 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                     "type": "mrkdwn",
                     "text": (
                         "```+----------------------------------------+\n"
-                        "|         DRINK RUNNER AVAILABLE         |\n"
-                        "+----------------------------------------+\n"
-                        terminal_box_line(label="Runner", value=real_name.upper(), width=40, align="label") + "\n"
+                        + "|         DRINK RUNNER AVAILABLE         |\n"
+                        + "+----------------------------------------+\n"
+                        + terminal_box_line(label="Runner", value=real_name.upper(), width=40, align="label") + "\n"
                         + terminal_box_line(label="CAN MAKE:", value=can_make_str, width=40) + "\n"
                         + terminal_box_line(label="CAN'T MAKE:", value=cannot_make_str, width=40) + "\n"
                         # Removed hardcoded status line
-                        "+----------------------------------------+\n"
-                        terminal_box_line(text=f"TIME LEFT ON SHIFT: {remaining} MINUTES", width=40, align="center") + "\n"
-                        terminal_box_line(text=progress_bar, width=40, align="center") + "\n"
-                        terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
-                        terminal_box_line(text="↓ CLICK BELOW TO PLACE AN ORDER ↓", width=40, align="center") + "\n"
-                        terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
-                        "+----------------------------------------+```"
+                        + "+----------------------------------------+\n"
+                        + terminal_box_line(text=f"TIME LEFT ON SHIFT: {remaining} MINUTES", width=40, align="center") + "\n"
+                        + terminal_box_line(text=progress_bar, width=40, align="center") + "\n"
+                        + terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
+                        + terminal_box_line(text="↓ CLICK BELOW TO PLACE AN ORDER ↓", width=40, align="center") + "\n"
+                        + terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
+                        + "+----------------------------------------+```"
                     )
                 }
             },
