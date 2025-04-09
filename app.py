@@ -469,7 +469,22 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-        "text": f"```+----------------------------------------+\n|       DRINK RUNNER AVAILABLE          |\n+----------------------------------------+\n| RUNNER: {real_name.upper():<32}|\n" + "\n".join(wrap_line(\"CAN MAKE:\", can_make_str, width=40)) + f"\n| CAN'T MAKE: {cannot_make_str:<30}|\n| STATUS: READY TO DELIVER               |\n+----------------------------------------+\n| TIME LEFT ON SHIFT: {remaining} MINUTES         |\n|         {progress_bar.center(36)}         |\n|  ------------------------------------  |\n|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n|  ------------------------------------  |\n+----------------------------------------+```"
+                    "text": (
+                        "```+----------------------------------------+\n"
+                        "|         DRINK RUNNER AVAILABLE         |\n"
+                        "+----------------------------------------+\n"
+                        f"| RUNNER: {real_name.upper():<32}|\n"
+                        + "\n".join(wrap_line("CAN MAKE:", can_make_str, width=40)) + "\n"
+                        + "\n".join(wrap_line("CAN'T MAKE:", cannot_make_str, width=40)) + "\n"
+                        "| STATUS: READY TO DELIVER               |\n"
+                        "+----------------------------------------+\n"
+                        f"| TIME LEFT ON SHIFT: {remaining} MINUTES         |\n"
+                        f"| {progress_bar.center(36)} |\n"
+                        "|  ------------------------------------  |\n"
+                        "|   ↓ CLICK BELOW TO PLACE AN ORDER ↓    |\n"
+                        "|  ------------------------------------  |\n"
+                        "+----------------------------------------+```"
+                    )
                 }
             },
             {
