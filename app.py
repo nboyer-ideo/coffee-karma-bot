@@ -959,7 +959,10 @@ def handle_ready_command(ack, body, client):
         {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip"},
         {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"}
     ]
-    initial_options = [opt for opt in cap_options if opt["value"] in saved_caps]
+    initial_options = []
+    for opt in cap_options:
+        if opt["value"] in saved_caps:
+            initial_options.append(opt)
     real_name = runner_capabilities.get("Name", f"<@{user_id}>")
     capabilities = runner_capabilities.get("Capabilities", [])
     if not isinstance(capabilities, list):
