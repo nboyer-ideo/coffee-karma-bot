@@ -873,12 +873,12 @@ def build_order_modal(trigger_id, runner_id=""):
                                 "value": "water"
                             },
                             {
-                                "text": {"type": "plain_text", "text": "Drip Coffee — 2 Karma"},
-                                "value": "drip"
-                            },
-                            {
                                 "text": {"type": "plain_text", "text": "Tea — 2 Karma"},
                                 "value": "tea"
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Drip Coffee — 2 Karma"},
+                                "value": "drip"
                             },
                             {
                                 "text": {"type": "plain_text", "text": "Espresso Drinks — UNAVAILABLE Ø"},
@@ -980,7 +980,7 @@ def build_order_modal(trigger_id, runner_id=""):
                     "type": "input",
                     "block_id": "gift_to",
                     "optional": True,
-                    "label": {"type": "plain_text", "text": "Gift drink to (optional)"},
+                    "label": {"type": "plain_text", "text": "Gift drink to"},
                     "element": {
                         "type": "users_select",
                         "action_id": "input",
@@ -990,7 +990,7 @@ def build_order_modal(trigger_id, runner_id=""):
                     "type": "input",
                     "block_id": "notes",
                     "optional": True,
-                    "label": {"type": "plain_text", "text": "Additional notes (optional)"},
+                    "label": {"type": "plain_text", "text": "Additional notes"},
                     "element": {"type": "plain_text_input", "action_id": "input", "max_length": 30}
                 }
             ]
@@ -1461,7 +1461,7 @@ def handle_ready_command(ack, body, client):
         view={
             "type": "modal",
             "callback_id": "runner_settings_modal",
-            "title": {"type": "plain_text", "text": "Drink Runner Availability"},
+            "title": {"type": "plain_text", "text": "Runner Availability"},
             "submit": {"type": "plain_text", "text": "Raise Hand"},
             "close": {"type": "plain_text", "text": "Just Kidding"},
             "blocks": [
