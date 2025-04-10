@@ -71,8 +71,7 @@ def safe_chat_update(client, channel, ts, text, blocks=None):
         client.chat_update(channel=channel, ts=ts, text=text, blocks=blocks)
     except Exception as e:
         print("⚠️ safe_chat_update failed:", e)
-if __name__ == "__main__":
-    flask_app.run(host="0.0.0.0", port=10000)
+
 cached_coordinates = None
 cached_map_template = None
 
@@ -1524,3 +1523,6 @@ def handle_open_order_modal_for_runner(ack, body, client):
         trigger_id=body["trigger_id"],
         view=build_order_modal(trigger_id=body["trigger_id"], runner_id=runner_id)["view"]
     )
+
+if __name__ == "__main__":
+    flask_app.run(host="0.0.0.0", port=10000)
