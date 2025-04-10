@@ -568,27 +568,27 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         empty_blocks = total_blocks - filled_blocks
         progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
 
-    blocks = [
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "```"
-                    + "+----------------------------------------+\n"
-                    + "|         DRINK RUNNER AVAILABLE         |\n"
-                    + "+----------------------------------------+\n"
-                    + "\n".join(box_line(label=\"Runner\", value=real_name.upper(), width=40)) + "\n"
-                    + "\n".join(box_line(label=\"CAN MAKE:\", value=can_make_str, width=40)) + "\n"
-                    + "\n".join(box_line(label=\"CAN'T MAKE:\", value=cannot_make_str, width=40)) + "\n"
-                    + "+----------------------------------------+\n"
-                    + "\n".join(box_line(text=f\"TIME LEFT ON SHIFT: {remaining} MINUTES\", width=40, align=\"center\")) + "\n"
-                    + "\n".join(box_line(text=progress_bar, width=40, align=\"center\")) + "\n"
-                    + "\n".join(box_line(text=\"------------------------------------\", width=40, align=\"center\")) + "\n"
-                    + "\n".join(box_line(text=\"↓ CLICK BELOW TO PLACE AN ORDER ↓\", width=40, align=\"center\")) + "\n"
-                    + "\n".join(box_line(text=\"------------------------------------\", width=40, align=\"center\")) + "\n"
-                    + "+----------------------------------------+```"
-            }
-        },
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "```"
+                        + "+----------------------------------------+\n"
+                        + "|         DRINK RUNNER AVAILABLE         |\n"
+                        + "+----------------------------------------+\n"
+                        + "\n".join(box_line(label=\"Runner\", value=real_name.upper(), width=40)) + "\n"
+                        + "\n".join(box_line(label=\"CAN MAKE:\", value=can_make_str, width=40)) + "\n"
+                        + "\n".join(box_line(label=\"CAN'T MAKE:\", value=cannot_make_str, width=40)) + "\n"
+                        + "+----------------------------------------+\n"
+                        + "\n".join(box_line(text=f\"TIME LEFT ON SHIFT: {remaining} MINUTES\", width=40, align=\"center\")) + "\n"
+                        + "\n".join(box_line(text=progress_bar, width=40, align=\"center\")) + "\n"
+                        + "\n".join(box_line(text=\"------------------------------------\", width=40, align=\"center\")) + "\n"
+                        + "\n".join(box_line(text=\"↓ CLICK BELOW TO PLACE AN ORDER ↓\", width=40, align=\"center\")) + "\n"
+                        + "\n".join(box_line(text=\"------------------------------------\", width=40, align=\"center\")) + "\n"
+                        + "+----------------------------------------+```"
+                }
+            },
             {
                 "type": "actions",
                 "elements": [
@@ -628,9 +628,6 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         if remaining > 1:
             import threading
             threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id, original_total_time)).start()
-    except Exception as e:
-        print("⚠️ Failed to update /ready countdown:", e)
-
     except Exception as e:
         print("⚠️ Failed to update /ready countdown:", e)
 
