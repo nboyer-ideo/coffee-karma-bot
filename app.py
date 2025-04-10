@@ -334,7 +334,7 @@ def format_order_message(order_data):
                 "emoji": True
             },
             "style": "primary",
-            "value": order_data["order_id"]
+            "value": order_data.get("order_id") or "unknown"
         })
     else:
         elements.append({
@@ -345,7 +345,7 @@ def format_order_message(order_data):
                 "text": "CLAIM THIS MISSION",
                 "emoji": True
             },
-            "value": order_data["order_id"]
+            "value": order_data.get("order_id") or "unknown"
         })
         elements.append({
             "type": "button",
@@ -866,28 +866,53 @@ def handle_modal_submission(ack, body, client):
         return
 
     runner_id = body["view"].get("private_metadata", "")
+    order_id = f"{'runner' if runner_id else 'requester'}_{user_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
     order_data = {
-    "order_id": "",
-    "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    "initiated_by": "runner" if runner_id else "requester",
-    "requester_id": user_id,
-    "requester_real_name": "",
-    "runner_id": runner_id,
-    "runner_name": "",
-    "runner_real_name": "",
-    "recipient_id": gifted_id if gifted_id else user_id,
-    "recipient_real_name": "",
-    "drink": drink,
-    "location": location,
-    "notes": notes,
-    "karma_cost": karma_cost,
-    "status": "pending",
-    "bonus_multiplier": "",
-    "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    "time_claimed": "",
-    "time_delivered": "",
-    "remaining_minutes": 10
+        "order_id": order_id,
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "initiated_by": "runner" if runner_id else "requester",
+        "requester_id": user_id,
+        "requester_real_name": "",
+        "runner_id": runner_id,
+        "runner_name": "",
+        "runner_real_name": "",
+        "recipient_id": gifted_id if gifted_id else user_id,
+        "recipient_real_name": "",
+        "drink": drink,
+        "location": location,
+        "notes": notes,
+        "karma_cost": karma_cost,
+        "status": "pending",
+        "bonus_multiplier": "",
+        "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "time_claimed": "",
+        "time_delivered": "",
+        "remaining_minutes": 10
     }
+    from slack_sdk.web import WebClient
+    slack_token = os.environ.get("SLACK_BOT_TOKEN")
+    slack_client = WebClient(token=slack_token)
+
+    try:
+        requester_info = slack_client.users_info(user=order_data["requester_id"])
+        order_data["requester_real_name"] = requester_info["user"]["real_name"]
+    except Exception as e:
+        print("⚠️ Failed to fetch requester real name:", e)
+
+    try:
+        if order_data["recipient_id"]:
+            recipient_info = slack_client.users_info(user=order_data["recipient_id"])
+            order_data["recipient_real_name"] = recipient_info["user"]["real_name"]
+    except Exception as e:
+        print("⚠️ Failed to fetch recipient real name:", e)
+
+    try:
+        if order_data["runner_id"]:
+            runner_info = slack_client.users_info(user=order_data["runner_id"])
+            order_data["runner_real_name"] = runner_info["user"]["real_name"]
+            order_data["runner_name"] = runner_info["user"]["real_name"]
+    except Exception as e:
+        print("⚠️ Failed to fetch runner real name:", e)
     print(f"🏃 runner_id: {runner_id}")
     order_ts = ""
     order_channel = ""
