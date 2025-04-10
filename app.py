@@ -702,10 +702,10 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
     runner_capabilities = get_runner_capabilities(user_id)
     real_name = runner_capabilities.get("Name", f"<@{user_id}>")
     pretty_caps = {
-        "water": "WATER",
-        "drip_coffee": "DRIP COFFEE",
-        "espresso_drinks": "ESPRESSO DRINKS",
-        "tea": "TEA"
+        "water": "Water",
+        "drip_coffee": "Drip Coffee",
+        "espresso_drinks": "Espresso Drinks",
+        "tea": "Tea"
     }
     saved_caps = runner_capabilities.get("Capabilities", [])
     all_options = ["water", "tea", "drip_coffee", "espresso_drinks"]
@@ -822,34 +822,33 @@ def build_order_modal(trigger_id, runner_id=""):
         "view": {
             "type": "modal",
             "callback_id": "koffee_request_modal",
-            "title": {"type": "plain_text", "text": "INITIATE A DROP"},
-            "submit": {"type": "plain_text", "text": "DEPLOY"},
-            "close": {"type": "plain_text", "text": "ABORT"},
+            "title": {"type": "plain_text", "text": "Make An Order"},
+            "submit": {"type": "plain_text", "text": "Submit Drop"},
+            "close": {"type": "plain_text", "text": "Nevermind"},
             "private_metadata": runner_id,
             "blocks": [
                 { 
                     "type": "input",
                     "block_id": "drink_category",
-                    "label": {"type": "plain_text", "text": "SELECT YOUR FUEL"},
+                    "label": {"type": "plain_text", "text": "Select your drink category"},
                     "element": {
                         "type": "static_select",
                         "action_id": "input",
-                        "placeholder": {"type": "plain_text", "text": "CHOOSE A BREW"},
                         "options": [
                             {
-                                "text": {"type": "plain_text", "text": "WATER (STILL/SPARKLING) — 1 KARMA"},
+                                "text": {"type": "plain_text", "text": "Water (Still/Sparkling) — 1 Karma"},
                                 "value": "water"
                             },
                             {
-                                "text": {"type": "plain_text", "text": "DRIP COFFEE — 2 KARMA"},
+                                "text": {"type": "plain_text", "text": "Drip Coffee — 2 Karma"},
                                 "value": "drip"
                             },
                             {
-                                "text": {"type": "plain_text", "text": "TEA — 2 KARMA"},
+                                "text": {"type": "plain_text", "text": "Tea — 2 Karma"},
                                 "value": "tea"
                             },
                             {
-                                "text": {"type": "plain_text", "text": "ESPRESSO DRINKS — UNAVAILABLE Ø"},
+                                "text": {"type": "plain_text", "text": "Espresso Drinks — UNAVAILABLE Ø"},
                                 "value": "espresso"
                             }
                         ]
@@ -858,17 +857,16 @@ def build_order_modal(trigger_id, runner_id=""):
                 {
                     "type": "input",
                     "block_id": "drink_detail",
-                    "label": {"type": "plain_text", "text": "SPECIFY THE BREW"},
+                    "label": {"type": "plain_text", "text": "Specify your drink"},
                     "element": {"type": "plain_text_input", "action_id": "input", "max_length": 30}
                 },
                 {
                     "type": "section",
                     "block_id": "location",
-                    "text": {"type": "mrkdwn", "text": "*DROP LOCATION?*"},
+                    "text": {"type": "mrkdwn", "text": "*Drop location?*"},
                     "accessory": {
                         "type": "static_select",
                         "action_id": "location_select",
-                        "placeholder": {"type": "plain_text", "text": "CHOOSE A SITE"},
                         "options": [ 
                             {"text": {"type": "plain_text", "text": "4A"}, "value": "4A"},
                             {"text": {"type": "plain_text", "text": "4B"}, "value": "4B"},
@@ -949,18 +947,17 @@ def build_order_modal(trigger_id, runner_id=""):
                     "type": "input",
                     "block_id": "gift_to",
                     "optional": True,
-                    "label": {"type": "plain_text", "text": "SEND TO (OPTIONAL)"},
+                    "label": {"type": "plain_text", "text": "Gift drink to (optional)"},
                     "element": {
                         "type": "users_select",
                         "action_id": "input",
-                        "placeholder": {"type": "plain_text", "text": "SELECT RECIPIENT"}
                     }
                 },
                 {
                     "type": "input",
                     "block_id": "notes",
                     "optional": True,
-                    "label": {"type": "plain_text", "text": "NOTES (IF CRUCIAL)"},
+                    "label": {"type": "plain_text", "text": "Additional notes (optional)"},
                     "element": {"type": "plain_text_input", "action_id": "input", "max_length": 30}
                 }
             ]
@@ -1312,10 +1309,10 @@ def handle_ready_command(ack, body, client):
     ack()
     user_id = body["user_id"]
     cap_options = [
-        {"text": {"type": "plain_text", "text": "WATER"}, "value": "water"},
-        {"text": {"type": "plain_text", "text": "TEA"}, "value": "tea"},
-        {"text": {"type": "plain_text", "text": "DRIP COFFEE"}, "value": "drip_coffee"},
-        {"text": {"type": "plain_text", "text": "ESPRESSO DRINKS"}, "value": "espresso_drinks"}
+        {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
+        {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"},
+        {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip_coffee"},
+        {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"}
     ]
     runner_capabilities = get_runner_capabilities(user_id)
     raw_caps = runner_capabilities.get("Capabilities", [])
@@ -1333,10 +1330,10 @@ def handle_ready_command(ack, body, client):
     real_name = runner_capabilities.get("Name", f"<@{user_id}>")
     # Removed redundant capabilities reassignment block since saved_caps and initial_options are used.
     pretty_caps = {
-        "water": "WATER",
-        "drip_coffee": "DRIP COFFEE",
-        "espresso_drinks": "ESPRESSO DRINKS",
-        "tea": "TEA"
+        "water": "Water",
+        "drip_coffee": "Drip Coffee",
+        "espresso_drinks": "Espresso Drinks",
+        "tea": "Tea"
     }
     can_make_str = ", ".join([pretty_caps.get(cap, cap.upper()) for cap in saved_caps]) or "NONE"
     user_id = body["user_id"]
@@ -1432,26 +1429,25 @@ def handle_ready_command(ack, body, client):
         view={
             "type": "modal",
             "callback_id": "runner_settings_modal",
-            "title": {"type": "plain_text", "text": "DECLARE RUNNER STATUS"},
-            "submit": {"type": "plain_text", "text": "ENGAGE"},
-            "close": {"type": "plain_text", "text": "ABORT"},
+            "title": {"type": "plain_text", "text": "Drink Runner Availability"},
+            "submit": {"type": "plain_text", "text": "Raise Hand"},
+            "close": {"type": "plain_text", "text": "Just Kidding"},
             "blocks": [
                 {
                     "type": "input",
                     "block_id": "time_available",
-                    "label": {"type": "plain_text", "text": "SHIFT DURATION?"},
+                    "label": {"type": "plain_text", "text": "How much time do you have?"},
                     "element": {
                         "type": "static_select",
                         "action_id": "input",
-                        "placeholder": {"type": "plain_text", "text": "CHOOSE LENGTH"},
                         "initial_option": {
-                            "text": {"type": "plain_text", "text": "10 MINUTES"},
+                            "text": {"type": "plain_text", "text": "10 Minutes"},
                             "value": "10"
                         },
                         "options": [
-                            {"text": {"type": "plain_text", "text": "5 MINUTES"}, "value": "5"},
-                            {"text": {"type": "plain_text", "text": "10 MINUTES"}, "value": "10"},
-                            {"text": {"type": "plain_text", "text": "15 MINUTES"}, "value": "15"}
+                            {"text": {"type": "plain_text", "text": "5 Minutes"}, "value": "5"},
+                            {"text": {"type": "plain_text", "text": "10 Minutes"}, "value": "10"},
+                            {"text": {"type": "plain_text", "text": "15 Minutes"}, "value": "15"}
                         ]
                     }
                 },
@@ -1502,11 +1498,11 @@ def handle_ready_command(ack, body, client):
                 user_id = None
 
             # Refund Karma on expiration
-            if "WATER" in current_text:
+            if "Water" in current_text:
                 refund_amount = 1
-            elif "DRIP" in current_text:
+            elif "Drip" in current_text:
                 refund_amount = 2
-            elif "ESPRESSO" in current_text:
+            elif "Espresso" in current_text:
                 refund_amount = 3
             else:
                 refund_amount = 1  # Fallback
@@ -1636,10 +1632,10 @@ def handle_runner_settings_modal(ack, body, client):
  
     # post terminal message with the selected time and capabilities
     pretty_caps = {
-        "water": "WATER",
-        "drip_coffee": "DRIP COFFEE",
-        "espresso_drinks": "ESPRESSO DRINKS",
-        "tea": "TEA"
+        "water": "Water",
+        "drip_coffee": "Drip Coffee",
+        "espresso_drinks": "Espresso Drinks",
+        "tea": "Tea"
     }
     can_make_str = ", ".join([pretty_caps.get(cap, cap.upper()) for cap in selected]) or "NONE"
     all_options = ["water", "tea", "drip_coffee", "espresso_drinks"]
