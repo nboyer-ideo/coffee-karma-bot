@@ -89,7 +89,7 @@ orders = {}
 
 
 
-from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma, get_runner_capabilities
+from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma, get_runner_capabilities, log_order_to_sheet
  
 def wrap_line(label, value, width=50):
     if not label and value:
@@ -548,7 +548,7 @@ def handle_claim_order(ack, body, client):
     import datetime
     from sheet import update_order_status
     order_id = body["actions"][0]["value"]
-    update_order_status(order_id, status="claimed", claimed_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    # Initial update removed; will update after order_data is populated
 
     global orders
     order_data = orders.get(order_id)
@@ -561,6 +561,12 @@ def handle_claim_order(ack, body, client):
             raw_text = blocks[0]["text"]["text"] if blocks else ""
             parsed = re.findall(r"\| (\w+)\s*:\s+(.*?)\s*\|", raw_text)
             order_data = {k.lower().replace(" ", "_"): v.strip() for k, v in parsed}
+            if "karma_cost" not in order_data:
+                match = re.search(r"\| REWARD\s*:\s+(\d+)", raw_text)
+                if match:
+                    order_data["karma_cost"] = int(match.group(1))
+                else:
+                    order_data["karma_cost"] = 1  # Fallback default
             if "from" in order_data:
                 from_val = order_data.pop("from")
                 order_data["requester_real_name"] = from_val
@@ -572,8 +578,22 @@ def handle_claim_order(ack, body, client):
             order_data["order_id"] = order_id
             order_data["runner_id"] = body["user"]["id"]
             order_data["runner_real_name"] = client.users_info(user=body["user"]["id"])["user"]["real_name"]
+            from random import choice
+            order_data["bonus_multiplier"] = choice(["", "🔥 2X", "💥 3X"])
+            karma_cost = int(order_data.get("karma_cost", 1))
+            order_data["karma_cost"] = karma_cost
+            multiplier = 1
+            if "2X" in order_data["bonus_multiplier"]:
+                multiplier = 2
+            elif "3X" in order_data["bonus_multiplier"]:
+                multiplier = 3
+            karma_earned = karma_cost * multiplier
+            order_data["runner_karma"] = add_karma(order_data["runner_id"], karma_earned)
             order_data["status"] = "claimed"
             order_data["time_claimed"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            if not order_data or order_data.get("requester_id") == "unknown":
+                from sheet import fetch_order_data
+                order_data = fetch_order_data(order_id)
         except Exception as e:
             print("⚠️ Failed to recover order_data from message:", e)
             order_data = {
@@ -600,6 +620,13 @@ def handle_claim_order(ack, body, client):
     channel = body.get("container", {}).get("channel_id")
     ts = body.get("container", {}).get("message_ts")
     if channel and ts:
+        update_order_status(
+            order_id,
+            status="claimed",
+            claimed_time=order_data["time_claimed"],
+            runner_id=order_data["runner_id"],
+            runner_name=order_data["runner_real_name"]
+        )
         safe_chat_update(client, channel, ts, "Order claimed", blocks)
 
     try:
@@ -612,6 +639,79 @@ def handle_claim_order(ack, body, client):
             client.chat_postMessage(channel=order_data["runner_id"], text="🛎️ You claimed a delivery. Hit 'Mark as Delivered' once it's dropped.")
     except Exception as e:
         print("⚠️ Failed to notify runner:", e)
+
+@app.action("mark_delivered")
+def handle_mark_delivered(ack, body, client):
+    ack()
+    import datetime
+    from sheet import update_order_status
+
+    order_id = body["actions"][0]["value"]
+    user_id = body["user"]["id"]
+    order_ts = body.get("container", {}).get("message_ts")
+    order_channel = body.get("container", {}).get("channel_id")
+
+    # Fallback: retrieve order_data from message if not in global `orders`
+    global orders
+    order_data = orders.get(order_id, {})
+
+    if not order_data:
+        current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+        blocks = current_message["messages"][0].get("blocks", [])
+        raw_text = blocks[0]["text"]["text"] if blocks else ""
+        parsed = re.findall(r"\| (\w+)\s*:\s+(.*?)\s*\|", raw_text)
+        order_data = {k.lower().replace(" ", "_"): v.strip() for k, v in parsed}
+        order_data["order_id"] = order_id
+        order_data["runner_id"] = user_id
+        try:
+            user_info = client.users_info(user=user_id)
+            order_data["runner_real_name"] = user_info["user"]["real_name"]
+        except:
+            order_data["runner_real_name"] = f"<@{user_id}>"
+
+    # Random bonus multiplier
+    from random import random
+    bonus_multiplier = ""
+    r = random()
+    if r < 0.1:
+        bonus_multiplier = "💥 3X"
+        multiplier = 3
+    elif r < 0.2:
+        bonus_multiplier = "🔥 2X"
+        multiplier = 2
+    else:
+        multiplier = 1
+
+    # Calculate final karma
+    karma_cost = int(order_data.get("karma_cost", 1))
+    total_karma = karma_cost * multiplier
+    from sheet import add_karma
+    runner_karma = add_karma(order_data["runner_id"], total_karma)
+
+    order_data.update({
+        "status": "delivered",
+        "time_delivered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "bonus_multiplier": bonus_multiplier,
+        "runner_karma": runner_karma,
+        "delivered_by": order_data.get("runner_real_name", f"<@{user_id}>")
+    })
+
+    blocks = format_order_message(order_data)
+    safe_chat_update(client, order_channel, order_ts, "Order delivered", blocks)
+
+    update_order_status(
+        order_id,
+        status=order_data["status"],
+        bonus_multiplier=order_data["bonus_multiplier"],
+        delivered_time=order_data["time_delivered"]
+    )
+
+    if multiplier > 1:
+        msg = f"{bonus_multiplier.split()[0]} bonus triggered. <@{user_id}> earned {multiplier}X karma on this run. respect."
+        try:
+            client.chat_postMessage(channel=order_channel, text=msg)
+        except Exception as e:
+            print("⚠️ Failed to post bonus message:", e)
 
 def update_ready_countdown(client, remaining, ts, channel, user_id, original_total_time):
     from sheet import get_runner_capabilities
@@ -757,8 +857,12 @@ def build_order_modal(trigger_id, runner_id=""):
                                 "value": "water"
                             },
                             {
-                                "text": {"type": "plain_text", "text": "Drip Coffee / Tea — 2 Karma"},
+                                "text": {"type": "plain_text", "text": "Drip Coffee — 2 Karma"},
                                 "value": "drip"
+                            },
+                            {
+                                "text": {"type": "plain_text", "text": "Tea — 2 Karma"},
+                                "value": "tea"
                             },
                             {
                                 "text": {"type": "plain_text", "text": "Espresso Drink (latte, cappuccino) — UNAVAILABLE ☕🚫"},
@@ -998,6 +1102,9 @@ def handle_modal_submission(ack, body, client):
         order_data["order_id"] = order_ts
         formatted_blocks = format_order_message(order_data)
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
+        # Only log the order if it hasn't been logged before.
+        if order_ts not in order_extras:
+            log_order_to_sheet(order_data)
         if not order_channel:
             order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
     else:
@@ -1155,6 +1262,7 @@ def handle_modal_submission(ack, body, client):
             )
             return
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
+        log_order_to_sheet(order_data)
         return
     else:
         formatted_blocks = format_order_message(order_data)

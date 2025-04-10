@@ -176,6 +176,11 @@ def mark_code_redeemed(code, user_id):
 
 def log_order_to_sheet(order_data):
     print("🟡 Starting log_order_to_sheet")
+    # Only log initial orders (status 'pending'); skip updates for claimed or delivered orders.
+    if order_data.get("status", "pending") != "pending":
+        print("ℹ️ Order status is not pending; skipping initial logging.")
+        return
+
     try:
         sheet = get_sheet()
         print("📝 Logging order data:", order_data)
@@ -305,4 +310,35 @@ def save_runner_capabilities(user_id, name, capabilities):
             worksheet.update_cell(i + 2, 5, json.dumps(capabilities))
             return
     worksheet.append_row([user_id, name, 3, get_title(3), json.dumps(capabilities)])
+
+def fetch_order_data(order_id):
+    try:
+        sheet = get_sheet()
+        worksheet = sheet.worksheet("Order Log")
+        data = worksheet.get_all_records()
+        for row in data:
+            if str(row.get("Order ID", "")).strip() == str(order_id).strip():
+                return {
+                    "order_id": row.get("Order ID", ""),
+                    "timestamp": row.get("Timestamp", ""),
+                    "initiated_by": row.get("Initiated By", ""),
+                    "requester_id": row.get("Requester ID", ""),
+                    "requester_real_name": row.get("Requester Name", ""),
+                    "runner_id": row.get("Runner ID", ""),
+                    "runner_name": row.get("Runner Name", ""),
+                    "recipient_id": row.get("Recipient ID", ""),
+                    "recipient_real_name": row.get("Recipient Name", ""),
+                    "drink": row.get("Drink", ""),
+                    "location": row.get("Location", ""),
+                    "notes": row.get("Notes", ""),
+                    "karma_cost": int(row.get("Karma Cost", 1)),
+                    "status": row.get("Status", ""),
+                    "bonus_multiplier": row.get("Bonus Multiplier", ""),
+                    "time_ordered": row.get("Ordered Time", ""),
+                    "time_claimed": row.get("Claimed Time", ""),
+                    "time_delivered": row.get("Delivered Time", ""),
+                }
+    except Exception as e:
+        print(f"⚠️ Failed to fetch order data from sheet for order_id {order_id}:", e)
+    return {}
 
