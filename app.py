@@ -125,29 +125,29 @@ def wrap_line(label, value, width=50):
 def terminal_box_line(text="", label=None, value=None, width=40, align="left", border=True):
     """
     General-purpose formatter for fixed-width terminal boxes.
-    Supports:
-    - plain text lines (centered or left)
-    - label/value pairs with alignment
-    - optional border padding
+    Ensures that the final output is always exactly `width` characters including borders.
     """
+    inner_width = width - 2  # for '|' borders on each side
+
     if label is not None and value is not None:
-        # Label/Value pair line
         label = label.rstrip(":").upper()
         label_prefix = f"{label}:"
         left = f"{label_prefix:<13} {value.upper()}"
         content = left if align == "label" else f"{label_prefix} {value.upper()}"
+        content = content[:inner_width].ljust(inner_width)
     else:
         content = text.upper()
-
-    if align == "center":
-        content = content.center(width - 4)  # 4 for borders and space padding
-    elif align == "left" and label is None:
-        content = f"{content:<{width - 4}}"
+        if align == "center":
+            content = content.center(inner_width)
+        elif align == "left":
+            content = content.ljust(inner_width)
+        else:
+            content = content[:inner_width].ljust(inner_width)
 
     if border:
-        return f"| {content} |"
+        return f"|{content}|"
     else:
-        return f"  {content}  "
+        return f" {content} "
 
 def wrap_line_runner(label, value, width=40):
     """
@@ -552,8 +552,8 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                         + "|         DRINK RUNNER AVAILABLE         |\n"
                         + "+----------------------------------------+\n"
                         + terminal_box_line(label="Runner", value=real_name.upper(), width=40, align="label") + "\n"
-                        + terminal_box_line(label="CAN MAKE:", value=can_make_str, width=40) + "\n"
-                        + terminal_box_line(label="CAN'T MAKE:", value=cannot_make_str, width=40) + "\n"
+                        + "\n".join(wrap_line_runner("CAN MAKE:", can_make_str, width=40)) + "\n"
+                        + "\n".join(wrap_line_runner("CAN'T MAKE:", cannot_make_str, width=40)) + "\n"
                         # Removed hardcoded status line
                         + "+----------------------------------------+\n"
                         + terminal_box_line(text=f"TIME LEFT ON SHIFT: {remaining} MINUTES", width=40, align="center") + "\n"
@@ -1404,8 +1404,8 @@ def handle_runner_settings_modal(ack, body, client):
     + "|         DRINK RUNNER AVAILABLE         |\n"
     + "+----------------------------------------+\n"
     + terminal_box_line(label="Runner", value=real_name.upper(), width=40, align="label") + "\n"
-    + terminal_box_line(label="CAN MAKE:", value=can_make_str, width=40) + "\n"
-    + terminal_box_line(label="CAN'T MAKE:", value=cannot_make_str, width=40) + "\n"
+    + "\n".join(wrap_line_runner("CAN MAKE:", can_make_str, width=40)) + "\n"
+    + "\n".join(wrap_line_runner("CAN'T MAKE:", cannot_make_str, width=40)) + "\n"
     + "+----------------------------------------+\n"
     + terminal_box_line(text=f"TIME LEFT ON SHIFT: {selected_time} MINUTES", width=40, align="center") + "\n"
     + terminal_box_line(text=progress_bar, width=40, align="center") + "\n"
