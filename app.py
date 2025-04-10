@@ -85,6 +85,7 @@ order_extras = {}
 countdown_timers = {}  # order_ts -> remaining minutes
 countdown_timers = {}
 runner_offer_claims = {}  # key: runner_id, value: user_id of matched requester (or None if still open)
+orders = {}
 
 
 
@@ -906,9 +907,8 @@ def handle_modal_submission(ack, body, client):
         return
 
     runner_id = body["view"].get("private_metadata", "")
-    order_id = f"{'runner' if runner_id else 'requester'}_{user_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
     order_data = {
-        "order_id": order_id,
+        "order_id": "",
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "initiated_by": "runner" if runner_id else "requester",
         "requester_id": user_id,
@@ -964,6 +964,7 @@ def handle_modal_submission(ack, body, client):
         )
         order_ts = posted["ts"]
         order_channel = posted["channel"]
+        order_data["order_id"] = order_ts
         formatted_blocks = format_order_message(order_data)
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
         if not order_channel:
@@ -976,6 +977,7 @@ def handle_modal_submission(ack, body, client):
         if not order_channel:
             print("⚠️ order_channel is missing. Trying to fall back from view or other message context.")
             order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")  # fallback to default channel
+        order_data["order_id"] = order_ts
 
     context_line = random.choice([
         "*☕ Caffeine + Chaos* — IDE☕O forever.",
