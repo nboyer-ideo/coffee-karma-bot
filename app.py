@@ -604,18 +604,15 @@ def handle_mark_delivered(ack, body, client):
     # Rely solely on fetch_order_data and Slack API lookups; fallback parsing removed.
     order_data = fetch_order_data(order_id)
 
-    # Random bonus multiplier
     from random import random
-    bonus_multiplier = ""
     r = random()
     if r < 0.1:
-        bonus_multiplier = "💥 3X"
         multiplier = 3
     elif r < 0.2:
-        bonus_multiplier = "🔥 2X"
         multiplier = 2
     else:
         multiplier = 1
+    bonus_multiplier = multiplier
 
     # Calculate final karma
     karma_cost = int(order_data.get("karma_cost", 1))
@@ -628,7 +625,7 @@ def handle_mark_delivered(ack, body, client):
         "time_delivered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "bonus_multiplier": bonus_multiplier,
         "runner_karma": runner_karma,
-        "delivered_by": order_data.get("runner_real_name", f"<@{user_id}>")
+        "delivered_by": order_data.get("runner_real_name") or order_data.get("runner_name") or f"<@{user_id}>"
     })
 
     blocks = format_order_message(order_data)
@@ -642,7 +639,7 @@ def handle_mark_delivered(ack, body, client):
     )
 
     if multiplier > 1:
-        msg = f"{bonus_multiplier.split()[0]} bonus triggered. <@{user_id}> earned {multiplier}X karma on this run. respect."
+        msg = f"bonus triggered. <@{user_id}> earned {multiplier}x karma on this run. respect."
         try:
             client.chat_postMessage(channel=order_channel, text=msg)
         except Exception as e:
