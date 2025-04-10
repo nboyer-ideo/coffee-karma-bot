@@ -126,13 +126,14 @@ def box_line(text="", label=None, value=None, width=42, align="left"):
     """
     Unified function for formatting boxed lines.
     Handles:
-    - Plain text (centered/left/right)
-    - Label: Value with multi-line wrapping
-    Ensures every line is exactly `width` characters including borders.
+      - Plain text (centered/left/right)
+      - Label: Value with multi-line wrapping.
+    Ensures every line is exactly `width` characters including the side borders.
     """
     lines = []
-    content_width = width - 2  # exclude the '|' borders
-    label_field = 13
+    # The interior width between the vertical borders:
+    content_width = width - 2  
+    label_field = 13  # fixed width for the label field
 
     if label is None and value is None:
         text = text.upper()
@@ -144,29 +145,49 @@ def box_line(text="", label=None, value=None, width=42, align="left"):
             content = text.ljust(content_width)
         return [f"|{content}|"]
 
+    # Process label: remove any trailing colon and uppercase it.
     label = label.rstrip(":").upper()
+    # For our special labels, ensure a colon is appended.
+    # (You can modify this list if there are more labels that need colons.)
+    if label in ["RUNNER", "CAN MAKE", "CAN'T MAKE"]:
+        label = f"{label}:"
+    # Otherwise, if a label is provided but without colon, append one:
+    elif label and not label.endswith(":"):
+        label = f"{label}:"
+    
     value = value.upper()
     words = value.split()
-    label_prefix = f"{label:<{label_field}}"
-    indent = " " * label_field
+    
+    # Create the prefix: starting with a left border, a space, and a label padded to 'label_field'
+    label_prefix = f"| {label:<{label_field}}"
+    # Calculate available space for the value portion:
+    available_for_value = content_width - len(label_prefix)
+    # Also, subsequent lines (wrapped lines) should start with "| " plus spaces equal
+    # to label_field (to align with the first line):
+    indent = " " * (label_field + 2)  # 2 characters for "| "
+    
     current_line = ""
-
     for word in words:
-        if len(current_line + (" " if current_line else "") + word) <= content_width - label_field:
-            current_line += (" " if current_line else "") + word
+        # Consider adding a space before the new word if not the first word.
+        if current_line:
+            test_line = current_line + " " + word
+        else:
+            test_line = word
+        if len(test_line) <= available_for_value:
+            current_line = test_line
         else:
             if not lines:
-                lines.append(f"|{label_prefix}{current_line:<{content_width - label_field}}|")
+                # first line uses label_prefix
+                lines.append(f"{label_prefix}{current_line:<{available_for_value}}|")
             else:
-                lines.append(f"|{indent}{current_line:<{content_width - label_field}}|")
+                # wrapped lines use indent prefixed with "| "
+                lines.append(f"| {indent}{current_line:<{available_for_value}}|")
             current_line = word
-
     if current_line:
         if not lines:
-            lines.append(f"|{label_prefix}{current_line:<{content_width - label_field}}|")
+            lines.append(f"{label_prefix}{current_line:<{available_for_value}}|")
         else:
-            lines.append(f"|{indent}{current_line:<{content_width - label_field}}|")
-
+            lines.append(f"| {indent}{current_line:<{available_for_value}}|")
     return lines
 
 def wrap_line_runner(label, value, width=40):
@@ -577,7 +598,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                         + "+----------------------------------------+\n"
                         + "|         DRINK RUNNER AVAILABLE         |\n"
                         + "+----------------------------------------+\n"
-                        + "\n".join(box_line(label="Runner", value=real_name.upper(), width=42)) + "\n"
+                        + "\n".join(box_line(label="RUNNER:", value=real_name.upper(), width=42)) + "\n"
                         + "\n".join(box_line(label="CAN MAKE:", value=can_make_str, width=42)) + "\n"
                         + "\n".join(box_line(label="CAN'T MAKE:", value=cannot_make_str, width=42)) + "\n"
                         + "+----------------------------------------+\n"
@@ -1424,7 +1445,7 @@ def handle_runner_settings_modal(ack, body, client):
         "```+----------------------------------------+\n"
         + "|         DRINK RUNNER AVAILABLE         |\n"
         + "+----------------------------------------+\n"
-        + "\n".join(box_line(label="Runner:", value=real_name.upper(), width=42)) + "\n"
+        + "\n".join(box_line(label="RUNNER:", value=real_name.upper(), width=42)) + "\n"
         + "\n".join(box_line(label="CAN MAKE:", value=can_make_str, width=42)) + "\n"
         + "\n".join(box_line(label="CAN'T MAKE:", value=cannot_make_str, width=42)) + "\n"
         + "+----------------------------------------+\n"
