@@ -89,7 +89,7 @@ orders = {}
 
 
 
-from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma, get_runner_capabilities, log_order_to_sheet
+from sheet import add_karma, get_karma, get_leaderboard, ensure_user, deduct_karma, get_runner_capabilities, log_order_to_sheet, fetch_order_data
  
 def wrap_line(label, value, width=50):
     if not label and value:
