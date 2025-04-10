@@ -122,63 +122,89 @@ def wrap_line(label, value, width=50):
 
     return wrapped_lines
 
-def terminal_box_line(text="", label=None, value=None, width=40, align="left", border=True):
+def box_line(text="", label=None, value=None, width=40, align="left"):
     """
-    General-purpose formatter for fixed-width terminal boxes.
-    Ensures that the final output is always exactly `width` characters including borders.
+    Unified function for formatting boxed lines.
+    Handles:
+    - Plain text (centered/left/right)
+    - Label: Value with multi-line wrapping
+    Always outputs lines that are exactly `width` characters wide.
     """
-    inner_width = width - 2  # for '|' borders on each side
+    lines = []
+    border_space = width - 3  # for '| ' and '|'
+    label_field = 13
 
-    if label is not None and value is not None:
-        label = label.rstrip(":").upper()
-        label_prefix = f"{label}:"
-        left = f"{label_prefix:<13} {value.upper()}"
-        content = left if align == "label" else f"{label_prefix} {value.upper()}"
-        content = content[:inner_width].ljust(inner_width)
-    else:
-        content = text.upper()
+    if label is None and value is None:
+        text = text.upper()
         if align == "center":
-            content = content.center(inner_width)
-        elif align == "left":
-            content = content.ljust(inner_width)
+            content = text.center(border_space)
+        elif align == "right":
+            content = text.rjust(border_space)
         else:
-            content = content[:inner_width].ljust(inner_width)
+            content = text.ljust(border_space)
+        return [f"| {content} |"]
 
-    if border:
-        return f"|{content}|"
-    else:
-        return f" {content} "
+    label = label.rstrip(":").upper()
+    value = value.upper()
+    words = value.split()
+    label_prefix = f"{label:<{label_field}}"
+    indent = " " * label_field
+    current_line = ""
+
+    for word in words:
+        if len(current_line + (" " if current_line else "") + word) <= border_space - label_field:
+            current_line += (" " if current_line else "") + word
+        else:
+            if not lines:
+                lines.append(f"| {label_prefix}{current_line:<{border_space - label_field}} |")
+            else:
+                lines.append(f"| {indent}{current_line:<{border_space - label_field}} |")
+            current_line = word
+
+    if current_line:
+        if not lines:
+            lines.append(f"| {label_prefix}{current_line:<{border_space - label_field}} |")
+        else:
+            lines.append(f"| {indent}{current_line:<{border_space - label_field}} |")
+
+    return lines
 
 def wrap_line_runner(label, value, width=40):
     """
     Wrap a label and value to fit in a fixed-width terminal-style box (40 char wide).
-    Preserves left-alignment of values under the label.
+    Preserves left-alignment of values under the label and ensures consistent line lengths.
     """
     lines = []
     label = label.rstrip(":").upper()
     value = value.upper()
  
-    label_prefix = f"| {label:<13}"
-    label_space = len(label_prefix)
-    available_space = width - label_space - 1  # subtract for trailing '|'
+    # Space for content between borders: width - 2 (for '|') - 1 space after '|' = width - 3
+    total_content_width = width - 3
+    label_prefix = f"{label:<11}"  # Label gets 11 characters
+    indent = " " * 13  # 2 spaces for '| ' plus 11-character label
+    line_prefix = "| "
+ 
     words = value.split()
     current_line = ""
  
     for word in words:
-        if len(current_line + (" " if current_line else "") + word) <= available_space:
+        if len(current_line + (" " if current_line else "") + word) <= total_content_width - len(label_prefix):
             current_line += (" " if current_line else "") + word
         else:
             if not lines:
-                lines.append(f"{label_prefix} {current_line:<{available_space - 1}} |")
+                line = f"{line_prefix}{label_prefix}{current_line:<{total_content_width - len(label_prefix)}} |"
             else:
-                lines.append(f"| {'':<13} {current_line:<{available_space - 1}} |")
+                line = f"{line_prefix}{indent}{current_line:<{total_content_width - len(indent)}} |"
+            lines.append(line)
             current_line = word
  
+    # Add final line
     if current_line:
         if not lines:
-            lines.append(f"{label_prefix} {current_line:<{available_space - 1}} |")
+            line = f"{line_prefix}{label_prefix}{current_line:<{total_content_width - len(label_prefix)}} |"
         else:
-            lines.append(f"| {'':<13} {current_line:<{available_space - 1}} |")
+            line = f"{line_prefix}{indent}{current_line:<{total_content_width - len(indent)}} |"
+        lines.append(line)
  
     return lines
 
@@ -542,29 +568,27 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         empty_blocks = total_blocks - filled_blocks
         progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
 
-        blocks = [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": (
-                        "```+----------------------------------------+\n"
-                        + "|         DRINK RUNNER AVAILABLE         |\n"
-                        + "+----------------------------------------+\n"
-                        + terminal_box_line(label="Runner", value=real_name.upper(), width=40, align="label") + "\n"
-                        + "\n".join(wrap_line_runner("CAN MAKE:", can_make_str, width=40)) + "\n"
-                        + "\n".join(wrap_line_runner("CAN'T MAKE:", cannot_make_str, width=40)) + "\n"
-                        # Removed hardcoded status line
-                        + "+----------------------------------------+\n"
-                        + terminal_box_line(text=f"TIME LEFT ON SHIFT: {remaining} MINUTES", width=40, align="center") + "\n"
-                        + terminal_box_line(text=progress_bar, width=40, align="center") + "\n"
-                        + terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
-                        + terminal_box_line(text="↓ CLICK BELOW TO PLACE AN ORDER ↓", width=40, align="center") + "\n"
-                        + terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
-                        + "+----------------------------------------+```"
-                    )
-                }
-            },
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "```"
+                    + "+----------------------------------------+\n"
+                    + "|         DRINK RUNNER AVAILABLE         |\n"
+                    + "+----------------------------------------+\n"
+                    + "\n".join(box_line(label=\"Runner\", value=real_name.upper(), width=40)) + "\n"
+                    + "\n".join(box_line(label=\"CAN MAKE:\", value=can_make_str, width=40)) + "\n"
+                    + "\n".join(box_line(label=\"CAN'T MAKE:\", value=cannot_make_str, width=40)) + "\n"
+                    + "+----------------------------------------+\n"
+                    + "\n".join(box_line(text=f\"TIME LEFT ON SHIFT: {remaining} MINUTES\", width=40, align=\"center\")) + "\n"
+                    + "\n".join(box_line(text=progress_bar, width=40, align=\"center\")) + "\n"
+                    + "\n".join(box_line(text=\"------------------------------------\", width=40, align=\"center\")) + "\n"
+                    + "\n".join(box_line(text=\"↓ CLICK BELOW TO PLACE AN ORDER ↓\", width=40, align=\"center\")) + "\n"
+                    + "\n".join(box_line(text=\"------------------------------------\", width=40, align=\"center\")) + "\n"
+                    + "+----------------------------------------+```"
+            }
+        },
             {
                 "type": "actions",
                 "elements": [
