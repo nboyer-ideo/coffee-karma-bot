@@ -280,11 +280,12 @@ def format_order_message(order_data):
         lines.append(f'| STATUS :      COMPLETED {" " * 22} |')
         lines.append(f'|               DELIVERED BY {order_data["delivered_by"].upper():<19} |')
         lines.append("| ---------------------------------------------- |")
-        karma_line = f"+{order_data['bonus_multiplier']} KARMA EARNED — TOTAL: {order_data['runner_karma']}"
+        earned = order_data.get('karma_cost', 1) * int(order_data.get('bonus_multiplier', 1))
+        total = order_data.get('runner_karma', 0)
+        karma_line = f"+{earned} Karma Earned — Total: {total} Karma"
         total_width = 46
-        left_padding = (total_width - len(karma_line)) // 2
-        right_padding = total_width - len(karma_line) - left_padding
-        lines.append(f"| {' ' * left_padding}{karma_line}{' ' * right_padding} |")
+        karma_line_centered = karma_line.center(total_width)
+        lines.append(f"| {karma_line_centered} |")
         lines.append("| ---------------------------------------------- |")
     elif order_data.get("claimed_by"):
         claimed_name = order_data.get("runner_real_name") or order_data.get("claimed_by", "")
@@ -445,12 +446,15 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print(f"🥤 Drink: {drink}, 📍 Location: {location}, 📝 Notes: {notes}, 💰 Karma Cost: {karma_cost}")
 
         extras = order_extras.get(order_ts)
+        print(f"🧪 Debug: order_extras for {order_ts} = {extras}")
         print(f"📦 order_extras for {order_ts}: {extras}")
         sys.stdout.flush()
 
         if not extras or not extras.get("active", True):
             print(f"⛔ Countdown aborted — order_extras missing or marked inactive for {order_ts}")
             return
+        else:
+            print(f"✅ Countdown proceeding for {order_ts}, remaining: {remaining}")
 
         current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
         order_data = {
@@ -497,6 +501,14 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", updated_blocks)
         print("✅ Countdown block update pushed to Slack")
         print(f"📣 client.chat_update call completed for order {order_ts}")
+        if remaining <= 1:
+            from sheet import add_karma
+            add_karma(user_id, karma_cost)
+            client.chat_postMessage(
+                channel=user_id,
+                text="¤ ORDER UNCLAIMED. KARMA RESTORED TO ORIGIN."
+            )
+            safe_chat_update(client, order_channel, order_ts, f"‡ ORDER FROM <@{user_id}> EXPIRED — NO CLAIMANT AROSE.", [])
  
         if remaining > 1 and extras.get("active", True):
             print(f"🕒 Scheduling next countdown tick — remaining: {remaining - 1}")
@@ -547,8 +559,14 @@ def handle_claim_order(ack, body, client):
     from sheet import fetch_order_data
     order_data = fetch_order_data(order_id)
     order_data["claimed_by"] = order_data.get("runner_real_name")
-
     runner_id = body["user"]["id"]
+    if order_data["requester_id"] == runner_id and runner_id != "U02EY5S5J0M":
+        client.chat_postEphemeral(
+            channel=runner_id,
+            user=runner_id,
+            text="§ SELF-CLAIM BLOCKED. WAIT FOR ANOTHER TO RISE."
+        )
+        return
     order_data["runner_id"] = runner_id
     try:
         user_info = client.users_info(user=runner_id)
@@ -580,13 +598,13 @@ def handle_claim_order(ack, body, client):
         safe_chat_update(client, channel, ts, "Order claimed", blocks)
 
     try:
-        client.chat_postMessage(channel=order_data["requester_id"], text="📬 Your order has been claimed. Hang tight — delivery en route.")
+        client.chat_postMessage(channel=order_data["requester_id"], text="¤ ORDER CLAIMED. DELIVERY EN ROUTE.")
     except Exception as e:
         print("⚠️ Failed to notify requester:", e)
 
     try:
         if order_data.get("runner_id"):
-            client.chat_postMessage(channel=order_data["runner_id"], text="🛎️ You claimed a delivery. Hit 'Mark as Delivered' once it's dropped.")
+            client.chat_postMessage(channel=order_data["runner_id"], text="¤ DELIVERY CLAIMED. MARK AS DELIVERED WHEN DROPPED.")
     except Exception as e:
         print("⚠️ Failed to notify runner:", e)
 
@@ -617,14 +635,21 @@ def handle_mark_delivered(ack, body, client):
     # Calculate final karma
     karma_cost = int(order_data.get("karma_cost", 1))
     total_karma = karma_cost * multiplier
-    from sheet import add_karma
+    from sheet import add_karma, get_title
     runner_karma = add_karma(order_data["runner_id"], total_karma)
+    from sheet import get_title
+    title = get_title(runner_karma)
+    client.chat_postMessage(
+        channel=order_data["runner_id"],
+        text=f"¤ DELIVERY LOGGED — +{total_karma} KARMA GRANTED. TITLE: {title.upper()}."
+    )
 
     order_data.update({
         "status": "delivered",
         "time_delivered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "bonus_multiplier": bonus_multiplier,
         "runner_karma": runner_karma,
+        "runner_id": user_id,
         "delivered_by": order_data.get("runner_real_name") or order_data.get("runner_name") or f"<@{user_id}>"
     })
 
@@ -637,13 +662,40 @@ def handle_mark_delivered(ack, body, client):
         bonus_multiplier=order_data["bonus_multiplier"],
         delivered_time=order_data["time_delivered"]
     )
+    order_data["status"] = "delivered"
 
     if multiplier > 1:
-        msg = f"bonus triggered. <@{user_id}> earned {multiplier}x karma on this run. respect."
+        msg = f"<@{user_id}> earned {multiplier}x karma on this run."
         try:
             client.chat_postMessage(channel=order_channel, text=msg)
         except Exception as e:
             print("⚠️ Failed to post bonus message:", e)
+
+@app.action("cancel_order")
+def handle_cancel_order(ack, body, client):
+    ack()
+    try:
+        value = body["actions"][0]["value"]
+        order_id, requester_id = value.split("|")
+        ts = body["container"]["message_ts"]
+        channel = body["container"]["channel_id"]
+
+        cancel_text = f"Order canceled by <@{requester_id}>"
+        safe_chat_update(client, channel, ts, cancel_text, [])
+
+        from sheet import update_order_status
+        update_order_status(order_id, status="canceled")
+        from sheet import fetch_order_data, add_karma
+        order_data = fetch_order_data(order_id)
+        refund_amount = order_data.get("karma_cost", 1)
+        add_karma(requester_id, refund_amount)
+
+        client.chat_postMessage(
+            channel=requester_id,
+            text="§ ORDER CANCELED. KARMA RETURNED TO SOURCE."
+        )
+    except Exception as e:
+        print("⚠️ Failed to cancel order:", e)
 
 def update_ready_countdown(client, remaining, ts, channel, user_id, original_total_time):
     from sheet import get_runner_capabilities
@@ -667,7 +719,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                 client,
                 channel,
                 ts,
-                f"<@{user_id}> is ready to deliver — {remaining} minutes left.",
+                f"<@{user_id}> IS READY TO DELIVER — {remaining} MINUTES LEFT.",
                 []
             )
             return
@@ -730,7 +782,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
             client,
             channel,
             ts,
-            f"<@{user_id}> is ready to deliver — {remaining} minutes left.",
+            f"<@{user_id}> IS READY TO DELIVER — {remaining} MINUTES LEFT.",
             blocks
         )
 
@@ -770,34 +822,34 @@ def build_order_modal(trigger_id, runner_id=""):
         "view": {
             "type": "modal",
             "callback_id": "koffee_request_modal",
-            "title": {"type": "plain_text", "text": "Place Your Order"},
-            "submit": {"type": "plain_text", "text": "Drop It"},
-            "close": {"type": "plain_text", "text": "Nevermind"},
+            "title": {"type": "plain_text", "text": "INITIATE A DROP"},
+            "submit": {"type": "plain_text", "text": "DEPLOY"},
+            "close": {"type": "plain_text", "text": "ABORT"},
             "private_metadata": runner_id,
             "blocks": [
-                {
+                { 
                     "type": "input",
                     "block_id": "drink_category",
-                    "label": {"type": "plain_text", "text": "Choose your drink category"},
+                    "label": {"type": "plain_text", "text": "SELECT YOUR FUEL"},
                     "element": {
                         "type": "static_select",
                         "action_id": "input",
-                        "placeholder": {"type": "plain_text", "text": "Pick your poison"},
+                        "placeholder": {"type": "plain_text", "text": "CHOOSE A BREW"},
                         "options": [
                             {
-                                "text": {"type": "plain_text", "text": "Water (still/sparkling) — 1 Karma"},
+                                "text": {"type": "plain_text", "text": "WATER (STILL/SPARKLING) — 1 KARMA"},
                                 "value": "water"
                             },
                             {
-                                "text": {"type": "plain_text", "text": "Drip Coffee — 2 Karma"},
+                                "text": {"type": "plain_text", "text": "DRIP COFFEE — 2 KARMA"},
                                 "value": "drip"
                             },
                             {
-                                "text": {"type": "plain_text", "text": "Tea — 2 Karma"},
+                                "text": {"type": "plain_text", "text": "TEA — 2 KARMA"},
                                 "value": "tea"
                             },
                             {
-                                "text": {"type": "plain_text", "text": "Espresso Drink (latte, cappuccino) — UNAVAILABLE ☕🚫"},
+                                "text": {"type": "plain_text", "text": "ESPRESSO DRINKS — UNAVAILABLE Ø"},
                                 "value": "espresso"
                             }
                         ]
@@ -806,17 +858,17 @@ def build_order_modal(trigger_id, runner_id=""):
                 {
                     "type": "input",
                     "block_id": "drink_detail",
-                    "label": {"type": "plain_text", "text": "What exactly do you want?"},
+                    "label": {"type": "plain_text", "text": "SPECIFY THE BREW"},
                     "element": {"type": "plain_text_input", "action_id": "input", "max_length": 30}
                 },
                 {
                     "type": "section",
                     "block_id": "location",
-                    "text": {"type": "mrkdwn", "text": "*Where’s it going?*"},
+                    "text": {"type": "mrkdwn", "text": "*DROP LOCATION?*"},
                     "accessory": {
                         "type": "static_select",
                         "action_id": "location_select",
-                        "placeholder": {"type": "plain_text", "text": "Select a location"},
+                        "placeholder": {"type": "plain_text", "text": "CHOOSE A SITE"},
                         "options": [ 
                             {"text": {"type": "plain_text", "text": "4A"}, "value": "4A"},
                             {"text": {"type": "plain_text", "text": "4B"}, "value": "4B"},
@@ -897,23 +949,49 @@ def build_order_modal(trigger_id, runner_id=""):
                     "type": "input",
                     "block_id": "gift_to",
                     "optional": True,
-                    "label": {"type": "plain_text", "text": "Gift to (optional)"},
+                    "label": {"type": "plain_text", "text": "SEND TO (OPTIONAL)"},
                     "element": {
                         "type": "users_select",
                         "action_id": "input",
-                        "placeholder": {"type": "plain_text", "text": "Choose a coworker"}
+                        "placeholder": {"type": "plain_text", "text": "SELECT RECIPIENT"}
                     }
                 },
                 {
                     "type": "input",
                     "block_id": "notes",
                     "optional": True,
-                    "label": {"type": "plain_text", "text": "Extra details (if it matters)"},
+                    "label": {"type": "plain_text", "text": "NOTES (IF CRUCIAL)"},
                     "element": {"type": "plain_text_input", "action_id": "input", "max_length": 30}
                 }
             ]
         }
     }
+
+@app.command("/leaderboard")
+def handle_leaderboard(ack, body, client):
+    ack()
+    from sheet import get_leaderboard, get_title
+    leaderboard = get_leaderboard()
+
+    lines = []
+    lines.append("+===================[ THE BREW SCROLL ]===================+")
+    lines.append("| RANK |        NAME        | KARMA |         TITLE       |")
+    lines.append("|------|--------------------|-------|---------------------|")
+    for i, entry in enumerate(leaderboard):
+        name = entry.get("Name", f"<@{entry['Slack ID']}>")[:20].ljust(20)
+        karma = str(entry.get("Karma", 0)).rjust(3)
+        title = get_title(int(entry.get("Karma", 0))).ljust(21)
+        lines.append(f"|  {i+1:<3} | {name} |  {karma} | {title} |")
+    lines.append("+=========================================================+")
+    lines.append("|      /ORDER     /KARMA     /LEADERBOARD     /REDEEM     |")
+    lines.append("+=========================================================+")
+    leaderboard_text = "```" + "\n".join(lines) + "```"
+
+    client.chat_postEphemeral(
+        channel=body["channel_id"],
+        user=body["user_id"],
+        text=leaderboard_text
+    )
 
 @app.command("/order")
 def handle_order(ack, body, client):
@@ -922,6 +1000,16 @@ def handle_order(ack, body, client):
         trigger_id=body["trigger_id"],
         view=build_order_modal(body["trigger_id"])["view"]
     )
+
+@app.command("/karma")
+def handle_karma(ack, body, client):
+    ack()
+    from sheet import get_karma, get_title
+    user_id = body["user_id"]
+    points = get_karma(user_id)
+    title = get_title(points)
+    message = f"¤ BALANCE: {points} KARMA — TITLE: {title.upper()}."
+    client.chat_postEphemeral(channel=body["channel_id"], user=user_id, text=message)
 
 @app.view("koffee_request_modal")
 def handle_modal_submission(ack, body, client):
@@ -937,7 +1025,7 @@ def handle_modal_submission(ack, body, client):
         client.chat_postEphemeral(
             channel=user_id,
             user=user_id,
-            text="🚫 Espresso orders are temporarily unavailable — the machine's down. Choose something else while we fix it up."
+            text="Ø ESPRESSO UNAVAILABLE. MACHINE FAILURE. CHOOSE ANOTHER BREW."
         )
         print("❌ Espresso order blocked due to machine downtime.")
         print(f"⚠️ BLOCKED ORDER — {user_id} tried to order espresso while machine is down.")
@@ -969,7 +1057,7 @@ def handle_modal_submission(ack, body, client):
         client.chat_postEphemeral(
             channel=user_id,
             user=user_id,
-            text="🚫 You don't have enough Koffee Karma to place this order. Deliver drinks to earn more."
+            text="§ INSUFFICIENT KARMA. DELIVER DRINKS TO RAISE YOUR STANDING."
         )
         return
 
@@ -1116,7 +1204,7 @@ def handle_modal_submission(ack, body, client):
         client.chat_postEphemeral(
             channel=user_id,
             user=user_id,
-            text="🚨 Modal submitted, but we couldn’t find the original `/ready` message to update. Try again?"
+            text="‡ MODAL ERROR. ORIGINAL `/READY` MESSAGE NOT FOUND. TRY AGAIN."
         )
         print("🚨 [MODAL SUBMIT] Fallback failed — cannot update message.")
         return
@@ -1137,14 +1225,14 @@ def handle_modal_submission(ack, body, client):
             client.chat_postEphemeral(
                 channel=user_id,
                 user=user_id,
-                text="❌ That runner has already been matched with another order. Try again later."
+                text="‡ TOO LATE. THIS RUNNER IS ALREADY BOUND TO ANOTHER."
             )
             return
         runner_offer_claims[order_data["runner_id"]] = user_id
         try:
             client.chat_postMessage(
                 channel=order_data["runner_id"],
-                text="📬 Someone just responded to your `/ready` post. You’ve got a mission. Scope the thread for details."
+                text="¤ RUNNER CALL ANSWERED. MISSION INBOUND."
             )
         except Exception as e:
             print("⚠️ Failed to notify runner:", e)
@@ -1190,7 +1278,7 @@ def handle_modal_submission(ack, body, client):
             client.chat_postEphemeral(
                 channel=user_id,
                 user=user_id,
-                text="🚨 Modal submitted, but we couldn’t find the original `/ready` message to update."
+            text="‡ MODAL ERROR. ORIGINAL `/READY` MESSAGE NOT FOUND. TRY AGAIN."
             )
             return
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
@@ -1224,10 +1312,10 @@ def handle_ready_command(ack, body, client):
     ack()
     user_id = body["user_id"]
     cap_options = [
-        {"text": {"type": "plain_text", "text": "Water"}, "value": "water"},
-        {"text": {"type": "plain_text", "text": "Tea"}, "value": "tea"},
-        {"text": {"type": "plain_text", "text": "Drip Coffee"}, "value": "drip_coffee"},
-        {"text": {"type": "plain_text", "text": "Espresso Drinks"}, "value": "espresso_drinks"}
+        {"text": {"type": "plain_text", "text": "WATER"}, "value": "water"},
+        {"text": {"type": "plain_text", "text": "TEA"}, "value": "tea"},
+        {"text": {"type": "plain_text", "text": "DRIP COFFEE"}, "value": "drip_coffee"},
+        {"text": {"type": "plain_text", "text": "ESPRESSO DRINKS"}, "value": "espresso_drinks"}
     ]
     runner_capabilities = get_runner_capabilities(user_id)
     raw_caps = runner_capabilities.get("Capabilities", [])
@@ -1344,33 +1432,33 @@ def handle_ready_command(ack, body, client):
         view={
             "type": "modal",
             "callback_id": "runner_settings_modal",
-            "title": {"type": "plain_text", "text": "Runner Availability"},
-            "submit": {"type": "plain_text", "text": "Go Live"},
-            "close": {"type": "plain_text", "text": "Cancel"},
+            "title": {"type": "plain_text", "text": "DECLARE RUNNER STATUS"},
+            "submit": {"type": "plain_text", "text": "ENGAGE"},
+            "close": {"type": "plain_text", "text": "ABORT"},
             "blocks": [
                 {
                     "type": "input",
                     "block_id": "time_available",
-                    "label": {"type": "plain_text", "text": "How much time do you have?"},
+                    "label": {"type": "plain_text", "text": "SHIFT DURATION?"},
                     "element": {
                         "type": "static_select",
                         "action_id": "input",
-                        "placeholder": {"type": "plain_text", "text": "Select time"},
+                        "placeholder": {"type": "plain_text", "text": "CHOOSE LENGTH"},
                         "initial_option": {
-                            "text": {"type": "plain_text", "text": "10 minutes"},
+                            "text": {"type": "plain_text", "text": "10 MINUTES"},
                             "value": "10"
                         },
                         "options": [
-                            {"text": {"type": "plain_text", "text": "5 minutes"}, "value": "5"},
-                            {"text": {"type": "plain_text", "text": "10 minutes"}, "value": "10"},
-                            {"text": {"type": "plain_text", "text": "15 minutes"}, "value": "15"}
+                            {"text": {"type": "plain_text", "text": "5 MINUTES"}, "value": "5"},
+                            {"text": {"type": "plain_text", "text": "10 MINUTES"}, "value": "10"},
+                            {"text": {"type": "plain_text", "text": "15 MINUTES"}, "value": "15"}
                         ]
                     }
                 },
                 {
                     "type": "input",
                     "block_id": "capabilities",
-                    "label": {"type": "plain_text", "text": "Drinks you can make"},
+                    "label": {"type": "plain_text", "text": "MARK YOUR CAPABILITIES"},
                     "element": {
                         "type": "checkboxes",
                         "action_id": "input",
@@ -1398,11 +1486,11 @@ def handle_ready_command(ack, body, client):
                 client,
                 order_channel,
                 order_ts,
-                "❌ *Expired.* No one stepped up.",
+                "‡ DROP EXPIRED. NO CLAIMANT AROSE.",
                 [
                     {
                         "type": "section",
-                        "text": {"type": "mrkdwn", "text": "❌ *Expired.* No one stepped up."}
+                        "text": {"type": "mrkdwn", "text": "‡ DROP EXPIRED. NO CLAIMANT AROSE."}
                     }
                 ]
             )
@@ -1414,11 +1502,11 @@ def handle_ready_command(ack, body, client):
                 user_id = None
 
             # Refund Karma on expiration
-            if "Water" in current_text:
+            if "WATER" in current_text:
                 refund_amount = 1
-            elif "Drip" in current_text:
+            elif "DRIP" in current_text:
                 refund_amount = 2
-            elif "Espresso" in current_text:
+            elif "ESPRESSO" in current_text:
                 refund_amount = 3
             else:
                 refund_amount = 1  # Fallback
@@ -1428,7 +1516,7 @@ def handle_ready_command(ack, body, client):
                 print(f"📬 Sending DM to user_id: {user_id} with message: 🌀 Your order expired. {refund_amount} Karma refunded. Balance restored.")
                 client.chat_postMessage(
                     channel=user_id,
-                    text=f"🌀 Your order expired. {refund_amount} Karma refunded. Balance restored."
+                    text=f"¤ ORDER EXPIRED. +{refund_amount} KARMA RETURNED TO YOUR BALANCE."
                 )
             from sheet import update_order_status
             update_order_status(order_ts, status="expired")

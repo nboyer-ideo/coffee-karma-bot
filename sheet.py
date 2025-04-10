@@ -113,6 +113,44 @@ def ensure_user(user_id):
     user_info = slack_client.users_info(user=user_id)
     real_name = user_info["user"]["real_name"]
     worksheet.append_row([user_id, real_name, 3, get_title(3)])
+    from slack_sdk import WebClient
+    slack_token = os.environ.get("SLACK_BOT_TOKEN")
+    slack_client = WebClient(token=slack_token)
+    
+    welcome_message = (
+        "¤ A NEW VESSEL JOINS THE ORDER.\n"
+        "YOUR STARTING BALANCE: 3 KARMA\n"
+        "YOUR RANK: THE INITIATE\n\n"
+        "TO PARTICIPATE IN THE RITUALS:\n\n"
+        "1. TYPE \"/\" IN THE #KOFFEE-KARMA-SF CHANNEL.\n"
+        "2. SELECT ONE OF THE COMMANDS BELOW.\n"
+        "3. HIT ENTER TO ACTIVATE THE COMMAND.\n\n"
+        "`/ORDER` — SUMMON YOUR DRINK\n"
+        "`/RUNNER` — PLEDGE TO DELIVER\n"
+        "`/KARMA` — CHECK YOUR PATH\n"
+        "`/REDEEM` — ACTIVATE CODES\n"
+        "`/LEADERBOARD` — WITNESS THE RANKINGS\n\n"
+        "THE CAFÉ WATCHES."
+    )
+    
+    slack_client.chat_postMessage(channel=user_id, text=welcome_message)
+    public_welcome_templates = [
+        "§ <@{user}> JOINED THE REBELLION. BREW RESPONSIBLY.\nUSE `/ORDER` TO REQUEST. `/RUNNER` TO OFFER.",
+        "¤ NEW OPERATIVE DETECTED: <@{user}>\nRUN A DROP WITH `/ORDER` OR OFFER TO DELIVER WITH `/RUNNER`.",
+        "‡ TRANSMISSION INBOUND — <@{user}> ENTERS THE GRID.\nKICK THINGS OFF: `/ORDER` OR `/RUNNER` TO VOLUNTEER.",
+        ":: ALERT :: <@{user}> HAS ENTERED THE CYCLE.\nINITIATE CONTACT VIA `/ORDER` OR OFFER WITH `/RUNNER`.",
+        "§ THE ORDER GROWS — <@{user}> NOW AMONG US.\nUSE `/ORDER` TO SUMMON. `/RUNNER` TO VOLUNTEER.",
+        "¤ INITIATE REGISTERED: <@{user}> \nSTART YOUR DESCENT WITH `/ORDER` OR OFFER A RUN WITH `/RUNNER`.",
+        "‡ <@{user}> BREACHES THE BREWLINE.\nFIRST MOVE: `/ORDER` TO PLACE. `/RUNNER` TO SERVE.",
+        ":: ACCESS GRANTED: <@{user}> ONBOARDED TO THE GRIND.\nREADY UP — `/ORDER` TO REQUEST, `/RUNNER` TO OFFER.",
+        "§ SYSTEM NOTIFICATION: <@{user}> IS NOW IN PLAY.\nDISPATCH VIA `/ORDER`. VOLUNTEER VIA `/RUNNER`.",
+        "¤ <@{user}> JOINS THE COLLECTIVE.\nSTIR THE SYSTEM WITH `/ORDER` OR OFFER WITH `/RUNNER`."
+    ]
+    public_message = random.choice(public_welcome_templates).replace("{user}", user_id)
+    slack_client.chat_postMessage(
+        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+        text=public_message
+    )
     return True
 
 def mark_code_redeemed(code, user_id):
@@ -126,6 +164,10 @@ def mark_code_redeemed(code, user_id):
                 try:
                     expiry_date = datetime.datetime.strptime(row["Expires"], "%Y-%m-%d")
                     if expiry_date < datetime.datetime.now():
+                        from slack_sdk import WebClient
+                        slack_token = os.environ.get("SLACK_BOT_TOKEN")
+                        slack_client = WebClient(token=slack_token)
+                        slack_client.chat_postMessage(channel=user_id, text="§ CODE EXPIRED. NO KARMA GRANTED.")
                         return "expired"
                 except ValueError:
                     pass  # ignore bad date formats
@@ -136,6 +178,10 @@ def mark_code_redeemed(code, user_id):
                 if r["Code"] == code and r.get("Slack ID"):
                     used_ids.add(r["Slack ID"])
             if user_id in used_ids:
+                from slack_sdk import WebClient
+                slack_token = os.environ.get("SLACK_BOT_TOKEN")
+                slack_client = WebClient(token=slack_token)
+                slack_client.chat_postMessage(channel=user_id, text="§ CODE ALREADY USED. NO KARMA GRANTED.")
                 return "already_used"
  
             try:
@@ -150,6 +196,10 @@ def mark_code_redeemed(code, user_id):
 
             redemptions_left = max_redemptions - len([r for r in data if r["Code"] == code and r.get("Slack ID")])
             if redemptions_left <= 0:
+                from slack_sdk import WebClient
+                slack_token = os.environ.get("SLACK_BOT_TOKEN")
+                slack_client = WebClient(token=slack_token)
+                slack_client.chat_postMessage(channel=user_id, text="§ CODE LIMIT REACHED. NO KARMA GRANTED.")
                 return "limit_reached"
  
             from slack_sdk import WebClient
@@ -163,6 +213,13 @@ def mark_code_redeemed(code, user_id):
             worksheet.update_cell(i + 2, 6, real_name)  # Redeemed By
             worksheet.update_cell(i + 2, 7, user_id)  # Slack ID
             worksheet.update_cell(i + 2, 8, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))  # Timestamp
+            # Ensure bonus_multiplier is stored as a plain number (1, 2, or 3) without emojis,
+            # in case it is used elsewhere in the code.
+            bonus_multiplier = row.get("Bonus Multiplier", "1")
+            try:
+                bonus_multiplier = int(bonus_multiplier)
+            except ValueError:
+                bonus_multiplier = 1
  
             # Award points
             try:
@@ -171,6 +228,10 @@ def mark_code_redeemed(code, user_id):
                 points = 1
  
             add_karma(user_id, points)
+            slack_client.chat_postMessage(
+                channel=user_id,
+                text=f"¤ CODE REDEEMED. +{points} KARMA ADDED TO YOUR BALANCE."
+            )
             return f"success:{points}"
     return False
 
@@ -252,8 +313,10 @@ def update_order_status(order_id, status=None, runner_id=None, runner_name=None,
                     worksheet.update_cell(i + 2, 6, runner_id)  # Runner ID
                     if runner_name is not None:
                         worksheet.update_cell(i + 2, 7, runner_name)  # Runner Name
+                        worksheet.update_cell(i + 2, 6, runner_id)  # Runner ID (redundantly ensure it's also set correctly here)
                 if bonus_multiplier is not None:
-                    worksheet.update_cell(i + 2, 15, bonus_multiplier)
+                    bonus_multiplier = int(bonus_multiplier) if str(bonus_multiplier).isdigit() else 1
+                    worksheet.update_cell(i + 2, 15, str(bonus_multiplier))
                 if claimed_time is not None:
                     worksheet.update_cell(i + 2, 17, claimed_time)
                 if delivered_time is not None:
