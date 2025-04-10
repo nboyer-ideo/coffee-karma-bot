@@ -122,27 +122,27 @@ def wrap_line(label, value, width=50):
 
     return wrapped_lines
 
-def box_line(text="", label=None, value=None, width=40, align="left"):
+def box_line(text="", label=None, value=None, width=42, align="left"):
     """
     Unified function for formatting boxed lines.
     Handles:
     - Plain text (centered/left/right)
     - Label: Value with multi-line wrapping
-    Always outputs lines that are exactly `width` characters wide.
+    Ensures every line is exactly `width` characters including borders.
     """
     lines = []
-    border_space = width - 3  # for '| ' and '|'
+    content_width = width - 2  # exclude the '|' borders
     label_field = 13
 
     if label is None and value is None:
         text = text.upper()
         if align == "center":
-            content = text.center(border_space)
+            content = text.center(content_width)
         elif align == "right":
-            content = text.rjust(border_space)
+            content = text.rjust(content_width)
         else:
-            content = text.ljust(border_space)
-        return [f"| {content} |"]
+            content = text.ljust(content_width)
+        return [f"|{content}|"]
 
     label = label.rstrip(":").upper()
     value = value.upper()
@@ -152,20 +152,20 @@ def box_line(text="", label=None, value=None, width=40, align="left"):
     current_line = ""
 
     for word in words:
-        if len(current_line + (" " if current_line else "") + word) <= border_space - label_field:
+        if len(current_line + (" " if current_line else "") + word) <= content_width - label_field:
             current_line += (" " if current_line else "") + word
         else:
             if not lines:
-                lines.append(f"| {label_prefix}{current_line:<{border_space - label_field}} |")
+                lines.append(f"|{label_prefix}{current_line:<{content_width - label_field}}|")
             else:
-                lines.append(f"| {indent}{current_line:<{border_space - label_field}} |")
+                lines.append(f"|{indent}{current_line:<{content_width - label_field}}|")
             current_line = word
 
     if current_line:
         if not lines:
-            lines.append(f"| {label_prefix}{current_line:<{border_space - label_field}} |")
+            lines.append(f"|{label_prefix}{current_line:<{content_width - label_field}}|")
         else:
-            lines.append(f"| {indent}{current_line:<{border_space - label_field}} |")
+            lines.append(f"|{indent}{current_line:<{content_width - label_field}}|")
 
     return lines
 
