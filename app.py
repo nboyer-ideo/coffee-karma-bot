@@ -1579,5 +1579,5 @@ def handle_open_order_modal_for_runner(ack, body, client):
         view=build_order_modal(trigger_id=body["trigger_id"], runner_id=runner_id)["view"]
     )
 
-    if __name__ == "__main__":
-        flask_app.run(host="0.0.0.0", port=10000)
+if __name__ == "__main__":
+    flask_app.run(host="0.0.0.0", port=10000)
