@@ -247,21 +247,21 @@ def update_order_status(order_id, status=None, runner_id=None, runner_name=None,
         for i, row in enumerate(data):
             if str(row.get("Order ID")) == str(order_id):
                 if status is not None:
-                    worksheet.update_cell(i + 2, 13, status)
+                    worksheet.update_cell(i + 2, 14, status)
                 if runner_id is not None:
-                    worksheet.update_cell(i + 2, 5, runner_id)
-                if runner_name is not None:
-                    worksheet.update_cell(i + 2, 6, runner_name)
+                    worksheet.update_cell(i + 2, 6, runner_id)  # Runner ID
+                    if runner_name is not None:
+                        worksheet.update_cell(i + 2, 7, runner_name)  # Runner Name
                 if bonus_multiplier is not None:
-                    worksheet.update_cell(i + 2, 14, bonus_multiplier)
+                    worksheet.update_cell(i + 2, 15, bonus_multiplier)
                 if claimed_time is not None:
-                    worksheet.update_cell(i + 2, 16, claimed_time)
+                    worksheet.update_cell(i + 2, 17, claimed_time)
                 if delivered_time is not None:
-                    worksheet.update_cell(i + 2, 17, delivered_time)
+                    worksheet.update_cell(i + 2, 18, delivered_time)
                 if requester_name is not None:
-                    worksheet.update_cell(i + 2, 4, requester_name)
+                    worksheet.update_cell(i + 2, 5, requester_name)
                 if recipient_name is not None:
-                    worksheet.update_cell(i + 2, 8, recipient_name)
+                    worksheet.update_cell(i + 2, 9, recipient_name)
                 return True
     except Exception as e:
         print("⚠️ Failed to update order status:", e)
