@@ -1399,6 +1399,22 @@ def handle_runner_settings_modal(ack, body, client):
     can_make_line = terminal_box_line(label="CAN MAKE:", value=can_make_str, width=40)
     cant_make_line = terminal_box_line(label="CAN'T MAKE:", value=cannot_make_str, width=40)
  
+    text = (
+    "```+----------------------------------------+\n"
+    + "|         DRINK RUNNER AVAILABLE         |\n"
+    + "+----------------------------------------+\n"
+    + terminal_box_line(label="Runner", value=real_name.upper(), width=40, align="label") + "\n"
+    + terminal_box_line(label="CAN MAKE:", value=can_make_str, width=40) + "\n"
+    + terminal_box_line(label="CAN'T MAKE:", value=cannot_make_str, width=40) + "\n"
+    + "+----------------------------------------+\n"
+    + terminal_box_line(text=f"TIME LEFT ON SHIFT: {selected_time} MINUTES", width=40, align="center") + "\n"
+    + terminal_box_line(text=progress_bar, width=40, align="center") + "\n"
+    + terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
+    + terminal_box_line(text="↓ CLICK BELOW TO PLACE AN ORDER ↓", width=40, align="center") + "\n"
+    + terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
+    + "```"
+    )
+    
     posted_ready = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
         text=f"🖐️ {real_name.upper()} is *on the clock* as a runner.\n*⏳ {selected_time} minutes left to send them an order.*",
@@ -1408,21 +1424,7 @@ def handle_runner_settings_modal(ack, body, client):
                 "block_id": "runner_text_block",
                 "text": {
                     "type": "mrkdwn",
-                    "text": (
-                        "```+----------------------------------------+\n"
-                        "|         DRINK RUNNER AVAILABLE         |\n"
-                        "+----------------------------------------+\n"
-                        terminal_box_line(label="Runner", value=real_name.upper(), width=40, align="label") + "\n"
-                        + terminal_box_line(label="CAN MAKE:", value=can_make_str, width=40) + "\n"
-                        + terminal_box_line(label="CAN'T MAKE:", value=cannot_make_str, width=40) + "\n"
-                        "+----------------------------------------+\n"
-                        terminal_box_line(text=f"TIME LEFT ON SHIFT: {selected_time} MINUTES", width=40, align="center") + "\n"
-                        terminal_box_line(text=progress_bar, width=40, align="center") + "\n"
-                        terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
-                        terminal_box_line(text="↓ CLICK BELOW TO PLACE AN ORDER ↓", width=40, align="center") + "\n"
-                        terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
-                        "+----------------------------------------+```"
-                    )
+                    "text": text
                 }
             },
             {
