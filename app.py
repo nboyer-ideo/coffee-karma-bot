@@ -561,6 +561,14 @@ def handle_claim_order(ack, body, client):
             raw_text = blocks[0]["text"]["text"] if blocks else ""
             parsed = re.findall(r"\| (\w+)\s*:\s+(.*?)\s*\|", raw_text)
             order_data = {k.lower().replace(" ", "_"): v.strip() for k, v in parsed}
+            if "from" in order_data:
+                from_val = order_data.pop("from")
+                order_data["requester_real_name"] = from_val
+                order_data["requester_id"] = body["user"]["id"]
+            if "to" in order_data:
+                to_val = order_data.pop("to")
+                order_data["recipient_real_name"] = to_val
+                order_data["recipient_id"] = order_data["requester_id"]
             order_data["order_id"] = order_id
             order_data["runner_id"] = body["user"]["id"]
             order_data["runner_real_name"] = client.users_info(user=body["user"]["id"])["user"]["real_name"]
