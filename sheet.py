@@ -100,9 +100,6 @@ def reset_karma_sheet():
         worksheet.update_cell(i + 2, 3, 0)
 
 def ensure_user(user_id):
-    from slack_sdk import WebClient
-    slack_token = os.environ.get("SLACK_BOT_TOKEN")
-    slack_client = WebClient(token=slack_token)
 
     worksheet = get_sheet().worksheet("Player Data")
     data = worksheet.get_all_records()
@@ -113,44 +110,6 @@ def ensure_user(user_id):
     user_info = slack_client.users_info(user=user_id)
     real_name = user_info["user"]["real_name"]
     worksheet.append_row([user_id, real_name, 3, get_title(3)])
-    from slack_sdk import WebClient
-    slack_token = os.environ.get("SLACK_BOT_TOKEN")
-    slack_client = WebClient(token=slack_token)
-    
-    welcome_message = (
-        "¤ A NEW VESSEL JOINS THE ORDER.\n"
-        "YOUR STARTING BALANCE: 3 KARMA\n"
-        "YOUR RANK: THE INITIATE\n\n"
-        "TO PARTICIPATE IN THE RITUALS:\n\n"
-        "1. TYPE \"/\" IN THE #KOFFEE-KARMA-SF CHANNEL.\n"
-        "2. SELECT ONE OF THE COMMANDS BELOW.\n"
-        "3. HIT ENTER TO ACTIVATE THE COMMAND.\n\n"
-        "`/ORDER` — SUMMON YOUR DRINK\n"
-        "`/RUNNER` — PLEDGE TO DELIVER\n"
-        "`/KARMA` — CHECK YOUR PATH\n"
-        "`/REDEEM` — ACTIVATE CODES\n"
-        "`/LEADERBOARD` — WITNESS THE RANKINGS\n\n"
-        "THE CAFÉ WATCHES."
-    )
-    
-    slack_client.chat_postMessage(channel=user_id, text=welcome_message)
-    public_welcome_templates = [
-        "§ <@{user}> JOINED THE REBELLION. BREW RESPONSIBLY.\nUSE `/ORDER` TO REQUEST. `/RUNNER` TO OFFER.",
-        "¤ NEW OPERATIVE DETECTED: <@{user}>\nRUN A DROP WITH `/ORDER` OR OFFER TO DELIVER WITH `/RUNNER`.",
-        "‡ TRANSMISSION INBOUND — <@{user}> ENTERS THE GRID.\nKICK THINGS OFF: `/ORDER` OR `/RUNNER` TO VOLUNTEER.",
-        ":: ALERT :: <@{user}> HAS ENTERED THE CYCLE.\nINITIATE CONTACT VIA `/ORDER` OR OFFER WITH `/RUNNER`.",
-        "§ THE ORDER GROWS — <@{user}> NOW AMONG US.\nUSE `/ORDER` TO SUMMON. `/RUNNER` TO VOLUNTEER.",
-        "¤ INITIATE REGISTERED: <@{user}> \nSTART YOUR DESCENT WITH `/ORDER` OR OFFER A RUN WITH `/RUNNER`.",
-        "‡ <@{user}> BREACHES THE BREWLINE.\nFIRST MOVE: `/ORDER` TO PLACE. `/RUNNER` TO SERVE.",
-        ":: ACCESS GRANTED: <@{user}> ONBOARDED TO THE GRIND.\nREADY UP — `/ORDER` TO REQUEST, `/RUNNER` TO OFFER.",
-        "§ SYSTEM NOTIFICATION: <@{user}> IS NOW IN PLAY.\nDISPATCH VIA `/ORDER`. VOLUNTEER VIA `/RUNNER`.",
-        "¤ <@{user}> JOINS THE COLLECTIVE.\nSTIR THE SYSTEM WITH `/ORDER` OR OFFER WITH `/RUNNER`."
-    ]
-    public_message = random.choice(public_welcome_templates).replace("{user}", user_id)
-    slack_client.chat_postMessage(
-        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text=public_message
-    )
     return True
 
 def mark_code_redeemed(code, user_id):

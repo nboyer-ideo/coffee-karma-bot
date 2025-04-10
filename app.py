@@ -13,6 +13,39 @@ import re
 import csv
 from sheet import get_runner_capabilities
 
+def send_koffee_welcome(client, user_id):
+    welcome_message = (
+        "¤ A new vessel joins the order.\n"
+        "Your starting balance: 3 Karma\n"
+        "Your rank: The Initiate.\n\n"
+        "To participate in the rituals:\n\n"
+        "1. Type \"/\" in the #koffee-karma-sf channel.\n"
+        "2. Select one of the commands below.\n"
+        "3. Hit enter to activate the command.\n\n"
+        "`/order` — Summon your drink\n"
+        "`/runner` — Pledge to deliver\n"
+        "`/karma` — Check your path\n"
+        "`/redeem` — Activate codes\n"
+        "`/leaderboard` — Witness the rankings\n\n"
+        "The café watches."
+    )
+    client.chat_postMessage(channel=user_id, text=welcome_message)
+
+    public_welcome_templates = [
+        "§ <@{user}> joined the rebellion. Brew responsibly.\nUse `/order` to request. `/runner` to offer.",
+        "¤ New operative detected: <@{user}>.\nRun a drop with `/order` or offer to deliver with `/runner`.",
+        "‡ Transmission inbound — <@{user}> enters the grid.\nKick things off: `/order` or `/runner` to volunteer.",
+        ":: Alert :: <@{user}> has entered the cycle.\nInitiate contact via `/order` or offer with `/runner`.",
+        "§ The order grows — <@{user}> now among us.\nUse `/order` to summon. `/runner` to volunteer.",
+        "¤ Initiate registered: <@{user}>.\nStart your descent with `/order` or offer a run with `/runner`.",
+        "‡ <@{user}> breaches the brewline.\nFirst move: `/order` to place. `/runner` to serve.",
+        ":: Access granted: <@{user}> onboarded to the grind.\nReady up — `/order` to request, `/runner` to offer.",
+        "§ System notification: <@{user}> is now in play.\nDispatch via `/order`. Volunteer via `/runner`.",
+        "¤ <@{user}> joins the collective.\nStir the system with `/order` or offer with `/runner`."
+    ]
+    public_message = random.choice(public_welcome_templates).replace("{user}", user_id)
+    client.chat_postMessage(channel=os.environ.get("KOFFEE_KARMA_CHANNEL"), text=public_message)
+
 def box_label(label, value, width=40):
     """
     Return a single line like: | LABEL:       VALUE               |
@@ -506,9 +539,9 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             add_karma(user_id, karma_cost)
             client.chat_postMessage(
                 channel=user_id,
-                text="¤ ORDER UNCLAIMED. KARMA RESTORED TO ORIGIN."
+                text="¤ Order UNCLAIMED. Karma returned to source."
             )
-            safe_chat_update(client, order_channel, order_ts, f"‡ ORDER FROM <@{user_id}> EXPIRED — NO CLAIMANT AROSE.", [])
+            safe_chat_update(client, order_channel, order_ts, f"‡ Order from <@{user_id}> EXPIRED — No claimant arose.", [])
  
         if remaining > 1 and extras.get("active", True):
             print(f"🕒 Scheduling next countdown tick — remaining: {remaining - 1}")
@@ -564,7 +597,7 @@ def handle_claim_order(ack, body, client):
         client.chat_postEphemeral(
             channel=runner_id,
             user=runner_id,
-            text="§ SELF-CLAIM BLOCKED. WAIT FOR ANOTHER TO RISE."
+            text="§ You cannot claim your own orders. Wait for another to rise."
         )
         return
     order_data["runner_id"] = runner_id
@@ -598,13 +631,13 @@ def handle_claim_order(ack, body, client):
         safe_chat_update(client, channel, ts, "Order claimed", blocks)
 
     try:
-        client.chat_postMessage(channel=order_data["requester_id"], text="¤ ORDER CLAIMED. DELIVERY EN ROUTE.")
+        client.chat_postMessage(channel=order_data["requester_id"], text="¤ Order CLAIMED. Delivery en route.")
     except Exception as e:
         print("⚠️ Failed to notify requester:", e)
 
     try:
         if order_data.get("runner_id"):
-            client.chat_postMessage(channel=order_data["runner_id"], text="¤ DELIVERY CLAIMED. MARK AS DELIVERED WHEN DROPPED.")
+            client.chat_postMessage(channel=order_data["runner_id"], text="¤ Delivery CLAIMED. Mark as delivered when dropped.")
     except Exception as e:
         print("⚠️ Failed to notify runner:", e)
 
@@ -641,7 +674,7 @@ def handle_mark_delivered(ack, body, client):
     title = get_title(runner_karma)
     client.chat_postMessage(
         channel=order_data["runner_id"],
-        text=f"¤ DELIVERY LOGGED — +{total_karma} KARMA GRANTED. TITLE: {title.upper()}."
+        text=f"¤ Delivery logged — +{total_karma} karma granted. Title: {title}."
     )
 
     order_data.update({
@@ -692,7 +725,7 @@ def handle_cancel_order(ack, body, client):
 
         client.chat_postMessage(
             channel=requester_id,
-            text="§ ORDER CANCELED. KARMA RETURNED TO SOURCE."
+            text="§ Order CANCELED. Karma returned to source."
         )
     except Exception as e:
         print("⚠️ Failed to cancel order:", e)
@@ -1005,7 +1038,7 @@ def handle_karma(ack, body, client):
     user_id = body["user_id"]
     points = get_karma(user_id)
     title = get_title(points)
-    message = f"¤ BALANCE: {points} KARMA — TITLE: {title.upper()}."
+    message = f"¤ Balance: {points} karma — Title: {title}."
     client.chat_postEphemeral(channel=body["channel_id"], user=user_id, text=message)
 
 @app.view("koffee_request_modal")
@@ -1022,7 +1055,7 @@ def handle_modal_submission(ack, body, client):
         client.chat_postEphemeral(
             channel=user_id,
             user=user_id,
-            text="Ø ESPRESSO UNAVAILABLE. MACHINE FAILURE. CHOOSE ANOTHER BREW."
+            text="Ø Espresso orders are temporarily unavailable — the machine's down. Choose something else while we fix it up."
         )
         print("❌ Espresso order blocked due to machine downtime.")
         print(f"⚠️ BLOCKED ORDER — {user_id} tried to order espresso while machine is down.")
@@ -1054,7 +1087,7 @@ def handle_modal_submission(ack, body, client):
         client.chat_postEphemeral(
             channel=user_id,
             user=user_id,
-            text="§ INSUFFICIENT KARMA. DELIVER DRINKS TO RAISE YOUR STANDING."
+            text="§ You do not have enough karma to place this order. Deliver drinks to earn more."
         )
         return
 
@@ -1111,7 +1144,6 @@ def handle_modal_submission(ack, body, client):
     if not runner_id:
         posted = client.chat_postMessage(
             channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-            text="New Koffee Karma order posted",
             blocks=[]
         )
         order_ts = posted["ts"]
@@ -1201,7 +1233,7 @@ def handle_modal_submission(ack, body, client):
         client.chat_postEphemeral(
             channel=user_id,
             user=user_id,
-            text="‡ MODAL ERROR. ORIGINAL `/READY` MESSAGE NOT FOUND. TRY AGAIN."
+            text="‡ Modal submitted, but we couldn’t find the original `/runner` message to update."
         )
         print("🚨 [MODAL SUBMIT] Fallback failed — cannot update message.")
         return
@@ -1222,14 +1254,14 @@ def handle_modal_submission(ack, body, client):
             client.chat_postEphemeral(
                 channel=user_id,
                 user=user_id,
-                text="‡ TOO LATE. THIS RUNNER IS ALREADY BOUND TO ANOTHER."
+                text="‡ TOO LATE. This runner is already bound to another order."
             )
             return
         runner_offer_claims[order_data["runner_id"]] = user_id
         try:
             client.chat_postMessage(
                 channel=order_data["runner_id"],
-                text="¤ RUNNER CALL ANSWERED. MISSION INBOUND."
+                text="¤ Runner call answered. DRINK INBOUND."
             )
         except Exception as e:
             print("⚠️ Failed to notify runner:", e)
@@ -1275,7 +1307,7 @@ def handle_modal_submission(ack, body, client):
             client.chat_postEphemeral(
                 channel=user_id,
                 user=user_id,
-            text="‡ MODAL ERROR. ORIGINAL `/READY` MESSAGE NOT FOUND. TRY AGAIN."
+            text="‡ Modal submitted, but we couldn’t find the original `/runner` message to update."
             )
             return
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
@@ -1300,7 +1332,7 @@ def handle_modal_submission(ack, body, client):
             client.chat_postEphemeral(
                 channel=user_id,
                 user=user_id,
-                text="🚨 Modal submitted, but we couldn’t find the original `/ready` message to update."
+                text="‡ Modal submitted, but we couldn’t find the original `/runner` message to update."
             )
             return
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
@@ -1482,11 +1514,11 @@ def handle_ready_command(ack, body, client):
                 client,
                 order_channel,
                 order_ts,
-                "‡ DROP EXPIRED. NO CLAIMANT AROSE.",
+                "‡ Drop expired. No claimant arose.",
                 [
                     {
                         "type": "section",
-                        "text": {"type": "mrkdwn", "text": "‡ DROP EXPIRED. NO CLAIMANT AROSE."}
+                        "text": {"type": "mrkdwn", "text": "‡ Drop expired. No claimant arose."}
                     }
                 ]
             )
@@ -1512,7 +1544,7 @@ def handle_ready_command(ack, body, client):
                 print(f"📬 Sending DM to user_id: {user_id} with message: 🌀 Your order expired. {refund_amount} Karma refunded. Balance restored.")
                 client.chat_postMessage(
                     channel=user_id,
-                    text=f"¤ ORDER EXPIRED. +{refund_amount} KARMA RETURNED TO YOUR BALANCE."
+                    text=f"¤ Order EXPIRED. +{refund_amount} karma returned to your balance."
                 )
             from sheet import update_order_status
             update_order_status(order_ts, status="expired")
