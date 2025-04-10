@@ -336,8 +336,9 @@ def fetch_order_data(order_id):
                     "bonus_multiplier": row.get("Bonus Multiplier", ""),
                     "time_ordered": row.get("Ordered Time", ""),
                     "time_claimed": row.get("Claimed Time", ""),
-                    "time_delivered": row.get("Delivered Time", ""),
-                }
+                "time_delivered": row.get("Delivered Time", ""),
+                "claimed_by": row.get("Runner Name", ""),
+            }
     except Exception as e:
         print(f"⚠️ Failed to fetch order data from sheet for order_id {order_id}:", e)
     return {}

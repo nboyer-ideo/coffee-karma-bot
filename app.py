@@ -267,12 +267,8 @@ def format_order_message(order_data):
     ]
     lines.append(border_mid)
     lines.append(f'| DROP ID :     {order_data["order_id"]:<32} |')
-    requester_display = order_data.get("requester_real_name") or f"<@{order_data['requester_id']}>"
-    recipient_display = order_data.get("recipient_real_name") or f"<@{order_data['recipient_id']}>"
-    if order_data.get("requester_id") == order_data.get("recipient_id"):
-        recipient_display += " (Self)"
-    else:
-        recipient_display += " (Gift)"
+    requester_display = order_data.get("requester_real_name", "")
+    recipient_display = order_data.get("recipient_real_name", "")
     lines.append(f'| FROM :        {requester_display.upper():<32} |')
     lines.append(f'| TO :          {recipient_display.upper():<32} |')
     lines.append(f'| DRINK :       {order_data["drink"].upper():<32} |')
@@ -550,6 +546,7 @@ def handle_claim_order(ack, body, client):
     order_id = body["actions"][0]["value"]
     from sheet import fetch_order_data
     order_data = fetch_order_data(order_id)
+    order_data["claimed_by"] = order_data.get("runner_real_name")
 
     runner_id = body["user"]["id"]
     order_data["runner_id"] = runner_id
@@ -557,10 +554,12 @@ def handle_claim_order(ack, body, client):
         user_info = client.users_info(user=runner_id)
         order_data["runner_real_name"] = user_info["user"]["real_name"]
         order_data["runner_name"] = user_info["user"]["real_name"]
+        order_data["claimed_by"] = user_info["user"]["real_name"]
     except Exception as e:
         print("⚠️ Failed to fetch runner real name:", e)
         order_data["runner_real_name"] = f"<@{runner_id}>"
         order_data["runner_name"] = f"<@{runner_id}>"
+    order_data["claimed_by"] = order_data["runner_real_name"]
 
     channel = body.get("container", {}).get("channel_id")
     ts = body.get("container", {}).get("message_ts")
@@ -573,6 +572,10 @@ def handle_claim_order(ack, body, client):
             runner_id=order_data["runner_id"],
             runner_name=order_data["runner_real_name"]
         )
+        from sheet import fetch_order_data  # ensure this is imported
+        order_data = fetch_order_data(order_id)
+        order_data["order_id"] = order_id
+        order_data["status"] = "claimed"
         blocks = format_order_message(order_data)
         safe_chat_update(client, channel, ts, "Order claimed", blocks)
 
@@ -598,23 +601,8 @@ def handle_mark_delivered(ack, body, client):
     order_ts = body.get("container", {}).get("message_ts")
     order_channel = body.get("container", {}).get("channel_id")
 
-    # Fallback: retrieve order_data from message if not in global `orders`
-    global orders
-    order_data = orders.get(order_id, {})
-
-    if not order_data:
-        current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
-        blocks = current_message["messages"][0].get("blocks", [])
-        raw_text = blocks[0]["text"]["text"] if blocks else ""
-        parsed = re.findall(r"\| (\w+)\s*:\s+(.*?)\s*\|", raw_text)
-        order_data = {k.lower().replace(" ", "_"): v.strip() for k, v in parsed}
-        order_data["order_id"] = order_id
-        order_data["runner_id"] = user_id
-        try:
-            user_info = client.users_info(user=user_id)
-            order_data["runner_real_name"] = user_info["user"]["real_name"]
-        except:
-            order_data["runner_real_name"] = f"<@{user_id}>"
+    # Rely solely on fetch_order_data and Slack API lookups; fallback parsing removed.
+    order_data = fetch_order_data(order_id)
 
     # Random bonus multiplier
     from random import random
