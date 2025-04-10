@@ -866,6 +866,28 @@ def handle_modal_submission(ack, body, client):
         return
 
     runner_id = body["view"].get("private_metadata", "")
+    order_data = {
+    "order_id": "",
+    "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    "initiated_by": "runner" if runner_id else "requester",
+    "requester_id": user_id,
+    "requester_real_name": "",
+    "runner_id": runner_id,
+    "runner_name": "",
+    "runner_real_name": "",
+    "recipient_id": gifted_id if gifted_id else user_id,
+    "recipient_real_name": "",
+    "drink": drink,
+    "location": location,
+    "notes": notes,
+    "karma_cost": karma_cost,
+    "status": "pending",
+    "bonus_multiplier": "",
+    "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    "time_claimed": "",
+    "time_delivered": "",
+    "remaining_minutes": 10
+    }
     print(f"🏃 runner_id: {runner_id}")
     order_ts = ""
     order_channel = ""
