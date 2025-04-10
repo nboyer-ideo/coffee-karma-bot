@@ -541,6 +541,46 @@ def handle_location_select(ack, body, client):
         view=modal["view"]
     )
 
+@app.action("claim_order")
+def handle_claim_order(ack, body, client):
+    ack()
+    import datetime
+    from sheet import update_order_status
+    order_id = body["actions"][0]["value"]
+    update_order_status(order_id, status="claimed", claimed_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    global orders
+    order_data = orders.get(order_id)
+    if not order_data:
+        order_data = {
+            "order_id": order_id,
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "requester_id": "unknown",
+            "requester_real_name": "Unknown",
+            "runner_id": body["user"]["id"],
+            "runner_real_name": "Runner",
+            "recipient_id": "unknown",
+            "recipient_real_name": "Unknown",
+            "drink": "unknown",
+            "location": "unknown",
+            "notes": "",
+            "karma_cost": "",
+            "status": "claimed",
+            "bonus_multiplier": "",
+            "time_ordered": "",
+            "time_claimed": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "time_delivered": ""
+        }
+
+    blocks = format_order_message(order_data)
+    channel = body.get("container", {}).get("channel_id")
+    ts = body.get("container", {}).get("message_ts")
+    if channel and ts:
+        safe_chat_update(client, channel, ts, "Order claimed", blocks)
+
+    client.chat_postMessage(channel=order_data["requester_id"], text="📬 Your order has been claimed. Hang tight — delivery en route.")
+    client.chat_postMessage(channel=order_data["runner_id"], text="🛎️ You claimed a delivery. Hit 'Mark as Delivered' once it's dropped.")
+
 def update_ready_countdown(client, remaining, ts, channel, user_id, original_total_time):
     from sheet import get_runner_capabilities
     runner_capabilities = get_runner_capabilities(user_id)
@@ -961,38 +1001,6 @@ def handle_modal_submission(ack, body, client):
     ])
     
     # For display only: use uppercase formatting for message output.
-    full_text = (
-        f"💀 NEW DROP // {'FROM <@' + user_id + '> TO <@' + gifted_id + '>' if gifted_id else 'FROM <@' + user_id + '>'}\n"
-        f"— — — — — — — — — — — —\n"
-        f"DRINK: {drink.upper()}\n"
-        f"LOCATION: {location.upper()}\n"
-        f"NOTES: {notes.upper() if notes else 'NONE'}\n"
-        f"— — — — — — — — — — — —\n"
-        f"🎁 {karma_cost} KARMA REWARD"
-    )
-
-    order_data = {
-        "order_id": "",
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "initiated_by": "runner" if runner_id else "requester",
-        "requester_id": user_id,
-        "requester_real_name": "",
-        "runner_id": runner_id,
-        "runner_name": "",
-        "runner_real_name": "",
-        "recipient_id": gifted_id if gifted_id else user_id,
-        "recipient_real_name": "",
-        "drink": drink,
-        "location": location,
-        "notes": notes,
-        "karma_cost": karma_cost,
-        "status": "pending",
-        "bonus_multiplier": "",
-        "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "time_claimed": "",
-        "time_delivered": "",
-        "remaining_minutes": 10
-    }
     if 'runner_offer_metadata' not in globals():
         print("⚠️ runner_offer_metadata not defined — initializing.")
         runner_offer_metadata = {}
@@ -1571,5 +1579,5 @@ def handle_open_order_modal_for_runner(ack, body, client):
         view=build_order_modal(trigger_id=body["trigger_id"], runner_id=runner_id)["view"]
     )
 
-if __name__ == "__main__":
+    if __name__ == "__main__":
     flask_app.run(host="0.0.0.0", port=10000)
