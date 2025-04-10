@@ -1580,4 +1580,4 @@ def handle_open_order_modal_for_runner(ack, body, client):
     )
 
     if __name__ == "__main__":
-    flask_app.run(host="0.0.0.0", port=10000)
+        flask_app.run(host="0.0.0.0", port=10000)
