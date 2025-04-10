@@ -1507,7 +1507,7 @@ def handle_runner_settings_modal(ack, body, client):
     import threading
     threading.Timer(60, update_ready_countdown, args=(client, selected_time - 1, order_ts, order_channel, user_id, selected_time)).start() 
 
-msg = "✅ Your delivery offer i<truncated__content/>
+msg = "✅ Your delivery offer is now live."
 
 @app.action("open_order_modal_for_runner")
 def handle_open_order_modal_for_runner(ack, body, client):
