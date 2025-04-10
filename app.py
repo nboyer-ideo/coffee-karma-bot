@@ -124,18 +124,24 @@ def wrap_line(label, value, width=50):
 
 def box_line(text="", label=None, value=None, width=42, align="left"):
     """
-    Unified function for formatting boxed lines at exactly 42 characters.
-    Layout:
-      | [content of length 38] |
-      ^ border   38 chars   border
-    If a label + value are provided, multi-line wrapping is applied for the value.
+    Ensures each returned line is EXACTLY 42 characters, including borders:
+      - 1 char for left border '|'
+      - 1 space after left border
+      - (width - 4) = 38 chars of content
+      - 1 space before right border
+      - 1 char for right border '|'
+    => total = 42
+
+    If label + value are given, it splits the line into a 13-char label field
+    and the rest for value. Automatically adds colons to the special labels.
     """
     lines = []
-    # We want 42 total → "| " + content_width + " |" → content_width = 38
+    
+    # The content area is width - 4 => because of "| " + " |"
     content_width = width - 4
-    label_field = 13  # e.g. "RUNNER:" => 13 chars space
+    label_field = 13  # space for the label field (e.g. "RUNNER:")
 
-    # 1) No label/value => just a single text line
+    # 1) No label/value => treat 'text' as the content line
     if label is None and value is None:
         text = text.upper()
         if align == "center":
@@ -144,58 +150,53 @@ def box_line(text="", label=None, value=None, width=42, align="left"):
             content = text.rjust(content_width)
         else:
             content = text.ljust(content_width)
+        # => build final line => 2 chars for "| " + 38 + 1 space + "|" => total=42
         lines.append(f"| {content} |")
         return lines
 
-    # 2) Labeled lines => wrap the 'value' portion if needed
-    label = label.rstrip(":").upper()
+    # 2) We have a label + value => multi-line wrapping for 'value'
     # Force colons for special labels
+    label = label.rstrip(":").upper()
     if label in ["RUNNER", "CAN MAKE", "CAN'T MAKE"]:
         label = f"{label}:"
-    # If there's a label but no trailing colon, add it
     elif label and not label.endswith(":"):
         label = f"{label}:"
 
-    # Prepare the text for wrapping
     value = value.upper()
     words = value.split()
 
-    # This is the prefix for the first line:  "| {label:<13}"
-    # Then we have some leftover space to fill with the actual value
-    # The total content_width is 38, so the label occupies 13 → leaves (38 - 13) = 25 for the first line of value
+    # The first line prefix => "| " plus a label of length 13 => total so far is 1+1 +13=15
+    # => leaves content_width - label_field = 38 - 13 = 25 chars for the value on the first line
     first_line_prefix = f"| {label:<{label_field}}"
-    available_for_value = content_width - label_field  # 38 - 13 = 25
+    available_for_value = content_width - label_field  # 25 if label_field=13
+    # For wrapped lines, we want them to align under the label:
+    # => "| " plus 13 spaces => total 1+1+13=15 => leaves 25 for the wrapped text
+    indent = " " * label_field  
 
-    # For wrapped lines, we want "indent" to align perfectly under the label
-    # That means the line should start with "| " + 13 spaces
-    indent = " " * label_field  # 13 spaces
-    wrapped_lines = []  # collect the lines for the value
+    wrapped_lines = []
     current_line = ""
 
     for word in words:
-        # If adding the new word fits in the leftover space for this line
-        # (include a space if we're not on the first word)
+        # Proposed line: if there's already text, add a space, else just the word
         proposed = (current_line + " " + word).strip() if current_line else word
         if len(proposed) <= available_for_value:
             current_line = proposed
         else:
-            # flush the current_line as a completed line
             wrapped_lines.append(current_line)
             current_line = word
 
-    # flush last line
+    # flush the last line
     if current_line:
         wrapped_lines.append(current_line)
 
-    # Build the final lines
+    # Build final lines
     for i, val_line in enumerate(wrapped_lines):
-        # For the first line, we place the label prefix + the partial value
+        # first line => label prefix + leftover for value
         if i == 0:
-            lines.append(f"{first_line_prefix}{val_line:<{available_for_value}}|")
+            lines.append(f"{first_line_prefix}{val_line:<{available_for_value}} |")
         else:
-            # Wrapped lines use the same border, plus spaces to align under the label
-            # => "| " + 13 spaces + the partial value
-            lines.append(f"| {indent}{val_line:<{available_for_value}}|")
+            # subsequent line => "| " + 13 spaces + value
+            lines.append(f"| {indent}{val_line:<{available_for_value}} |")
 
     return lines
 
