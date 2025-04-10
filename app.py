@@ -122,26 +122,17 @@ def wrap_line(label, value, width=50):
 
     return wrapped_lines
 
-def box_line(text="", label=None, value=None, width=42, align="left"):
+def box_line(text="", label=None, value=None, width=42, align="left", auto_colon=True, label_field=13):
     """
-    Ensures each returned line is EXACTLY 42 characters, including borders:
-      - 1 char for left border '|'
-      - 1 space after left border
-      - (width - 4) = 38 chars of content
-      - 1 space before right border
-      - 1 char for right border '|'
-    => total = 42
-
-    If label + value are given, it splits the line into a 13-char label field
-    and the rest for value. Automatically adds colons to the special labels.
+    Unified function for formatting boxed lines at exactly 42 characters.
+    If a label and value are provided, it formats them with multi-line wrapping.
+    If auto_colon is True, a colon is appended to the label if it doesn't already end with one.
     """
     lines = []
-    
-    # The content area is width - 4 => because of "| " + " |"
+    # The interior content area is width - 4 (for "| " and " |")
     content_width = width - 4
-    label_field = 13  # space for the label field (e.g. "RUNNER:")
 
-    # 1) No label/value => treat 'text' as the content line
+    # Case 1: text-only mode.
     if label is None and value is None:
         text = text.upper()
         if align == "center":
@@ -150,54 +141,37 @@ def box_line(text="", label=None, value=None, width=42, align="left"):
             content = text.rjust(content_width)
         else:
             content = text.ljust(content_width)
-        # => build final line => 2 chars for "| " + 38 + 1 space + "|" => total=42
-        lines.append(f"| {content} |")
-        return lines
-
-    # 2) We have a label + value => multi-line wrapping for 'value'
-    # Force colons for special labels
-    label = label.rstrip(":").upper()
-    if label in ["RUNNER", "CAN MAKE", "CAN'T MAKE"]:
-        label = f"{label}:"
-    elif label and not label.endswith(":"):
-        label = f"{label}:"
-
+        return [f"| {content} |"]
+    
+    # Case 2: Label + value formatting.
+    label = label.upper().rstrip()
+    if auto_colon and not label.endswith(":"):
+        label += ":"
+    
     value = value.upper()
     words = value.split()
-
-    # The first line prefix => "| " plus a label of length 13 => total so far is 1+1 +13=15
-    # => leaves content_width - label_field = 38 - 13 = 25 chars for the value on the first line
+    # The first line gets the label, padded to label_field, and then the value.
     first_line_prefix = f"| {label:<{label_field}}"
-    available_for_value = content_width - label_field  # 25 if label_field=13
-    # For wrapped lines, we want them to align under the label:
-    # => "| " plus 13 spaces => total 1+1+13=15 => leaves 25 for the wrapped text
-    indent = " " * label_field  
-
+    available_for_value = content_width - label_field  # Remaining space for the value on the first line
+    indent = " " * label_field  # For subsequent lines.
+    
     wrapped_lines = []
     current_line = ""
-
     for word in words:
-        # Proposed line: if there's already text, add a space, else just the word
         proposed = (current_line + " " + word).strip() if current_line else word
         if len(proposed) <= available_for_value:
             current_line = proposed
         else:
             wrapped_lines.append(current_line)
             current_line = word
-
-    # flush the last line
     if current_line:
         wrapped_lines.append(current_line)
-
-    # Build final lines
+    
     for i, val_line in enumerate(wrapped_lines):
-        # first line => label prefix + leftover for value
         if i == 0:
             lines.append(f"{first_line_prefix}{val_line:<{available_for_value}} |")
         else:
-            # subsequent line => "| " + 13 spaces + value
             lines.append(f"| {indent}{val_line:<{available_for_value}} |")
-
     return lines
 
 def wrap_line_runner(label, value, width=40):
@@ -608,9 +582,9 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                         + "+----------------------------------------+\n"
                         + "|         DRINK RUNNER AVAILABLE         |\n"
                         + "+----------------------------------------+\n"
-                        + "\n".join(box_line(label="RUNNER:", value=real_name.upper(), width=42)) + "\n"
-                        + "\n".join(box_line(label="CAN MAKE:", value=can_make_str, width=42)) + "\n"
-                        + "\n".join(box_line(label="CAN'T MAKE:", value=cannot_make_str, width=42)) + "\n"
+                        + "\n".join(box_line(label="RUNNER", value=real_name.upper(), width=42)) + "\n"
+                        + "\n".join(box_line(label="CAN MAKE", value=can_make_str, width=42)) + "\n"
+                        + "\n".join(box_line(label="CAN'T MAKE", value=cannot_make_str, width=42)) + "\n"
                         + "+----------------------------------------+\n"
                         + "\n".join(box_line(text=f"TIME LEFT ON SHIFT: {remaining} MINUTES", width=42, align="center")) + "\n"
                         + "\n".join(box_line(text=progress_bar, width=42, align="center")) + "\n"
@@ -1455,9 +1429,9 @@ def handle_runner_settings_modal(ack, body, client):
         "```+----------------------------------------+\n"
         + "|         DRINK RUNNER AVAILABLE         |\n"
         + "+----------------------------------------+\n"
-        + "\n".join(box_line(label="RUNNER:", value=real_name.upper(), width=42)) + "\n"
-        + "\n".join(box_line(label="CAN MAKE:", value=can_make_str, width=42)) + "\n"
-        + "\n".join(box_line(label="CAN'T MAKE:", value=cannot_make_str, width=42)) + "\n"
+        + "\n".join(box_line(label="RUNNER", value=real_name.upper(), width=42)) + "\n"
+        + "\n".join(box_line(label="CAN MAKE", value=can_make_str, width=42)) + "\n"
+        + "\n".join(box_line(label="CAN'T MAKE", value=cannot_make_str, width=42)) + "\n"
         + "+----------------------------------------+\n"
         + "\n".join(box_line(text=f"TIME LEFT ON SHIFT: {selected_time} MINUTES", width=42, align="center")) + "\n"
         + "\n".join(box_line(text=progress_bar, width=42, align="center")) + "\n"
