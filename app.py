@@ -548,85 +548,32 @@ def handle_claim_order(ack, body, client):
     import datetime
     from sheet import update_order_status
     order_id = body["actions"][0]["value"]
-    # Initial update removed; will update after order_data is populated
+    from sheet import fetch_order_data
+    order_data = fetch_order_data(order_id)
 
-    global orders
-    order_data = orders.get(order_id)
-    if not order_data:
-        try:
-            order_ts = body.get("container", {}).get("message_ts")
-            order_channel = body.get("container", {}).get("channel_id")
-            current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
-            blocks = current_message["messages"][0].get("blocks", [])
-            raw_text = blocks[0]["text"]["text"] if blocks else ""
-            parsed = re.findall(r"\| (\w+)\s*:\s+(.*?)\s*\|", raw_text)
-            order_data = {k.lower().replace(" ", "_"): v.strip() for k, v in parsed}
-            if "karma_cost" not in order_data:
-                match = re.search(r"\| REWARD\s*:\s+(\d+)", raw_text)
-                if match:
-                    order_data["karma_cost"] = int(match.group(1))
-                else:
-                    order_data["karma_cost"] = 1  # Fallback default
-            if "from" in order_data:
-                from_val = order_data.pop("from")
-                order_data["requester_real_name"] = from_val
-                order_data["requester_id"] = body["user"]["id"]
-            if "to" in order_data:
-                to_val = order_data.pop("to")
-                order_data["recipient_real_name"] = to_val
-                order_data["recipient_id"] = order_data["requester_id"]
-            order_data["order_id"] = order_id
-            order_data["runner_id"] = body["user"]["id"]
-            order_data["runner_real_name"] = client.users_info(user=body["user"]["id"])["user"]["real_name"]
-            from random import choice
-            order_data["bonus_multiplier"] = choice(["", "🔥 2X", "💥 3X"])
-            karma_cost = int(order_data.get("karma_cost", 1))
-            order_data["karma_cost"] = karma_cost
-            multiplier = 1
-            if "2X" in order_data["bonus_multiplier"]:
-                multiplier = 2
-            elif "3X" in order_data["bonus_multiplier"]:
-                multiplier = 3
-            karma_earned = karma_cost * multiplier
-            order_data["runner_karma"] = add_karma(order_data["runner_id"], karma_earned)
-            order_data["status"] = "claimed"
-            order_data["time_claimed"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            if not order_data or order_data.get("requester_id") == "unknown":
-                from sheet import fetch_order_data
-                order_data = fetch_order_data(order_id)
-        except Exception as e:
-            print("⚠️ Failed to recover order_data from message:", e)
-            order_data = {
-                "order_id": order_id,
-                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "requester_id": "unknown",
-                "requester_real_name": "Unknown",
-                "runner_id": body["user"]["id"],
-                "runner_real_name": "Runner",
-                "recipient_id": "unknown",
-                "recipient_real_name": "Unknown",
-                "drink": "unknown",
-                "location": "unknown",
-                "notes": "",
-                "karma_cost": "",
-                "status": "claimed",
-                "bonus_multiplier": "",
-                "time_ordered": "",
-                "time_claimed": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "time_delivered": ""
-            }
+    runner_id = body["user"]["id"]
+    order_data["runner_id"] = runner_id
+    try:
+        user_info = client.users_info(user=runner_id)
+        order_data["runner_real_name"] = user_info["user"]["real_name"]
+        order_data["runner_name"] = user_info["user"]["real_name"]
+    except Exception as e:
+        print("⚠️ Failed to fetch runner real name:", e)
+        order_data["runner_real_name"] = f"<@{runner_id}>"
+        order_data["runner_name"] = f"<@{runner_id}>"
 
-    blocks = format_order_message(order_data)
     channel = body.get("container", {}).get("channel_id")
     ts = body.get("container", {}).get("message_ts")
     if channel and ts:
+        from sheet import update_order_status
         update_order_status(
             order_id,
             status="claimed",
-            claimed_time=order_data["time_claimed"],
+            claimed_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             runner_id=order_data["runner_id"],
             runner_name=order_data["runner_real_name"]
         )
+        blocks = format_order_message(order_data)
         safe_chat_update(client, channel, ts, "Order claimed", blocks)
 
     try:
