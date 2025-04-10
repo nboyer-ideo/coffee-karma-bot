@@ -1375,6 +1375,10 @@ def handle_runner_settings_modal(ack, body, client):
     selected = []
     if "capabilities" in values and "input" in values["capabilities"]:
         selected = [opt["value"] for opt in values["capabilities"]["input"].get("selected_options", [])]
+    previous_caps_data = get_runner_capabilities(user_id)
+    previous_caps = set(previous_caps_data.get("Capabilities", []))
+    current_caps = set(selected)
+    caps_changed = previous_caps != current_caps
  
     selected_time = 10  # default
     if "time_available" in values and "input" in values["time_available"]:
@@ -1444,6 +1448,11 @@ def handle_runner_settings_modal(ack, body, client):
         + "\n".join(box_line(text="------------------------------------", width=42, align="center")) + "\n"
         + "+----------------------------------------+```"
     )
+    msg = "✅ Your delivery offer is now live."
+    if caps_changed:
+        msg = "✅ Your drink-making capabilities have been saved and your delivery offer is now live."
+
+    client.chat_postMessage(channel=user_id, text=msg)
     
     posted_ready = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
