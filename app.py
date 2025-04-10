@@ -877,6 +877,10 @@ def handle_modal_submission(ack, body, client):
         )
         order_ts = posted["ts"]
         order_channel = posted["channel"]
+        formatted_blocks = format_order_message(order_data)
+        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
+        if not order_channel:
+            order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
     else:
         # Reuse the existing message posted by /ready
         posted_ready = body.get("view", {}).get("root_view_id")
@@ -1494,91 +1498,19 @@ def handle_runner_settings_modal(ack, body, client):
     import threading
     threading.Timer(60, update_ready_countdown, args=(client, selected_time - 1, order_ts, order_channel, user_id, selected_time)).start() 
 
-    msg = "✅ Your delivery offer is now live!"
-    if caps_changed:
-        msg = "✅ Your drink-making capabilities have been saved and your delivery offer is now live!"
-    client.chat_postEphemeral(
-        channel=user_id,
-        user=user_id,
-        text=msg
-    )
+msg = "✅ Your delivery offer i<truncated__content/>
 
-
-@app.action("cancel_order")
-def handle_cancel_order(ack, body, client):
+@app.action("open_order_modal_for_runner")
+def handle_open_order_modal_for_runner(ack, body, client):
     ack()
-    user_id = body["user"]["id"]
-    message = body["message"]
-    original_text = ""
-    for block in message.get("blocks", []):
-        if block.get("type") == "section" and isinstance(block.get("text"), dict):
-            original_text = block["text"].get("text", "")
-            if original_text:
-                break
+    import json
 
-    order_ts = message["ts"]
-    extras = order_extras.get(order_ts, {})
-    original_user_id = extras.get("requester_id")
-    if not original_user_id:
-        original_user_id = re.search(r"FROM <@([A-Z0-9]+)>", original_text or "")
-        if original_user_id:
-            original_user_id = original_user_id.group(1)
+    # Parse runner ID from button payload
+    runner_info = json.loads(body["actions"][0]["value"])
+    runner_id = runner_info.get("runner_id", "")
 
-    if user_id != original_user_id:
-        client.chat_postEphemeral(
-            channel=body["channel"]["id"],
-            user=user_id,
-            text="❌ You can only cancel your own unclaimed order."
-        )
-        return
-
-    if "Claimed by" in original_text:
-        client.chat_postEphemeral(
-            channel=body["channel"]["id"],
-            user=user_id,
-            text="❌ This order has already been claimed and can’t be canceled."
-        )
-        return
-
-    # Clean up any extras like GIFs or context
-    order_ts = message["ts"]
-    if order_ts in order_extras:
-        gif_ts = order_extras[order_ts].get("gif_ts")
-        if gif_ts:
-            try:
-                client.chat_delete(channel=body["channel"]["id"], ts=gif_ts)
-            except Exception as e:
-                print("⚠️ Failed to delete gif message:", e)
-        del order_extras[order_ts]
-    
-    # Refund the karma cost to the original user
-    karma_cost = extras.get("karma_cost", 1)
-    add_karma(user_id, karma_cost)
-    print(f"📬 Sending DM to user_id: {user_id} with message: 🌀 Your order was canceled. {karma_cost} Karma refunded. Balance restored.")
-    client.chat_postMessage(
-        channel=user_id,
-        text=f"🌀 Your order was canceled. {karma_cost} Karma refunded. Balance restored."
+    # Open the shared order modal with runner_id passed in
+    client.views_open(
+        trigger_id=body["trigger_id"],
+        view=build_order_modal(trigger_id=body["trigger_id"], runner_id=runner_id)["view"]
     )
-
-    # Stop any further scheduled updates by overwriting the original message with only cancellation info.
-    import re
-    updated_text = re.sub(r"\n*⏳ \*Time left to claim:\*.*", "", original_text)
-    updated_text = re.sub(r"\n*⚠️ This mission’s still unclaimed\..*", "", updated_text)
-    updated_text = f"{updated_text}\n\n❌ Order canceled by <@{user_id}>."
-    from sheet import update_order_status
-    update_order_status(order_ts, status="canceled")
-    safe_chat_update(
-        client,
-        body["channel"]["id"],
-        order_ts,
-        updated_text,
-        [
-            {
-                "type": "section",
-                "text": {"type": "mrkdwn", "text": f"❌ *Order canceled by <@{user_id}>.*"}
-            }
-        ]
-    )
-
-if __name__ == "__main__":
-    flask_app.run(host="0.0.0.0", port=10000)
