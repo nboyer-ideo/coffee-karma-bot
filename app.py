@@ -553,25 +553,40 @@ def handle_claim_order(ack, body, client):
     global orders
     order_data = orders.get(order_id)
     if not order_data:
-        order_data = {
-            "order_id": order_id,
-            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "requester_id": "unknown",
-            "requester_real_name": "Unknown",
-            "runner_id": body["user"]["id"],
-            "runner_real_name": "Runner",
-            "recipient_id": "unknown",
-            "recipient_real_name": "Unknown",
-            "drink": "unknown",
-            "location": "unknown",
-            "notes": "",
-            "karma_cost": "",
-            "status": "claimed",
-            "bonus_multiplier": "",
-            "time_ordered": "",
-            "time_claimed": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "time_delivered": ""
-        }
+        try:
+            order_ts = body.get("container", {}).get("message_ts")
+            order_channel = body.get("container", {}).get("channel_id")
+            current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+            blocks = current_message["messages"][0].get("blocks", [])
+            raw_text = blocks[0]["text"]["text"] if blocks else ""
+            parsed = re.findall(r"\| (\w+)\s*:\s+(.*?)\s*\|", raw_text)
+            order_data = {k.lower().replace(" ", "_"): v.strip() for k, v in parsed}
+            order_data["order_id"] = order_id
+            order_data["runner_id"] = body["user"]["id"]
+            order_data["runner_real_name"] = client.users_info(user=body["user"]["id"])["user"]["real_name"]
+            order_data["status"] = "claimed"
+            order_data["time_claimed"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        except Exception as e:
+            print("⚠️ Failed to recover order_data from message:", e)
+            order_data = {
+                "order_id": order_id,
+                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "requester_id": "unknown",
+                "requester_real_name": "Unknown",
+                "runner_id": body["user"]["id"],
+                "runner_real_name": "Runner",
+                "recipient_id": "unknown",
+                "recipient_real_name": "Unknown",
+                "drink": "unknown",
+                "location": "unknown",
+                "notes": "",
+                "karma_cost": "",
+                "status": "claimed",
+                "bonus_multiplier": "",
+                "time_ordered": "",
+                "time_claimed": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "time_delivered": ""
+            }
 
     blocks = format_order_message(order_data)
     channel = body.get("container", {}).get("channel_id")
@@ -579,8 +594,16 @@ def handle_claim_order(ack, body, client):
     if channel and ts:
         safe_chat_update(client, channel, ts, "Order claimed", blocks)
 
-    client.chat_postMessage(channel=order_data["requester_id"], text="📬 Your order has been claimed. Hang tight — delivery en route.")
-    client.chat_postMessage(channel=order_data["runner_id"], text="🛎️ You claimed a delivery. Hit 'Mark as Delivered' once it's dropped.")
+    try:
+        client.chat_postMessage(channel=order_data["requester_id"], text="📬 Your order has been claimed. Hang tight — delivery en route.")
+    except Exception as e:
+        print("⚠️ Failed to notify requester:", e)
+
+    try:
+        if order_data.get("runner_id"):
+            client.chat_postMessage(channel=order_data["runner_id"], text="🛎️ You claimed a delivery. Hit 'Mark as Delivered' once it's dropped.")
+    except Exception as e:
+        print("⚠️ Failed to notify runner:", e)
 
 def update_ready_countdown(client, remaining, ts, channel, user_id, original_total_time):
     from sheet import get_runner_capabilities
