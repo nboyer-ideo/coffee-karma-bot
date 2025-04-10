@@ -1419,23 +1419,21 @@ def handle_runner_settings_modal(ack, body, client):
     total_blocks = 20
     filled_blocks = total_blocks
     progress_bar = "[" + ("█" * filled_blocks) + ("░" * (total_blocks - filled_blocks)) + "]"
-    can_make_line = terminal_box_line(label="CAN MAKE:", value=can_make_str, width=40)
-    cant_make_line = terminal_box_line(label="CAN'T MAKE:", value=cannot_make_str, width=40)
  
     text = (
-    "```+----------------------------------------+\n"
-    + "|         DRINK RUNNER AVAILABLE         |\n"
-    + "+----------------------------------------+\n"
-    + terminal_box_line(label="Runner", value=real_name.upper(), width=40, align="label") + "\n"
-    + "\n".join(wrap_line_runner("CAN MAKE:", can_make_str, width=40)) + "\n"
-    + "\n".join(wrap_line_runner("CAN'T MAKE:", cannot_make_str, width=40)) + "\n"
-    + "+----------------------------------------+\n"
-    + terminal_box_line(text=f"TIME LEFT ON SHIFT: {selected_time} MINUTES", width=40, align="center") + "\n"
-    + terminal_box_line(text=progress_bar, width=40, align="center") + "\n"
-    + terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
-    + terminal_box_line(text="↓ CLICK BELOW TO PLACE AN ORDER ↓", width=40, align="center") + "\n"
-    + terminal_box_line(text="------------------------------------", width=40, align="center") + "\n"
-    + "```"
+        "```+----------------------------------------+\n"
+        + "|         DRINK RUNNER AVAILABLE         |\n"
+        + "+----------------------------------------+\n"
+        + "\n".join(box_line(label="Runner", value=real_name.upper(), width=40)) + "\n"
+        + "\n".join(box_line(label="CAN MAKE:", value=can_make_str, width=40)) + "\n"
+        + "\n".join(box_line(label="CAN'T MAKE:", value=cannot_make_str, width=40)) + "\n"
+        + "+----------------------------------------+\n"
+        + "\n".join(box_line(text=f"TIME LEFT ON SHIFT: {selected_time} MINUTES", width=40, align="center")) + "\n"
+        + "\n".join(box_line(text=progress_bar, width=40, align="center")) + "\n"
+        + "\n".join(box_line(text="------------------------------------", width=40, align="center")) + "\n"
+        + "\n".join(box_line(text="↓ CLICK BELOW TO PLACE AN ORDER ↓", width=40, align="center")) + "\n"
+        + "\n".join(box_line(text="------------------------------------", width=40, align="center")) + "\n"
+        + "```"
     )
     
     posted_ready = client.chat_postMessage(
