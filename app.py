@@ -917,8 +917,6 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         if remaining > 1:
             import threading
             threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id, original_total_time)).start()
-        except Exception as e:
-            print("⚠️ Failed to update /ready countdown:", e)
 
 from flask import jsonify
 
