@@ -1490,22 +1490,18 @@ def handle_modal_submission(ack, body, client):
     order_ts = ""
     order_channel = ""
     posted = client.chat_postMessage(
-        print("DEBUG: /order modal posted:", posted)
-        print("DEBUG: order_ts =", posted["ts"], ", order_channel =", posted["channel"])
-        order_ts = posted["ts"]
-        order_data["order_id"] = order_ts
-        log_order_to_sheet(order_data)
-        order_channel = posted["channel"]
-        formatted_blocks = format_order_message(order_data)
-        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
         text="New Koffee Karma order posted...",
         blocks=[]
     )
-    if runner_id:
-        order_ts = posted["ts"]
-        order_data["order_id"] = order_ts
-        log_order_to_sheet(order_data)
+    print("DEBUG: /order modal posted:", posted)
+    print("DEBUG: order_ts =", posted["ts"], ", order_channel =", posted["channel"])
+    order_ts = posted["ts"]
+    order_data["order_id"] = order_ts
+    log_order_to_sheet(order_data)
+    order_channel = posted["channel"]
+    formatted_blocks = format_order_message(order_data)
+    safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
     if runner_id:
         print(f"🧪 Logging /deliver-initiated order to sheet for ts={order_ts} and user_id={user_id}")
         order_ts = posted["ts"]
