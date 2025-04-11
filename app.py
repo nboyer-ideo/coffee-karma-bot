@@ -1244,10 +1244,10 @@ def handle_modal_submission(ack, body, client):
 
         for block in blocks:
             if block.get("block_id") == "drink_category":
-                block["element"]["initial_option"] = {
-                    "text": {"type": "plain_text", "text": drink_value},
-                    "value": drink_value
-                }
+                for option in block["element"]["options"]:
+                    if option["value"] == drink_value:
+                        block["element"]["initial_option"] = option
+                        break
             elif block.get("block_id") == "drink_detail":
                 block["element"]["initial_value"] = drink_detail
             elif block.get("block_id") == "notes":
