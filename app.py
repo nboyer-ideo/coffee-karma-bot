@@ -570,7 +570,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print(f"📤 Sending updated Slack message with remaining_minutes = {remaining}")
         print(f"🧾 Updated blocks:\n{updated_blocks}")
         print(f"🧪 Sending to Slack with FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
-        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", updated_blocks)
+        safe_chat_update(client, order_channel, order_ts, "Order update: Countdown updated", updated_blocks)
         print("✅ Countdown block update pushed to Slack")
         print(f"📣 client.chat_update call completed for order {order_ts}")
         if remaining <= 1 and extras.get("status") == "ordered":
@@ -675,7 +675,7 @@ def handle_claim_order(ack, body, client):
         order_data["order_id"] = order_id
         order_data["status"] = "claimed"
         blocks = format_order_message(order_data)
-        safe_chat_update(client, channel, ts, "Order claimed", blocks)
+        safe_chat_update(client, channel, ts, "Order update: Order claimed", blocks)
 
     try:
         client.chat_postMessage(channel=order_data["requester_id"], text="¤ Order CLAIMED. Delivery en route.")
@@ -734,7 +734,7 @@ def handle_mark_delivered(ack, body, client):
     })
 
     blocks = format_order_message(order_data)
-    safe_chat_update(client, order_channel, order_ts, "Order delivered", blocks)
+    safe_chat_update(client, order_channel, order_ts, "Order update: Order delivered", blocks)
 
     update_order_status(
         order_id,
@@ -806,7 +806,10 @@ def handle_cancel_ready_offer(ack, body, client):
         print("⚠️ Failed to cancel runner offer:", e)
 
 def update_ready_countdown(client, remaining, ts, channel, user_id, original_total_time):
+    print(f"🕵️ Entered update_ready_countdown: remaining={remaining}, ts={ts}, user_id={user_id}")
+    print(f"🧪 Checking if message should expire: remaining={remaining}")
     if remaining <= 0:
+        print("🚨 Countdown reached zero — attempting to expire message")
         try:
             from slack_sdk.errors import SlackApiError
             expired_text = f"Delivery offer from <@{user_id}> EXPIRED — No order was placed."
@@ -816,6 +819,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                 text=expired_text,
                 blocks=[]
             )
+            print(f"✅ Successfully expired runner message ts={ts} for user_id={user_id}")
             print("☠️ Runner offer expired and message replaced.")
         except SlackApiError as e:
             print("⚠️ Slack API error during runner expiration update:", e.response['error'])
@@ -924,9 +928,8 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         })
 
         # 🔁 Always schedule next tick if countdown is not done
-    if remaining > 0:
-        import threading
-        threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id, original_total_time)).start()
+    import threading
+    threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id, original_total_time)).start()
 
 from flask import jsonify
 
@@ -1299,6 +1302,7 @@ def handle_modal_submission(ack, body, client):
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
         # Only log the order if it hasn't been logged before.
         if order_ts not in order_extras:
+            print(f"🧪 Logging runner-submitted order: {order_data}")
             log_order_to_sheet(order_data)
         if not order_channel:
             order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
@@ -1319,6 +1323,8 @@ def handle_modal_submission(ack, body, client):
         order_data["status"] = "offered"
         order_data["runner_id"] = runner_id
         order_data["runner_real_name"] = order_data.get("runner_real_name", "")
+        print(f"🧪 [DELIVER] Logging runner order: {order_data}")
+        print(f"🧪 [DELIVER] Order status: {order_data.get('status')}, runner_id: {order_data.get('runner_id')}")
         log_order_to_sheet(order_data)
 
     context_line = random.choice([
