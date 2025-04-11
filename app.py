@@ -317,9 +317,9 @@ def format_order_message(order_data):
     lines.append(f'| LOCATION:     {order_data["location"].upper():<32} |')
     lines.append(f'| NOTES:        {(order_data["notes"] or "NONE").upper():<32} |')
     lines.append(border_mid)
-    lines.append(f'| REWARD :      {order_data["karma_cost"]} KARMA{" " * (32 - len(str(order_data["karma_cost"]) + " KARMA"))} |')
+    lines.append(f'| REWARD:      {order_data["karma_cost"]} KARMA{" " * (32 - len(str(order_data["karma_cost"]) + " KARMA"))} |')
     if order_data.get("delivered_by"):
-        lines.append(f'| STATUS :      COMPLETED {" " * 22} |')
+        lines.append(f'| STATUS:      COMPLETED {" " * 22} |')
         lines.append(f'|               DELIVERED BY {order_data["delivered_by"].upper():<19} |')
         lines.append("| ---------------------------------------------- |")
         earned = order_data.get('karma_cost', 1) * int(order_data.get('bonus_multiplier', 1))
@@ -331,7 +331,7 @@ def format_order_message(order_data):
         lines.append("| ---------------------------------------------- |")
     elif order_data.get("claimed_by"):
         claimed_name = order_data.get("runner_real_name") or order_data.get("claimed_by", "")
-        lines.append(f'| STATUS :      CLAIMED BY {claimed_name.upper():<21} |')
+        lines.append(f'| STATUS:      CLAIMED BY {claimed_name.upper():<21} |')
         lines.append(f'|               WAITING TO BE DELIVERED          |')
     else:
         total_blocks = 20
@@ -340,7 +340,7 @@ def format_order_message(order_data):
         empty_blocks = total_blocks - filled_blocks
         progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
         status_line = f'{order_data.get("remaining_minutes", 10)} MINUTES TO CLAIM'
-        lines.append(f'| STATUS :      {status_line:<32} |')
+        lines.append(f'| STATUS:      {status_line:<32} |')
         lines.append(f'|               {progress_bar:<32} |')
     
     # Only add call-to-action if order is not delivered
@@ -495,6 +495,9 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         if not extras or not extras.get("active", True):
             print(f"⛔ Countdown aborted — order_extras missing or marked inactive for {order_ts}")
             return
+        elif extras.get("status") in ["claimed", "delivered"]:
+            print(f"🛑 Countdown stopped — order marked {extras.get('status')} (order_ts: {order_ts})")
+            return
         else:
             print(f"✅ Countdown proceeding for {order_ts}, remaining: {remaining}")
 
@@ -503,29 +506,45 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "order_id": "",
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "requester_id": user_id,
-            "requester_real_name": extras.get("requester_real_name", ""),
+            "requester_real_name": extras.get("requester_real_name") or "",
             "runner_id": "",
             "runner_real_name": "",
             "recipient_id": gifted_id if gifted_id else user_id,
-            "recipient_real_name": extras.get("recipient_real_name", ""),
+            "recipient_real_name": extras.get("recipient_real_name") or "",
             "drink": drink,
             "location": location,
             "notes": notes,
             "karma_cost": karma_cost,
-            "status": "ordered",
+            "status": extras.get("status", "ordered"),
             "bonus_multiplier": "",
             "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "time_claimed": "",
             "time_delivered": "",
-        "remaining_minutes": remaining
+            "remaining_minutes": remaining,
+            "claimed_by": extras.get("claimed_by", ""),
+            "runner_real_name": extras.get("runner_real_name", ""),
+            "delivered_by": extras.get("delivered_by", "")
         }
         print("🛠️ Calling format_order_message with updated remaining time")
         order_data["order_id"] = order_ts
-        order_data["recipient_real_name"] = extras.get("recipient_real_name", "")
-        order_data["requester_real_name"] = extras.get("requester_real_name", "")
-        order_data["drink"] = drink
-        order_data["location"] = location
-        order_data["notes"] = notes
+        order_data["requester_real_name"] = extras.get("requester_real_name") or user_id
+        order_data["recipient_real_name"] = extras.get("recipient_real_name") or gifted_id or user_id
+        order_data["drink"] = extras.get("drink", drink)
+        order_data["location"] = extras.get("location", location)
+        order_data["notes"] = extras.get("notes", notes)
+        order_data["claimed_by"] = extras.get("claimed_by", "")
+        order_data["runner_real_name"] = extras.get("runner_real_name", "")
+        order_data["delivered_by"] = extras.get("delivered_by", "")
+        order_data["status"] = extras.get("status", "ordered")
+        order_extras[order_ts]["requester_real_name"] = order_data["requester_real_name"]
+        order_extras[order_ts]["recipient_real_name"] = order_data["recipient_real_name"]
+        order_extras[order_ts]["drink"] = order_data["drink"]
+        order_extras[order_ts]["location"] = order_data["location"]
+        order_extras[order_ts]["notes"] = order_data["notes"]
+        order_extras[order_ts]["claimed_by"] = order_data.get("claimed_by", "")
+        order_extras[order_ts]["runner_real_name"] = order_data.get("runner_real_name", "")
+        order_extras[order_ts]["delivered_by"] = order_data.get("delivered_by", "")
+        order_extras[order_ts]["status"] = order_data.get("status", "ordered")
         updated_blocks = format_order_message(order_data)
  
         current_blocks = current_message["messages"][0].get("blocks", [])
@@ -554,14 +573,11 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             add_karma(user_id, karma_cost)
             client.chat_postMessage(
                 channel=user_id,
-                text="¤ Order UNCLAIMED. Karma returned to your balance.."
+                text="∴ Order UNCLAIMED. Karma returned to your balance.."
             )
-            safe_chat_update(client, order_channel, order_ts, f"‡ Order from <@{user_id}> EXPIRED — No claimant arose.", [])
+            safe_chat_update(client, order_channel, order_ts, f"Order from <@{user_id}> EXPIRED — No claimant arose.", [])
  
-        if remaining > 1 and extras.get("active", True):
-            if extras.get("status") in ["claimed", "delivered"]:
-                print(f"🛑 Stopping countdown loop — order already {extras.get('status')}")
-                return
+        if remaining > 1:
             print(f"🕒 Scheduling next countdown tick — remaining: {remaining - 1}")
             t = threading.Timer(60, update_countdown, args=(
                 client, remaining - 1, order_ts, order_channel,
@@ -755,10 +771,30 @@ def handle_cancel_order(ack, body, client):
 
         client.chat_postMessage(
             channel=requester_id,
-            text="§ Order CANCELED. Karma returned to your balance."
+            text="× Order CANCELED. Karma returned to your balance."
         )
     except Exception as e:
         print("⚠️ Failed to cancel order:", e)
+
+@app.action("cancel_ready_offer")
+def handle_cancel_ready_offer(ack, body, client):
+    ack()
+    user_id = body["user"]["id"]
+    channel = body["container"]["channel_id"]
+    ts = body["container"]["message_ts"]
+
+    try:
+        # Replace the runner terminal with a cancellation message
+        cancel_text = f"Delivery offer canceled by <@{user_id}>."
+        client.chat_update(channel=channel, ts=ts, text=cancel_text, blocks=[])
+
+        # Cleanup any existing claim
+        if user_id in runner_offer_claims:
+            del runner_offer_claims[user_id]
+
+        print(f"🛑 Runner offer canceled by {user_id}")
+    except Exception as e:
+        print("⚠️ Failed to cancel runner offer:", e)
 
 def update_ready_countdown(client, remaining, ts, channel, user_id, original_total_time):
     from sheet import get_runner_capabilities
@@ -776,16 +812,22 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
     cannot_make = [pretty_caps[c] for c in all_options if c not in saved_caps]
     can_make_str = ", ".join(can_make) if can_make else "NONE"
     cannot_make_str = ", ".join(cannot_make) if cannot_make else "NONE"
-    try:
-        if remaining <= 0:
-            safe_chat_update(
-                client,
-                channel,
-                ts,
-                f"<@{user_id}> IS READY TO DELIVER — {remaining} MINUTES LEFT.",
-                []
+    if remaining <= 0:
+        try:
+            from slack_sdk.errors import SlackApiError
+            expired_text = f"Delivery offer from <@{user_id}> EXPIRED — No order was placed."
+            client.chat_update(
+                channel=channel,
+                ts=ts,
+                text=expired_text,
+                blocks=[]
             )
-            return
+            print("☠️ Runner offer expired and message replaced.")
+        except SlackApiError as e:
+            print("⚠️ Slack API error during runner expiration update:", e.response['error'])
+        except Exception as e:
+            print("⚠️ Failed to update expired runner offer message:", e)
+        return
 
         total_blocks = 20
         filled_blocks = round((remaining / original_total_time) * total_blocks)
@@ -934,7 +976,7 @@ def build_order_modal(trigger_id, runner_id=""):
                                 "value": "drip"
                             },
                             {
-                                "text": {"type": "plain_text", "text": "Espresso Drinks — UNAVAILABLE Ø"},
+                                "text": {"type": "plain_text", "text": "Espresso Drinks — UNAVAILABLE ⊘"},
                                 "value": "espresso"
                             }
                         ]
@@ -1236,6 +1278,8 @@ def handle_modal_submission(ack, body, client):
         order_ts = posted["ts"]
         order_channel = posted["channel"]
         order_data["order_id"] = order_ts
+        if order_ts not in order_extras:
+            log_order_to_sheet(order_data)
         formatted_blocks = format_order_message(order_data)
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
         # Only log the order if it hasn't been logged before.
@@ -1633,11 +1677,11 @@ def handle_ready_command(ack, body, client):
                 client,
                 order_channel,
                 order_ts,
-                "‡ Drop expired. No claimant arose.",
+                "Drop EXPIRED. No claimant arose.",
                 [
                     {
                         "type": "section",
-                        "text": {"type": "mrkdwn", "text": "‡ Drop expired. No claimant arose."}
+                        "text": {"type": "mrkdwn", "text": "Drop EXPIRED. No claimant arose."}
                     }
                 ]
             )
@@ -1663,7 +1707,7 @@ def handle_ready_command(ack, body, client):
                 print(f"📬 Sending DM to user_id: {user_id} with message: 🌀 Your order expired. {refund_amount} Karma refunded. Balance restored.")
                 client.chat_postMessage(
                     channel=user_id,
-                    text=f"¤ Order EXPIRED. +{refund_amount} karma returned to your balance."
+                    text=f"☽ Order EXPIRED. +{refund_amount} karma returned to your balance."
                 )
             from sheet import update_order_status
             update_order_status(order_ts, status="expired")
@@ -1798,7 +1842,7 @@ def handle_runner_settings_modal(ack, body, client):
  
     text = (
         "```+----------------------------------------+\n"
-        + "|         DRINK RUNNER AVAILABLE         |\n"
+        + "|       𐂀 DRINK RUNNER AVAILABLE 𐂀       |\n"
         + "+----------------------------------------+\n"
         + "\n".join(box_line(label="RUNNER", value=real_name.upper(), width=42)) + "\n"
         + "\n".join(box_line(label="CAN MAKE", value=can_make_str, width=42)) + "\n"
