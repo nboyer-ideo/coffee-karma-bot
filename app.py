@@ -883,41 +883,40 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
             ]
         }
     ]
+    safe_chat_update(
+        client,
+        channel,
+        ts,
+        f"<@{user_id}> IS READY TO DELIVER — {remaining} MINUTES LEFT.",
+        blocks
+    )
+    if remaining == original_total_time:
+        from sheet import log_order_to_sheet
+        import datetime
+        log_order_to_sheet({
+            "order_id": ts,
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "initiated_by": "runner",
+            "requester_id": user_id,
+            "requester_real_name": real_name,
+            "runner_id": user_id,
+            "runner_name": real_name,
+            "recipient_id": "",
+            "recipient_real_name": "",
+            "drink": "",
+            "location": "",
+            "notes": "Runner offer",
+            "karma_cost": 0,
+            "status": "offered",
+            "bonus_multiplier": "",
+            "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "time_claimed": "",
+            "time_delivered": ""
+        })
 
-        safe_chat_update(
-            client,
-            channel,
-            ts,
-            f"<@{user_id}> IS READY TO DELIVER — {remaining} MINUTES LEFT.",
-            blocks
-        )
-        if remaining == original_total_time:
-            from sheet import log_order_to_sheet
-            import datetime
-            log_order_to_sheet({
-                "order_id": ts,
-                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "initiated_by": "runner",
-                "requester_id": user_id,
-                "requester_real_name": real_name,
-                "runner_id": user_id,
-                "runner_name": real_name,
-                "recipient_id": "",
-                "recipient_real_name": "",
-                "drink": "",
-                "location": "",
-                "notes": "Runner offer",
-                "karma_cost": 0,
-                "status": "offered",
-                "bonus_multiplier": "",
-                "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "time_claimed": "",
-                "time_delivered": ""
-            })
-
-        if remaining > 1:
-            import threading
-            threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id, original_total_time)).start()
+    if remaining > 1:
+        import threading
+        threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id, original_total_time)).start()
 
 from flask import jsonify
 
