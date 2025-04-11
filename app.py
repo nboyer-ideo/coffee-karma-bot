@@ -831,6 +831,11 @@ def handle_cancel_ready_offer(ack, body, client):
 def update_ready_countdown(client, remaining, ts, channel, user_id, original_total_time):
     print(f"🕵️ Entered update_ready_countdown: remaining={remaining}, ts={ts}, user_id={user_id}")
     print(f"🧪 Checking if message should expire: remaining={remaining}")
+    if ts in order_extras:
+        status = order_extras[ts].get("status", "")
+        if status in ["delivered", "canceled"]:
+            print(f"⛔ Skipping expiration — order {ts} is already marked as {status}")
+            return
     if user_id in runner_offer_claims and runner_offer_claims[user_id].get("delivered") is True:
         print(f"⛔ Countdown halted — delivery offer by {user_id} already completed.")
         return
@@ -838,7 +843,15 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
     if user_id in runner_offer_claims and runner_offer_claims[user_id].get("canceled") is True:
         print(f"⛔ Countdown halted — delivery offer by {user_id} already canceled.")
         return
+    if user_id in runner_offer_claims and runner_offer_claims[user_id].get("fulfilled") is True:
+        print(f"⛔ Countdown halted — delivery offer by {user_id} already fulfilled.")
+        return
     if remaining <= 0:
+        if ts in order_extras:
+            status = order_extras[ts].get("status", "")
+            if status in ["delivered", "canceled"]:
+                print(f"⛔ Skipping expiration — order {ts} is already marked as {status}")
+                return
         print("🚨 Countdown reached zero — attempting to expire message")
         try:
             from slack_sdk.errors import SlackApiError
@@ -1337,8 +1350,13 @@ def handle_modal_submission(ack, body, client):
         )
         return
     deduct_karma(user_id, karma_cost)
-
+    
     runner_id = body["view"].get("private_metadata", "")
+    # Mark runner offer as fulfilled to stop its countdown expiration
+    if runner_id:
+        if runner_id not in runner_offer_claims:
+            runner_offer_claims[runner_id] = {}
+        runner_offer_claims[runner_id]["fulfilled"] = True
     order_data = {
         "order_id": "",
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
