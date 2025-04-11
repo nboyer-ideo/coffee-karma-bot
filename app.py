@@ -2026,6 +2026,7 @@ def handle_ready_command(ack, body, client):
 @app.view("runner_settings_modal")
 def handle_runner_settings_modal(ack, body, client):
     ack()
+    import os
     print("📥 /deliver modal submission received")
     from sheet import log_order_to_sheet
     import datetime
