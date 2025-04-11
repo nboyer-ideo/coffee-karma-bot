@@ -77,11 +77,11 @@ def format_full_map_with_legend(mini_map_lines):
         "| ≋ = BATHROOM             |",
         "+--------------------------+",
         "|                          |",
-        "| Use the dropdown above   |",
-        "| to pick your delivery    |",
-        "| spot in the studio. The  |",
-        "| ✗ in the map shows where |",
-        "| your drink will arrive.  |",
+        "| USE THE DROPDOWN ABOVE   |",
+        "| TO PICK YOUR DELIVERY    |",
+        "| SPOT IN THE STUDIO. THE  |",
+        "| ✗ IN THE MAP SHOWS WHERE |",
+        "| YOUR DRINK WILL ARRIVE.  |",
         "|                          |",
         "|                          |",
         "+--------------------------+"
@@ -308,14 +308,14 @@ def format_order_message(order_data):
         *wrap_line("", "☠ NEW DRINK ORDER ☠", width=50),
     ]
     lines.append(border_mid)
-    lines.append(f'| DROP ID :     {order_data["order_id"]:<32} |')
+    lines.append(f'| DROP ID:      {order_data["order_id"]:<32} |')
     requester_display = order_data.get("requester_real_name", "")
     recipient_display = order_data.get("recipient_real_name", "")
-    lines.append(f'| FROM :        {requester_display.upper():<32} |')
-    lines.append(f'| TO :          {recipient_display.upper():<32} |')
-    lines.append(f'| DRINK :       {order_data["drink"].upper():<32} |')
-    lines.append(f'| LOCATION :    {order_data["location"].upper():<32} |')
-    lines.append(f'| NOTES :       {(order_data["notes"] or "NONE").upper():<32} |')
+    lines.append(f'| FROM:         {requester_display.upper():<32} |')
+    lines.append(f'| TO:           {recipient_display.upper():<32} |')
+    lines.append(f'| DRINK:        {order_data["drink"].upper():<32} |')
+    lines.append(f'| LOCATION:     {order_data["location"].upper():<32} |')
+    lines.append(f'| NOTES:        {(order_data["notes"] or "NONE").upper():<32} |')
     lines.append(border_mid)
     lines.append(f'| REWARD :      {order_data["karma_cost"]} KARMA{" " * (32 - len(str(order_data["karma_cost"]) + " KARMA"))} |')
     if order_data.get("delivered_by"):
@@ -382,7 +382,7 @@ def format_order_message(order_data):
             "action_id": "claim_order",
             "text": {
                 "type": "plain_text",
-                "text": "CLAIM THIS MISSION",
+                "text": "CLAIM ORDER",
                 "emoji": True
             },
             "value": order_data.get("order_id") or "unknown"
@@ -523,6 +523,9 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         order_data["order_id"] = order_ts
         order_data["recipient_real_name"] = extras.get("recipient_real_name", "")
         order_data["requester_real_name"] = extras.get("requester_real_name", "")
+        order_data["drink"] = drink
+        order_data["location"] = location
+        order_data["notes"] = notes
         updated_blocks = format_order_message(order_data)
  
         current_blocks = current_message["messages"][0].get("blocks", [])
@@ -551,7 +554,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             add_karma(user_id, karma_cost)
             client.chat_postMessage(
                 channel=user_id,
-                text="¤ Order UNCLAIMED. Karma returned to source."
+                text="¤ Order UNCLAIMED. Karma returned to your balance.."
             )
             safe_chat_update(client, order_channel, order_ts, f"‡ Order from <@{user_id}> EXPIRED — No claimant arose.", [])
  
@@ -752,7 +755,7 @@ def handle_cancel_order(ack, body, client):
 
         client.chat_postMessage(
             channel=requester_id,
-            text="§ Order CANCELED. Karma returned to source."
+            text="§ Order CANCELED. Karma returned to your balance."
         )
     except Exception as e:
         print("⚠️ Failed to cancel order:", e)
@@ -905,7 +908,7 @@ def build_order_modal(trigger_id, runner_id=""):
         "view": {
             "type": "modal",
             "callback_id": "koffee_request_modal",
-            "title": {"type": "plain_text", "text": "Make An Order"},
+            "title": {"type": "plain_text", "text": "Place An Order"},
             "submit": {"type": "plain_text", "text": "Submit Drop"},
             "close": {"type": "plain_text", "text": "Nevermind"},
             "private_metadata": runner_id,
