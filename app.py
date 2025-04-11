@@ -20,6 +20,7 @@ from sheet import (
     get_runner_capabilities,
     log_order_to_sheet,
     fetch_order_data,
+    mark_code_redeemed,
 )
 
 def send_koffee_welcome(client, user_id):
@@ -305,7 +306,7 @@ def format_order_message(order_data):
     border_bot = "+------------------------------------------------+"
     lines = [
         border_top,
-        *wrap_line("", "☠ NEW DRINK ORDER ☠", width=50),
+        *wrap_line("", "☠ DRINK ORDER ☠", width=50),
     ]
     lines.append(border_mid)
     lines.append(f'| DROP ID:      {order_data["order_id"]:<32} |')
@@ -493,8 +494,8 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         sys.stdout.flush()
         
         # Added check: stop countdown if order is already claimed or delivered
-        if extras and extras.get("status") in ["claimed", "delivered"]:
-            print(f"🛑 Countdown stopped — order marked {extras.get('status')} (order_ts: {order_ts})")
+        if extras and extras.get("status") in ["claimed", "delivered", "canceled"]:
+            print("Countdown halted due to status:", extras.get("status"))
             return
         
         if not extras or not extras.get("active", True):
@@ -706,6 +707,7 @@ def handle_mark_delivered(ack, body, client):
         multiplier = 2
     else:
         multiplier = 1
+    print(f"🎲 Bonus multiplier roll: r={r} → multiplier={multiplier}")
     bonus_multiplier = multiplier
 
     # Calculate final karma
@@ -713,7 +715,6 @@ def handle_mark_delivered(ack, body, client):
     total_karma = karma_cost * multiplier
     from sheet import add_karma, get_title
     runner_karma = add_karma(order_data["runner_id"], total_karma)
-    from sheet import get_title
     title = get_title(runner_karma)
     client.chat_postMessage(
         channel=order_data["runner_id"],
@@ -765,6 +766,10 @@ def handle_cancel_order(ack, body, client):
 
         from sheet import update_order_status
         update_order_status(order_id, status="canceled")
+        if order_id not in order_extras:
+            order_extras[order_id] = {}
+        order_extras[order_id]["status"] = "canceled"
+        order_extras[order_id]["active"] = False
         from sheet import fetch_order_data, add_karma
         order_data = fetch_order_data(order_id)
         refund_amount = order_data.get("karma_cost", 1)
@@ -891,6 +896,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         blocks
     )
     if remaining == original_total_time:
+        # Logging runner offer with required payload as per o3's recommendation
         from sheet import log_order_to_sheet
         import datetime
         log_order_to_sheet({
@@ -919,6 +925,14 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id, original_total_time)).start()
 
 from flask import jsonify
+
+@app.command("/redeem")
+def handle_redeem(ack, body, client):
+    ack()
+    code = body.get("text", "").strip()
+    user_id = body["user_id"]
+    result = mark_code_redeemed(code, user_id)
+    client.chat_postEphemeral(channel=body["channel_id"], user=user_id, text=f"Redemption result: {result}")
 
 @flask_app.route("/slack/events", methods=["POST"])
 def slack_events():
@@ -1213,7 +1227,7 @@ def handle_modal_submission(ack, body, client):
         client.chat_postEphemeral(
             channel=user_id,
             user=user_id,
-            text="§ You do not have enough karma to place this order. Deliver drinks to earn more."
+            text="⊘ You do not have enough karma to place this order. Deliver drinks to earn more."
         )
         return
     deduct_karma(user_id, karma_cost)
@@ -1289,7 +1303,7 @@ def handle_modal_submission(ack, body, client):
             client, 9, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost
         )).start()
     else:
-        # Reuse the existing message posted by /ready
+        # Reuse the existing message posted by /ready (deliver modal submission)
         posted_ready = body.get("view", {}).get("root_view_id")
         order_ts = body.get("container", {}).get("message_ts", "")
         order_channel = body.get("container", {}).get("channel_id", "")
@@ -1297,6 +1311,11 @@ def handle_modal_submission(ack, body, client):
             print("⚠️ order_channel is missing. Trying to fall back from view or other message context.")
             order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")  # fallback to default channel
         order_data["order_id"] = order_ts
+        order_data["initiated_by"] = "runner"
+        order_data["status"] = "offered"
+        order_data["runner_id"] = runner_id
+        order_data["runner_real_name"] = order_data.get("runner_real_name", "")
+        log_order_to_sheet(order_data)
 
     context_line = random.choice([
         "*☕ Caffeine + Chaos* — IDE☕O forever.",
@@ -1856,9 +1875,9 @@ def handle_runner_settings_modal(ack, body, client):
         + "\n".join(box_line(text="------------------------------------", width=42, align="center")) + "\n"
         + "+----------------------------------------+```"
     )
-    msg = "✅ Your delivery offer is now live."
+    msg = "✷ Your delivery offer is now live."
     if caps_changed:
-        msg = "✅ Your drink-making capabilities have been saved and your delivery offer is now live."
+        msg = "✷ Your drink-making capabilities have been saved and your delivery offer is now live."
 
     client.chat_postMessage(channel=user_id, text=msg)
     
