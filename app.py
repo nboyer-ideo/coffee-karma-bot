@@ -260,6 +260,7 @@ def wrap_line_runner(label, value, width=40):
 def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.json", map_file="lion_map_template.txt"):
     import json
     print(f"🔍 build_mini_map called with location_name={location_name}")
+    print(f"📍 [DEBUG] build_mini_map received location_name: '{location_name}'")
     global cached_map_template
     if cached_map_template is None:
         try:
@@ -288,10 +289,12 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
     if location_name in coordinates:
         x = int(coordinates[location_name]["x"])
         y = int(coordinates[location_name]["y"])
+        print(f"🗺️ [DEBUG] Coordinates for {location_name} → X: {x}, Y: {y}")
         print(f"🗺️ Marking location on map at ({x}, {y}) for {location_name}")
         if 0 <= y < len(map_lines):
             line = list(map_lines[y])
             if 0 <= x < len(line):
+                print(f"✍️ [DEBUG] Placing ✗ on map at line[{y}][{x}]")
                 print(f"✍️ Placing '✗' on map at ({x}, {y})")
                 line[x] = "✗"
                 map_lines[y] = "".join(line)
@@ -991,6 +994,7 @@ def handle_app_home_opened_events(body, logger):
     pass
 
 def build_order_modal(trigger_id, runner_id="", selected_location=""):
+    print(f"📍 [DEBUG] build_order_modal called with selected_location: {selected_location}")
     return {
         "trigger_id": trigger_id,
         "view": {
