@@ -598,7 +598,6 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 
 @app.action("location_select")
 def handle_location_select(ack, body, client):
-    ack()
     user_id = body["user"]["id"]
     trigger_id = body["trigger_id"]
     selected_location = body["actions"][0]["selected_option"]["value"]
