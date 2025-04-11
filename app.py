@@ -1231,10 +1231,10 @@ def handle_modal_submission(ack, body, client):
             "type": "context",
             "block_id": "location_error",
             "elements": [
-                { "type": "mrkdwn", "text": "⚠️ You must select a location before submitting." }
+                { "type": "mrkdwn", "text": "⌂ You must select a location before submitting." }
             ]
         }
-        blocks.insert(4, error_block)
+        blocks.insert(3, error_block)
 
         # Preserve previous selections/input
         drink_value = values["drink_category"]["input"]["selected_option"]["value"]
