@@ -511,6 +511,9 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         "remaining_minutes": remaining
         }
         print("🛠️ Calling format_order_message with updated remaining time")
+        order_data["order_id"] = order_ts
+        order_data["recipient_real_name"] = extras.get("recipient_real_name", "")
+        order_data["requester_real_name"] = extras.get("requester_real_name", "")
         updated_blocks = format_order_message(order_data)
  
         current_blocks = current_message["messages"][0].get("blocks", [])
@@ -591,9 +594,17 @@ def handle_claim_order(ack, body, client):
     order_id = body["actions"][0]["value"]
     from sheet import fetch_order_data
     order_data = fetch_order_data(order_id)
+    if not order_data or "requester_id" not in order_data:
+        print(f"🚨 Missing order data or requester_id for order_id {order_id}")
+        client.chat_postEphemeral(
+            channel=body["user"]["id"],
+            user=body["user"]["id"],
+            text="‡ Failed to claim order. Something went wrong — try again in a moment."
+        )
+        return
     order_data["claimed_by"] = order_data.get("runner_real_name")
     runner_id = body["user"]["id"]
-    if order_data["requester_id"] == runner_id and runner_id != "U02EY5S5J0M":
+    if order_data.get("requester_id") == runner_id and runner_id != "U02EY5S5J0M":
         client.chat_postEphemeral(
             channel=runner_id,
             user=runner_id,
