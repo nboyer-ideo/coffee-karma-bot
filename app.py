@@ -1297,18 +1297,15 @@ def handle_modal_submission(ack, body, client):
                         from app import format_full_map_with_legend, build_mini_map
                         ascii_block["text"]["text"] = "```" + format_full_map_with_legend(build_mini_map("")) + "```"
  
-        client.views_update(
-            view_id=body["view"]["id"],
-            view={
-                "type": "modal",
-                "callback_id": "koffee_request_modal",
-                "title": {"type": "plain_text", "text": "Place An Order"},
-                "submit": {"type": "plain_text", "text": "Submit Drop"},
-                "close": {"type": "plain_text", "text": "Nevermind"},
-                "private_metadata": body["view"].get("private_metadata", ""),
-                "blocks": blocks
-            }
-        )
+        ack(response_action="update", view={
+            "type": "modal",
+            "callback_id": "koffee_request_modal",
+            "title": {"type": "plain_text", "text": "Place An Order"},
+            "submit": {"type": "plain_text", "text": "Submit Drop"},
+            "close": {"type": "plain_text", "text": "Nevermind"},
+            "private_metadata": body["view"].get("private_metadata", ""),
+            "blocks": blocks
+        })
 
         modal = build_order_modal(trigger_id="")
         blocks = modal["view"]["blocks"]
