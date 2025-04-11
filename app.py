@@ -1365,6 +1365,51 @@ def handle_modal_submission(ack, body, client):
         return
     print(f"📋 Modal values: {json.dumps(values, indent=2)}")
     print(f"📦 private_metadata (runner_id): {body['view'].get('private_metadata', '')}")
+    runner_id = body['view'].get('private_metadata', '')
+    if runner_id:
+        posted = client.chat_postMessage(
+            channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+            text="🧃 Runner available for delivery!",
+            blocks=[]
+        )
+        order_ts = posted["ts"]
+        order_channel = posted["channel"]
+        import datetime
+        order_data = {
+            "order_id": order_ts,
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "initiated_by": "runner",
+            "requester_id": runner_id,
+            "requester_real_name": "",
+            "runner_id": runner_id,
+            "runner_name": "",
+            "recipient_id": "",
+            "recipient_real_name": "",
+            "drink": "",
+            "location": "",
+            "notes": "Runner offer",
+            "karma_cost": 0,
+            "status": "offered",
+            "bonus_multiplier": "",
+            "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "time_claimed": "",
+            "time_delivered": ""
+        }
+        log_order_to_sheet(order_data)
+    else:
+        posted = client.chat_postMessage(
+            channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+            text="New Koffee Karma order posted...",
+            blocks=[]
+        )
+        print("DEBUG: /order modal posted:", posted)
+        print("DEBUG: order_ts =", posted["ts"], ", order_channel =", posted["channel"])
+        order_ts = posted["ts"]
+        order_data["order_id"] = order_ts
+        log_order_to_sheet(order_data)
+        order_channel = posted["channel"]
+        formatted_blocks = format_order_message(order_data)
+        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
     user_id = body["user"]["id"]
     drink_value = values["drink_category"]["input"]["selected_option"]["value"]
     if drink_value == "espresso":
