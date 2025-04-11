@@ -2035,6 +2035,51 @@ def handle_runner_settings_modal(ack, body, client):
     selected = []
     if "capabilities" in values and "input" in values["capabilities"]:
         selected = [opt["value"] for opt in values["capabilities"]["input"].get("selected_options", [])]
+    try:
+        from slack_sdk import WebClient
+        slack_token = os.environ.get("SLACK_BOT_TOKEN")
+        slack_client = WebClient(token=slack_token)
+        user_info = slack_client.users_info(user=user_id)
+        real_name = user_info["user"]["real_name"]
+    except Exception as e:
+        print("⚠️ Failed to fetch user real name for settings save:", e)
+        real_name = f"<@{user_id}>"
+    from sheet import save_runner_capabilities
+    save_runner_capabilities(user_id, real_name, selected)
+
+    posted_ready = client.chat_postMessage(
+        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+        text="🧃 Runner available for delivery!",
+        blocks=[]
+    )
+    order_ts = posted_ready["ts"]
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    order_data = {
+        "order_id": order_ts,
+        "timestamp": timestamp,
+        "initiated_by": "runner",
+        "requester_id": "",
+        "requester_real_name": "",
+        "runner_id": user_id,
+        "runner_name": real_name,
+        "recipient_id": "",
+        "recipient_real_name": "",
+        "drink": "",
+        "location": "",
+        "notes": "",
+        "karma_cost": "",
+        "status": "offered",
+        "bonus_multiplier": "",
+        "time_ordered": timestamp,
+        "time_claimed": "",
+        "time_delivered": ""
+    }
+    log_order_to_sheet(order_data)
+
+    selected = []
+    if "capabilities" in values and "input" in values["capabilities"]:
+        selected = [opt["value"] for opt in values["capabilities"]["input"].get("selected_options", [])]
     previous_caps_data = get_runner_capabilities(user_id)
     previous_caps = set(previous_caps_data.get("Capabilities", []))
     current_caps = set(selected)
@@ -2162,64 +2207,6 @@ def handle_open_order_modal_for_runner(ack, body, client):
         trigger_id=body["trigger_id"],
         view=build_order_modal(trigger_id=body["trigger_id"], runner_id=runner_id)["view"]
     )
-
-@app.view("runner_settings_modal")
-def handle_runner_settings_modal(ack, body, client):
-    ack()
-    print("📥 /deliver modal submission received")
-
-    from sheet import log_order_to_sheet
-    import datetime
-
-    user_id = body["user"]["id"]
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    from sheet import save_runner_capabilities
-    selected = []
-    values = body["view"]["state"]["values"]
-    if "capabilities" in values and "input" in values["capabilities"]:
-        selected = [opt["value"] for opt in values["capabilities"]["input"].get("selected_options", [])]
-    try:
-        from slack_sdk import WebClient
-        slack_token = os.environ.get("SLACK_BOT_TOKEN")
-        slack_client = WebClient(token=slack_token)
-        user_info = slack_client.users_info(user=user_id)
-        real_name = user_info["user"]["real_name"]
-    except Exception as e:
-        print("⚠️ Failed to fetch user real name for settings save:", e)
-        real_name = f"<@{user_id}>"
-    save_runner_capabilities(user_id, real_name, selected)
-    
-    # Post Slack message and extract actual ts
-    posted = client.chat_postMessage(
-        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text="🧃 Runner available for delivery!",
-        blocks=[]
-    )
-    order_ts = posted["ts"]
-
-    order_data = {
-        "order_id": order_ts,                # ✅ actual Slack ts
-        "timestamp": timestamp,
-        "initiated_by": "runner",
-        "requester_id": "",                  # ✅ blank
-        "requester_real_name": "",           # ✅ blank
-        "runner_id": user_id,                # ✅ set properly
-        "runner_name": "",                   # will be filled by log_order_to_sheet
-        "recipient_id": "",
-        "recipient_real_name": "",
-        "drink": "",
-        "location": "",
-        "notes": "",                         # ✅ no notes
-        "karma_cost": "",                    # ✅ blank
-        "status": "offered",
-        "bonus_multiplier": "",
-        "time_ordered": timestamp,
-        "time_claimed": "",
-        "time_delivered": ""
-    }
-
-    log_order_to_sheet(order_data)
 
 if __name__ == "__main__":
     flask_app.run(host="0.0.0.0", port=10000)
