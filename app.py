@@ -1411,6 +1411,10 @@ def handle_modal_submission(ack, body, client):
         blocks=[]
     )
     if runner_id:
+        order_ts = posted["ts"]
+        order_data["order_id"] = order_ts
+        log_order_to_sheet(order_data)
+    if runner_id:
         print(f"🧪 Logging /deliver-initiated order to sheet for ts={order_ts} and user_id={user_id}")
         order_ts = body.get("container", {}).get("message_ts", "")
         order_channel = body.get("container", {}).get("channel_id", "")
