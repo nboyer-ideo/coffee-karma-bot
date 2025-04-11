@@ -1048,21 +1048,43 @@ def handle_leaderboard(ack, body, client):
     ack()
     from sheet import get_leaderboard, get_title
     leaderboard = get_leaderboard()
-
+ 
+    # We'll define a consistent table format:
+    # | RANK |         NAME         | KARMA |         TITLE         |
+    # Each column is carefully sized for alignment.
+ 
     lines = []
+    # ASCII header (fits width of table)
     lines.append("||================[ ⚙ THE BREW SCROLL ⚙ ]================||")
-    lines.append("| RANK |        NAME        | KARMA |         TITLE       |")
-    lines.append("|------|--------------------|-------|---------------------|")
+ 
+    # Column headings: 4 wide for RANK, 20 wide for NAME, 5 wide for KARMA, 20 wide for TITLE
+    lines.append("|{:^4}|{:^20}|{:^5}|{:^20}|".format("RANK", "NAME", "KARMA", "TITLE"))
+ 
+    # Divider line matching exact column widths
+    lines.append("|----|--------------------|-----|--------------------|")
+ 
+    # Build each row of leaderboard
     for i, entry in enumerate(leaderboard):
-        name = entry.get("Name", f"<@{entry['Slack ID']}>")[:20].ljust(20)
-        karma = str(entry.get("Karma", 0)).rjust(3)
-        title = get_title(int(entry.get("Karma", 0))).ljust(21)
-        lines.append(f"|  {i+1:<3} | {name} |  {karma} | {title} |")
+        raw_name = entry.get("Name", f"<@{entry['Slack ID']}>") or ""
+        name_str = raw_name.upper()[:20]
+        karma_value = int(entry.get("Karma", 0))
+        title_str = get_title(karma_value).upper()[:20]
+        karma_str = str(karma_value).center(5)
+ 
+        lines.append("|{:^4}|{:^20}|{:^5}|{:^20}|".format(
+            str(i + 1),
+            name_str,
+            karma_str,
+            title_str
+        ))
+ 
+    # Bottom navigation commands
     lines.append("+=========================================================+")
     lines.append("|     /ORDER  /DELIVER  /KARMA  /LEADERBOARD  /REDEEM     |")
     lines.append("+=========================================================+")
+ 
     leaderboard_text = "```" + "\n".join(lines) + "```"
-
+ 
     client.chat_postEphemeral(
         channel=body["channel_id"],
         user=body["user_id"],
