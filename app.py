@@ -963,8 +963,6 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
 
         # 🔁 Always schedule next tick if countdown is not done
     import threading
-    if remaining != original_total_time:
-        print(f"🟡 WARNING: log_order_to_sheet() was NOT called this cycle (remaining={remaining})")
     import threading
     print(f"DEBUG: Scheduling next tick for order {ts}, remaining = {remaining - 1}")
     threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id, original_total_time)).start()
@@ -1371,7 +1369,7 @@ def handle_modal_submission(ack, body, client):
                 "order_id": order_ts,
                 "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "initiated_by": "runner",
-                "requester_id": runner_id,
+                "requester_id": "",
                 "requester_real_name": "",
                 "runner_id": runner_id,
                 "runner_name": "",
@@ -1379,8 +1377,8 @@ def handle_modal_submission(ack, body, client):
                 "recipient_real_name": "",
                 "drink": "",
                 "location": "",
-                "notes": "Runner offer",
-                "karma_cost": 0,
+                "notes": "",
+                "karma_cost": "",
                 "status": "offered",
                 "bonus_multiplier": "",
                 "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
