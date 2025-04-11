@@ -31,11 +31,11 @@ def send_koffee_welcome(client, user_id):
         "1. Type \"/\" in the #koffee-karma-sf channel.\n"
         "2. Select one of the commands below.\n"
         "3. Hit enter to activate the command.\n\n"
-        "`/order` — Summon your drink\n"
-        "`/deliver` — Pledge to deliver\n"
-        "`/karma` — Check your path\n"
-        "`/redeem` — Activate codes\n"
-        "`/leaderboard` — Witness the rankings\n\n"
+        "`/order` — Request a drink\n"
+        "`/deliver` — Available to deliver orders\n"
+        "`/karma` — Check your current Koffee Karma\n"
+        "`/redeem` — Redeem codes for bonus karma\n"
+        "`/leaderboard` — Show the top Koffee Karma earners\n\n"
         "The café watches."
     )
     client.chat_postMessage(channel=user_id, text=welcome_message)
@@ -305,7 +305,7 @@ def format_order_message(order_data):
     border_bot = "+------------------------------------------------+"
     lines = [
         border_top,
-        *wrap_line("", "KOFFEE KARMA TERMINAL", width=50),
+        *wrap_line("", "☠ NEW DRINK ORDER ☠", width=50),
     ]
     lines.append(border_mid)
     lines.append(f'| DROP ID :     {order_data["order_id"]:<32} |')
@@ -719,6 +719,10 @@ def handle_mark_delivered(ack, body, client):
         delivered_time=order_data["time_delivered"]
     )
     order_data["status"] = "delivered"
+    
+    # Clear runner_offer_claims once delivery is completed
+    if order_data.get("runner_id") in runner_offer_claims:
+        del runner_offer_claims[order_data["runner_id"]]
 
     if multiplier > 1:
         msg = f"<@{user_id}> earned {multiplier}x karma on this run."
@@ -792,7 +796,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                     "type": "mrkdwn",
                     "text": "```"
                         + "+----------------------------------------+\n"
-                        + "|         DRINK RUNNER AVAILABLE         |\n"
+                        + "|       𐂀 DRINK RUNNER AVAILABLE 𐂀       |\n"
                         + "+----------------------------------------+\n"
                         + "\n".join(box_line(label="RUNNER", value=real_name.upper(), width=42)) + "\n"
                         + "\n".join(box_line(label="CAN MAKE", value=can_make_str, width=42)) + "\n"
@@ -1096,10 +1100,9 @@ def handle_leaderboard(ack, body, client):
  
     leaderboard_text = "```" + "\n".join(lines) + "```"
  
-    # Send the ephemeral message
-    client.chat_postEphemeral(
+    # Send a public message to the channel
+    client.chat_postMessage(
         channel=body["channel_id"],
-        user=body["user_id"],
         text=leaderboard_text
     )
 
@@ -1335,21 +1338,26 @@ def handle_modal_submission(ack, body, client):
     else:
         order_data["recipient_real_name"] = order_data["requester_real_name"]
 
-        if runner_offer_claims.get(order_data["runner_id"]):
+        # Prevent double-claiming runner offers unless cleared
+        existing_claim = runner_offer_claims.get(order_data["runner_id"])
+        if existing_claim:
             client.chat_postEphemeral(
                 channel=user_id,
                 user=user_id,
                 text="‡ TOO LATE. This runner is already bound to another order."
             )
             return
+
         runner_offer_claims[order_data["runner_id"]] = user_id
-        try:
-            client.chat_postMessage(
-                channel=order_data["runner_id"],
-                text="¤ Runner call answered. DRINK INBOUND."
-            )
-        except Exception as e:
-            print("⚠️ Failed to notify runner:", e)
+
+        # Schedule removal after 15 minutes as fallback
+        import threading
+        def clear_runner_offer():
+            current = runner_offer_claims.get(order_data["runner_id"])
+            if current == user_id:
+                del runner_offer_claims[order_data["runner_id"]]
+
+        threading.Timer(900, clear_runner_offer).start()
 
 
     try:
