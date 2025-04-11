@@ -1055,7 +1055,7 @@ def handle_leaderboard(ack, body, client):
  
     lines = []
     # ASCII header (fits width of table)
-    lines.append("||================[ ⚙ THE BREW SCROLL ⚙ ]================||")
+    lines.append("||==============[ ⚙ THE BREW SCROLL ⚙ ]=============||")
  
     # Column headings: 4 wide for RANK, 20 wide for NAME, 5 wide for KARMA, 20 wide for TITLE
     lines.append("|{:^4}|{:^20}|{:^5}|{:^20}|".format("RANK", "NAME", "KARMA", "TITLE"))
@@ -1079,9 +1079,9 @@ def handle_leaderboard(ack, body, client):
         ))
  
     # Bottom navigation commands
-    lines.append("+=========================================================+")
-    lines.append("|     /ORDER  /DELIVER  /KARMA  /LEADERBOARD  /REDEEM     |")
-    lines.append("+=========================================================+")
+    lines.append("+====================================================+")
+    lines.append("|   /ORDER  /DELIVER  /KARMA  /LEADERBOARD  /REDEEM  |")
+    lines.append("+====================================================+")
  
     leaderboard_text = "```" + "\n".join(lines) + "```"
  
