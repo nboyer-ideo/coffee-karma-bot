@@ -1038,7 +1038,7 @@ def build_order_modal(trigger_id, runner_id="", selected_location=""):
                     "label": {"type": "plain_text", "text": "Specify your drink"},
                     "element": {"type": "plain_text_input", "action_id": "input", "max_length": 30}
                 },
-                {
+                location_block = {
                     "type": "section",
                     "block_id": "location",
                     "text": {"type": "mrkdwn", "text": "*Drop location?*"},
@@ -1113,6 +1113,11 @@ def build_order_modal(trigger_id, runner_id="", selected_location=""):
                         ]
                     }
                 },
+                if selected_location:
+                    location_block["accessory"]["initial_option"] = {
+                        "text": {"type": "plain_text", "text": selected_location},
+                        "value": selected_location
+                    }
                 {
                     "type": "section",
                     "block_id": "ascii_map_block",
