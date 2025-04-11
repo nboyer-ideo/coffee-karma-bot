@@ -1114,13 +1114,13 @@ def build_order_modal(trigger_id, runner_id="", selected_location=""):
                         ]
                     }
                 },
-                location_block,
                 {
                     "type": "input",
                     "block_id": "drink_detail",
                     "label": {"type": "plain_text", "text": "Specify your drink"},
                     "element": {"type": "plain_text_input", "action_id": "input", "max_length": 30}
                 },
+                location_block,
                 {
                     "type": "section",
                     "block_id": "ascii_map_block",
