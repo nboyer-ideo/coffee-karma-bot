@@ -197,8 +197,8 @@ def mark_code_redeemed(code, user_id):
 def log_order_to_sheet(order_data):
     print("🟡 Starting log_order_to_sheet")
     # Only log initial orders (status 'pending'); skip updates for claimed or delivered orders.
-    if order_data.get("status", "ordered") != "ordered":
-        print("ℹ️ Order status is not pending; skipping initial logging.")
+    if order_data.get("status") not in ["ordered", "offered"]:
+        print("ℹ️ Order status is not eligible for initial logging; skipping.")
         return
 
     try:
