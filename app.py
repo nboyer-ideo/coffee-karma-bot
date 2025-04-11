@@ -317,9 +317,9 @@ def format_order_message(order_data):
     lines.append(f'| LOCATION:     {order_data["location"].upper():<32} |')
     lines.append(f'| NOTES:        {(order_data["notes"] or "NONE").upper():<32} |')
     lines.append(border_mid)
-    lines.append(f'| REWARD:      {order_data["karma_cost"]} KARMA{" " * (32 - len(str(order_data["karma_cost"]) + " KARMA"))} |')
+    lines.append(f'| REWARD:       {order_data["karma_cost"]} KARMA{" " * (32 - len(str(order_data["karma_cost"]) + " KARMA"))} |')
     if order_data.get("delivered_by"):
-        lines.append(f'| STATUS:      COMPLETED {" " * 22} |')
+        lines.append(f'| STATUS:       COMPLETED {" " * 22} |')
         lines.append(f'|               DELIVERED BY {order_data["delivered_by"].upper():<19} |')
         lines.append("| ---------------------------------------------- |")
         earned = order_data.get('karma_cost', 1) * int(order_data.get('bonus_multiplier', 1))
@@ -331,7 +331,7 @@ def format_order_message(order_data):
         lines.append("| ---------------------------------------------- |")
     elif order_data.get("claimed_by"):
         claimed_name = order_data.get("runner_real_name") or order_data.get("claimed_by", "")
-        lines.append(f'| STATUS:      CLAIMED BY {claimed_name.upper():<21} |')
+        lines.append(f'| STATUS:       CLAIMED BY {claimed_name.upper():<21} |')
         lines.append(f'|               WAITING TO BE DELIVERED          |')
     else:
         total_blocks = 20
@@ -340,7 +340,7 @@ def format_order_message(order_data):
         empty_blocks = total_blocks - filled_blocks
         progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
         status_line = f'{order_data.get("remaining_minutes", 10)} MINUTES TO CLAIM'
-        lines.append(f'| STATUS:      {status_line:<32} |')
+        lines.append(f'| STATUS:       {status_line:<32} |')
         lines.append(f'|               {progress_bar:<32} |')
     
     # Only add call-to-action if order is not delivered
@@ -760,7 +760,7 @@ def handle_cancel_order(ack, body, client):
         ts = body["container"]["message_ts"]
         channel = body["container"]["channel_id"]
 
-        cancel_text = f"Order canceled by <@{requester_id}>"
+        cancel_text = f"Order canceled by <@{requester_id}>."
         safe_chat_update(client, channel, ts, cancel_text, [])
 
         from sheet import update_order_status
