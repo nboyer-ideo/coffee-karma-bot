@@ -946,8 +946,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         blocks
     )
     if remaining == original_total_time:
-        print(f"📝 Logging /deliver order to sheet for ts={ts} and user_id={user_id}")
-        # Log initial delivery offer
+        print("📝 Logging /deliver order to sheet for ts=", ts)
         from sheet import log_order_to_sheet
         import datetime
         log_order_to_sheet({
@@ -1406,13 +1405,14 @@ def handle_modal_submission(ack, body, client):
     print(f"🏃 runner_id: {runner_id}")
     order_ts = ""
     order_channel = ""
-    if not runner_id:
-        posted = client.chat_postMessage(
-            channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-            text="New Koffee Karma order posted...",
-            blocks=[]
-        )
-        order_ts = posted["ts"]
+    posted = client.chat_postMessage(
+        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+        text="New Koffee Karma order posted...",
+        blocks=[]
+    )
+    order_ts = posted["ts"]
+    order_data["order_id"] = order_ts
+    log_order_to_sheet(order_data)
         order_channel = posted["channel"]
         order_data["order_id"] = order_ts
         formatted_blocks = format_order_message(order_data)
