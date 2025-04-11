@@ -491,15 +491,16 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print(f"🧪 Debug: order_extras for {order_ts} = {extras}")
         print(f"📦 order_extras for {order_ts}: {extras}")
         sys.stdout.flush()
-
+        
+        # Added check: stop countdown if order is already claimed or delivered
+        if extras and extras.get("status") in ["claimed", "delivered"]:
+            print(f"🛑 Countdown stopped — order marked {extras.get('status')} (order_ts: {order_ts})")
+            return
+        
         if not extras or not extras.get("active", True):
             print(f"⛔ Countdown aborted — order_extras missing or marked inactive for {order_ts}")
             return
-        elif extras.get("status") in ["claimed", "delivered"]:
-            print(f"🛑 Countdown stopped — order marked {extras.get('status')} (order_ts: {order_ts})")
-            return
-        else:
-            print(f"✅ Countdown proceeding for {order_ts}, remaining: {remaining}")
+        print(f"✅ Countdown proceeding for {order_ts}, remaining: {remaining}")
 
         current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
         order_data = {
@@ -568,7 +569,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", updated_blocks)
         print("✅ Countdown block update pushed to Slack")
         print(f"📣 client.chat_update call completed for order {order_ts}")
-        if remaining <= 1:
+        if remaining <= 1 and extras.get("status") == "ordered":
             from sheet import add_karma
             add_karma(user_id, karma_cost)
             client.chat_postMessage(
@@ -716,7 +717,7 @@ def handle_mark_delivered(ack, body, client):
     title = get_title(runner_karma)
     client.chat_postMessage(
         channel=order_data["runner_id"],
-        text=f"¤ Delivery logged — +{total_karma} karma granted. Title: {title}."
+        text=f"¤ Delivery COMPLETED. +{total_karma} karma granted. Title: {title}."
     )
 
     order_data.update({
@@ -744,9 +745,9 @@ def handle_mark_delivered(ack, body, client):
         runner_offer_claims[order_data["runner_id"]]["delivered"] = True
 
     if multiplier > 1:
-        msg = f"<@{user_id}> earned {multiplier}x karma on this run."
+        bonus_msg = f"¤ <@{user_id}> earned {multiplier}x bonus karma on this run."
         try:
-            client.chat_postMessage(channel=order_channel, text=msg)
+            client.chat_postMessage(channel=order_channel, text=bonus_msg)
         except Exception as e:
             print("⚠️ Failed to post bonus message:", e)
 
@@ -797,21 +798,6 @@ def handle_cancel_ready_offer(ack, body, client):
         print("⚠️ Failed to cancel runner offer:", e)
 
 def update_ready_countdown(client, remaining, ts, channel, user_id, original_total_time):
-    from sheet import get_runner_capabilities
-    runner_capabilities = get_runner_capabilities(user_id)
-    real_name = runner_capabilities.get("Name", f"<@{user_id}>")
-    pretty_caps = {
-        "water": "Water",
-        "drip_coffee": "Drip Coffee",
-        "espresso_drinks": "Espresso Drinks",
-        "tea": "Tea"
-    }
-    saved_caps = runner_capabilities.get("Capabilities", [])
-    all_options = ["water", "tea", "drip_coffee", "espresso_drinks"]
-    can_make = [pretty_caps[c] for c in saved_caps if c in pretty_caps]
-    cannot_make = [pretty_caps[c] for c in all_options if c not in saved_caps]
-    can_make_str = ", ".join(can_make) if can_make else "NONE"
-    cannot_make_str = ", ".join(cannot_make) if cannot_make else "NONE"
     if remaining <= 0:
         try:
             from slack_sdk.errors import SlackApiError
@@ -828,6 +814,21 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         except Exception as e:
             print("⚠️ Failed to update expired runner offer message:", e)
         return
+    from sheet import get_runner_capabilities
+    runner_capabilities = get_runner_capabilities(user_id)
+    real_name = runner_capabilities.get("Name", f"<@{user_id}>")
+    pretty_caps = {
+        "water": "Water",
+        "drip_coffee": "Drip Coffee",
+        "espresso_drinks": "Espresso Drinks",
+        "tea": "Tea"
+    }
+    saved_caps = runner_capabilities.get("Capabilities", [])
+    all_options = ["water", "tea", "drip_coffee", "espresso_drinks"]
+    can_make = [pretty_caps[c] for c in saved_caps if c in pretty_caps]
+    cannot_make = [pretty_caps[c] for c in all_options if c not in saved_caps]
+    can_make_str = ", ".join(can_make) if can_make else "NONE"
+    cannot_make_str = ", ".join(cannot_make) if cannot_make else "NONE"
 
         total_blocks = 20
         filled_blocks = round((remaining / original_total_time) * total_blocks)
@@ -1216,6 +1217,7 @@ def handle_modal_submission(ack, body, client):
             text="§ You do not have enough karma to place this order. Deliver drinks to earn more."
         )
         return
+    deduct_karma(user_id, karma_cost)
 
     runner_id = body["view"].get("private_metadata", "")
     order_data = {
@@ -1276,8 +1278,6 @@ def handle_modal_submission(ack, body, client):
         order_ts = posted["ts"]
         order_channel = posted["channel"]
         order_data["order_id"] = order_ts
-        if order_ts not in order_extras:
-            log_order_to_sheet(order_data)
         formatted_blocks = format_order_message(order_data)
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
         # Only log the order if it hasn't been logged before.
@@ -1372,6 +1372,10 @@ def handle_modal_submission(ack, body, client):
         return
     if order_ts not in order_extras:
         order_extras[order_ts] = {}
+    order_data["requester_real_name"] = requester_info["user"]["real_name"]
+    order_data["recipient_real_name"] = recipient_info["user"]["real_name"]
+    order_extras[order_ts]["requester_real_name"] = order_data["requester_real_name"]
+    order_extras[order_ts]["recipient_real_name"] = order_data["recipient_real_name"]
     order_extras[order_ts]["runner_real_name"] = order_data["runner_real_name"]
     
     if gifted_id:
