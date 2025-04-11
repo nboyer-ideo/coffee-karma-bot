@@ -1410,6 +1410,9 @@ def handle_modal_submission(ack, body, client):
             client, 9, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost
         )).start()
     else:
+        print(f"🧪 Logging /deliver-initiated order to sheet for ts={order_ts} and user_id={user_id}")
+        order_data["order_id"] = order_ts
+        log_order_to_sheet(order_data)
         # Reuse the existing message posted by /ready (deliver modal submission)
         posted_ready = body.get("view", {}).get("root_view_id")
         order_ts = body.get("container", {}).get("message_ts", "")
