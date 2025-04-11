@@ -1263,8 +1263,8 @@ def handle_modal_submission(ack, body, client):
                         from app import format_full_map_with_legend, build_mini_map
                         ascii_block["text"]["text"] = "```" + format_full_map_with_legend(build_mini_map("")) + "```"
 
-        client.views_update(
-            view_id=body["view"]["id"],
+        client.views_open(
+            trigger_id=body["trigger_id"],
             view={
                 "type": "modal",
                 "callback_id": "koffee_request_modal",
