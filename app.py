@@ -615,10 +615,15 @@ def handle_location_select(ack, body, client):
                     "value": selected_location
                 }
 
-    client.views_update(
-        view_id=body["view"]["id"],
-        view=modal["view"]
-    )
+    ack(response_action="update", view={
+        "type": "modal",
+        "callback_id": "koffee_request_modal",
+        "title": {"type": "plain_text", "text": "Place An Order"},
+        "submit": {"type": "plain_text", "text": "Submit Drop"},
+        "close": {"type": "plain_text", "text": "Nevermind"},
+        "private_metadata": body["view"].get("private_metadata", ""),
+        "blocks": modal["view"]["blocks"]
+    })
 
 @app.action("claim_order")
 def handle_claim_order(ack, body, client):
