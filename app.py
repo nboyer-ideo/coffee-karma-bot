@@ -601,19 +601,7 @@ def handle_location_select(ack, body, client):
     selected_location = body["actions"][0]["selected_option"]["value"]
 
     # Rebuild the modal with the new map based on selected location
-    modal = build_order_modal(trigger_id)
-    for block in modal["view"]["blocks"]:
-        if block.get("block_id") == "ascii_map_block":
-            from app import build_mini_map, format_full_map_with_legend
-            ascii_map = "```" + format_full_map_with_legend(build_mini_map(selected_location)) + "```"
-            block["text"]["text"] = ascii_map
-        elif block.get("block_id") == "location":
-            # Preserve the newly selected value with safe check for accessory key
-            if "accessory" in block:
-                block["accessory"]["initial_option"] = {
-                    "text": {"type": "plain_text", "text": selected_location},
-                    "value": selected_location
-                }
+    modal = build_order_modal(trigger_id, selected_location=selected_location)
 
     ack(response_action="update", view={
         "type": "modal",
@@ -1002,7 +990,7 @@ def handle_app_home_opened_events(body, logger):
     # Silently ignore app_home_opened events to suppress 404 log messages
     pass
 
-def build_order_modal(trigger_id, runner_id=""):
+def build_order_modal(trigger_id, runner_id="", selected_location=""):
     return {
         "trigger_id": trigger_id,
         "view": {
@@ -1126,7 +1114,7 @@ def build_order_modal(trigger_id, runner_id=""):
                     "block_id": "ascii_map_block",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "```" + format_full_map_with_legend(build_mini_map("")) + "```"
+                        "text": "```" + format_full_map_with_legend(build_mini_map(selected_location)) + "```"
                     }
                 },
                 {
