@@ -36,7 +36,11 @@ def get_sheet():
     ]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     client = gspread.authorize(creds)
-    return client.open("Koffee Karma")
+    try:
+        return client.open("Koffee Karma")
+    except Exception as e:
+        print(f"⚠️ Failed to open spreadsheet: {e}")
+        raise e
 
 
 

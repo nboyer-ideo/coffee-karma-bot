@@ -624,12 +624,26 @@ def handle_location_select(ack, body, client):
 
 @app.action("claim_order")
 def handle_claim_order(ack, body, client):
+    print("🎯 claim_order button clicked!")
     ack()
     import datetime
     from sheet import update_order_status
     order_id = body["actions"][0]["value"]
     from sheet import fetch_order_data
     order_data = fetch_order_data(order_id)
+    # Fill in missing keys with safe defaults to avoid KeyErrors
+    defaults = {
+        "drink": "UNKNOWN",
+        "location": "UNKNOWN",
+        "notes": "",
+        "karma_cost": 1,
+        "runner_real_name": f"<@{body['user']['id']}>",
+        "requester_real_name": "",
+        "recipient_real_name": "",
+    }
+    for key, default in defaults.items():
+        if key not in order_data:
+            order_data[key] = default
     if not order_data or "requester_id" not in order_data:
         print(f"🚨 Missing order data or requester_id for order_id {order_id}")
         client.chat_postEphemeral(
@@ -930,6 +944,9 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         # 🔁 Always schedule next tick if countdown is not done
     import threading
     threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id, original_total_time)).start()
+    print(f"🕓 Next tick scheduled for ts={ts}, remaining={remaining - 1}")
+    if remaining == 1:
+        print(f"⚠️ WARNING: This countdown will end after this tick. Watch for expiration.")
 
 from flask import jsonify
 
@@ -1010,6 +1027,7 @@ def build_order_modal(trigger_id, runner_id=""):
                 {
                     "type": "section",
                     "block_id": "location",
+                    "optional": False,
                     "text": {"type": "mrkdwn", "text": "*Drop location?*"},
                     "accessory": {
                         "type": "static_select",
@@ -1191,11 +1209,14 @@ def handle_karma(ack, body, client):
 @app.view("koffee_request_modal")
 def handle_modal_submission(ack, body, client):
     ack()
+    print("📥 Modal submission received")
     global runner_offer_metadata
     if 'runner_offer_metadata' not in globals():
         print("⚠️ runner_offer_metadata not defined — initializing.")
         runner_offer_metadata = {}
     values = body["view"]["state"]["values"]
+    print(f"📋 Modal values: {json.dumps(values, indent=2)}")
+    print(f"📦 private_metadata (runner_id): {body['view'].get('private_metadata', '')}")
     user_id = body["user"]["id"]
     drink_value = values["drink_category"]["input"]["selected_option"]["value"]
     if drink_value == "espresso":
@@ -1206,6 +1227,7 @@ def handle_modal_submission(ack, body, client):
         )
         print("❌ Espresso order blocked due to machine downtime.")
         print(f"⚠️ BLOCKED ORDER — {user_id} tried to order espresso while machine is down.")
+        print("❌ Exiting early due to espresso block")
         return
     drink_detail = values["drink_detail"]["input"]["value"]
     drink_map = {
@@ -1323,6 +1345,7 @@ def handle_modal_submission(ack, body, client):
         order_data["status"] = "offered"
         order_data["runner_id"] = runner_id
         order_data["runner_real_name"] = order_data.get("runner_real_name", "")
+        print("🚚 Entered runner-initiated order block")
         print(f"🧪 [DELIVER] Logging runner order: {order_data}")
         print(f"🧪 [DELIVER] Order status: {order_data.get('status')}, runner_id: {order_data.get('runner_id')}")
         log_order_to_sheet(order_data)
