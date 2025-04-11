@@ -1239,7 +1239,7 @@ def handle_modal_submission(ack, body, client):
         # Preserve previous selections/input
         drink_value = values["drink_category"]["input"]["selected_option"]["value"]
         drink_detail = values["drink_detail"]["input"]["value"]
-        notes = values["notes"]["input"]["value"] if "notes" in values and "input" in values["notes"] else ""
+        notes = values["notes"]["input"]["value"] if "notes" in values and "input" in values["notes"] and isinstance(values["notes"]["input"]["value"], str) else ""
         gifted_id = values["gift_to"]["input"]["selected_user"] if "gift_to" in values and "input" in values["gift_to"] else None
 
         for block in blocks:
