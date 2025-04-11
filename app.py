@@ -1293,7 +1293,7 @@ def handle_modal_submission(ack, body, client):
             "submit": {"type": "plain_text", "text": "Submit Drop"},
             "close": {"type": "plain_text", "text": "Nevermind"},
             "private_metadata": body["view"].get("private_metadata", ""),
-            "blocks": blocks
+            "blocks": modal["view"]["blocks"]
         })
 
         modal = build_order_modal(trigger_id="")
