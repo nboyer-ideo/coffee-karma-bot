@@ -834,6 +834,11 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
     if extras and extras.get("status") in ["delivered", "canceled"]:
         print(f"⛔ Skipping expiration — order {ts} is already marked as {extras.get('status')}")
         return
+    print(f"DEBUG: Countdown tick for order {ts} with remaining = {remaining}")
+    extras = order_extras.get(ts)
+    if extras and extras.get("status") in ["delivered", "canceled"]:
+        print(f"⛔ Skipping expiration — order {ts} is already marked as {extras.get('status')}")
+        return
     print(f"🧪 Checking if message should expire: remaining={remaining}")
     if ts in order_extras:
         status = order_extras[ts].get("status", "")
@@ -893,6 +898,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
     filled_blocks = round((remaining / original_total_time) * total_blocks)
     empty_blocks = total_blocks - filled_blocks
     progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
+    print(f"DEBUG: Progress bar: filled_blocks = {filled_blocks}, empty_blocks = {empty_blocks}")
     
     blocks = [
         {
@@ -979,6 +985,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
     if remaining != original_total_time:
         print(f"🟡 WARNING: log_order_to_sheet() was NOT called this cycle (remaining={remaining})")
     import threading
+    print(f"DEBUG: Scheduling next tick for order {ts}, remaining = {remaining - 1}")
     threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id, original_total_time)).start()
     print(f"🕓 Next tick scheduled for ts={ts}, remaining={remaining - 1}")
     if remaining == 1:
@@ -1261,7 +1268,7 @@ def handle_modal_submission(ack, body, client):
             "type": "context",
             "block_id": "location_error",
             "elements": [
-                { "type": "mrkdwn", "text": "↗ You must select a location before submitting." }
+                { "type": "mrkdwn", "text": "∆ You must select a location before submitting." }
             ]
         }
         blocks.insert(3, error_block)
@@ -1290,8 +1297,8 @@ def handle_modal_submission(ack, body, client):
                         from app import format_full_map_with_legend, build_mini_map
                         ascii_block["text"]["text"] = "```" + format_full_map_with_legend(build_mini_map("")) + "```"
  
-        client.views_open(
-            trigger_id=body["trigger_id"],
+        client.views_update(
+            view_id=body["view"]["id"],
             view={
                 "type": "modal",
                 "callback_id": "koffee_request_modal",
@@ -1404,7 +1411,13 @@ def handle_modal_submission(ack, body, client):
     
     runner_id = body["view"].get("private_metadata", "")
     if runner_id:
-        print(f"🧪 Logging /deliver-initiated order to sheet for ts={order_ts} and user_id={user_id}")
+        print(f"🧪 Logging /deliver-initiated order to sheet for runner_id={runner_id}")
+        posted = client.chat_postMessage(
+            channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+            text="New Koffee Karma order posted...",
+            blocks=[]
+        )
+        print("DEBUG: /deliver modal posted:", posted)
         order_ts = posted["ts"]
         order_channel = posted["channel"]
         order_data["order_id"] = order_ts
@@ -1412,6 +1425,7 @@ def handle_modal_submission(ack, body, client):
         order_data["status"] = "offered"
         order_data["runner_id"] = runner_id
         order_data["runner_real_name"] = order_data.get("runner_real_name", "")
+        print("DEBUG: /deliver order_data to log:", order_data)
         log_order_to_sheet(order_data)
     else:
         order_ts = posted["ts"]
@@ -1420,8 +1434,6 @@ def handle_modal_submission(ack, body, client):
         order_channel = posted["channel"]
         formatted_blocks = format_order_message(order_data)
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
-        if order_ts not in order_extras:
-            print(f"🧪 Logging runner-submitted order: {order_data}")
         if not order_channel:
             order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
         from threading import Timer
@@ -1478,6 +1490,14 @@ def handle_modal_submission(ack, body, client):
     order_ts = ""
     order_channel = ""
     posted = client.chat_postMessage(
+        print("DEBUG: /order modal posted:", posted)
+        print("DEBUG: order_ts =", posted["ts"], ", order_channel =", posted["channel"])
+        order_ts = posted["ts"]
+        order_data["order_id"] = order_ts
+        log_order_to_sheet(order_data)
+        order_channel = posted["channel"]
+        formatted_blocks = format_order_message(order_data)
+        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
         text="New Koffee Karma order posted...",
         blocks=[]
@@ -1503,9 +1523,6 @@ def handle_modal_submission(ack, body, client):
         order_channel = posted["channel"]
         formatted_blocks = format_order_message(order_data)
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
-        if order_ts not in order_extras:
-            print(f"🧪 Logging runner-submitted order: {order_data}")
-            log_order_to_sheet(order_data)
         if not order_channel:
             order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
         from threading import Timer
