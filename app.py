@@ -2048,12 +2048,6 @@ def handle_runner_settings_modal(ack, body, client):
     from sheet import save_runner_capabilities
     save_runner_capabilities(user_id, real_name, selected)
 
-    posted_ready = client.chat_postMessage(
-        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text="🧃 Runner available for delivery!",
-        blocks=[]
-    )
-    order_ts = posted_ready["ts"]
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     order_data = {
