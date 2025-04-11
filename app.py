@@ -1410,29 +1410,8 @@ def handle_modal_submission(ack, body, client):
         text="New Koffee Karma order posted...",
         blocks=[]
     )
-    order_ts = posted["ts"]
-    order_data["order_id"] = order_ts
-    log_order_to_sheet(order_data)
-    order_channel = posted["channel"]
-    order_data["order_id"] = order_ts
-    formatted_blocks = format_order_message(order_data)
-    safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
-    # Only log the order if it hasn't been logged before.
-    if order_ts not in order_extras:
-        print(f"🧪 Logging runner-submitted order: {order_data}")
-        log_order_to_sheet(order_data)
-    if not order_channel:
-        order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
-    from threading import Timer
-    Timer(60, update_countdown, args=(
-        client, 9, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost
-    )).start()
-    else:
+    if runner_id:
         print(f"🧪 Logging /deliver-initiated order to sheet for ts={order_ts} and user_id={user_id}")
-        order_data["order_id"] = order_ts
-        log_order_to_sheet(order_data)
-        # Reuse the existing message posted by /ready (deliver modal submission)
-        posted_ready = body.get("view", {}).get("root_view_id")
         order_ts = body.get("container", {}).get("message_ts", "")
         order_channel = body.get("container", {}).get("channel_id", "")
         if not order_channel:
@@ -1447,6 +1426,23 @@ def handle_modal_submission(ack, body, client):
         print(f"🧪 [DELIVER] Logging runner order: {order_data}")
         print(f"🧪 [DELIVER] Order status: {order_data.get('status')}, runner_id: {order_data.get('runner_id')}")
         log_order_to_sheet(order_data)
+    else:
+        order_ts = posted["ts"]
+        order_data["order_id"] = order_ts
+        log_order_to_sheet(order_data)
+        order_channel = posted["channel"]
+        formatted_blocks = format_order_message(order_data)
+        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
+        # Only log the order if it hasn't been logged before.
+        if order_ts not in order_extras:
+            print(f"🧪 Logging runner-submitted order: {order_data}")
+            log_order_to_sheet(order_data)
+        if not order_channel:
+            order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
+        from threading import Timer
+        Timer(60, update_countdown, args=(
+            client, 9, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost
+        )).start()
 
     context_line = random.choice([
         "*☕ Caffeine + Chaos* — IDE☕O forever.",
