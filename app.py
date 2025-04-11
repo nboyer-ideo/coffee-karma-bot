@@ -1049,30 +1049,41 @@ def handle_leaderboard(ack, body, client):
     from sheet import get_leaderboard, get_title
     leaderboard = get_leaderboard()
  
-    # We'll define a consistent table format:
-    # | RANK |         NAME         | KARMA |         TITLE         |
-    # Each column is carefully sized for alignment.
+    # We'll define a consistent table format with extra spacing for RANK and KARMA,
+    # and ensure NAME/TITLE entries are left-aligned with one space of padding at the start.
  
     lines = []
-    # ASCII header (fits width of table)
+    # Header bar (unchanged, though note it won't perfectly match new column widths)
     lines.append("||==============[ ⚙ THE BREW SCROLL ⚙ ]=============||")
  
-    # Column headings: 4 wide for RANK, 20 wide for NAME, 5 wide for KARMA, 20 wide for TITLE
-    lines.append("|{:^4}|{:^20}|{:^5}|{:^20}|".format("RANK", "NAME", "KARMA", "TITLE"))
+    # Column headings:
+    # - RANK and KARMA get a single space padding on both sides: " RANK ", " KARMA "
+    # - 8 chars wide for each of them, centered (^8).
+    # - 20 chars wide for NAME and TITLE, each centered (^20) in the header row.
+    lines.append("|{:^8}|{:^20}|{:^8}|{:^20}|".format(" RANK ", " NAME ", " KARMA ", " TITLE "))
  
-    # Divider line matching exact column widths
-    lines.append("|----|--------------------|-----|--------------------|")
+    # Divider line with exact widths: 8 for RANK, 20 for NAME, 8 for KARMA, 20 for TITLE
+    lines.append("|--------|--------------------|--------|--------------------|")
  
-    # Build each row of leaderboard
+    # Build each row of the leaderboard
     for i, entry in enumerate(leaderboard):
+        # Convert the user name to uppercase, add one space at the front, then slice to 18
         raw_name = entry.get("Name", f"<@{entry['Slack ID']}>") or ""
-        name_str = raw_name.upper()[:20]
+        name_str = " " + raw_name.upper()[:18]  # e.g. " NEAL BOYER"
+        
+        # Convert the title to uppercase, also adding one space in front
         karma_value = int(entry.get("Karma", 0))
-        title_str = get_title(karma_value).upper()[:20]
-        karma_str = str(karma_value).center(5)
+        raw_title = get_title(karma_value).upper() 
+        title_str = " " + raw_title[:18]
  
-        lines.append("|{:^4}|{:^20}|{:^5}|{:^20}|".format(
-            str(i + 1),
+        # RANK is centered in an 8-wide field
+        rank_str = str(i + 1).center(8)
+        # KARMA is centered in an 8-wide field
+        karma_str = str(karma_value).center(8)
+ 
+        # NAME and TITLE columns are left-aligned in 20 chars using {:<20}
+        lines.append("|{:^8}|{:<20}|{:^8}|{:<20}|".format(
+            rank_str,
             name_str,
             karma_str,
             title_str
@@ -1085,6 +1096,7 @@ def handle_leaderboard(ack, body, client):
  
     leaderboard_text = "```" + "\n".join(lines) + "```"
  
+    # Send the ephemeral message
     client.chat_postEphemeral(
         channel=body["channel_id"],
         user=body["user_id"],
@@ -1534,7 +1546,7 @@ def handle_ready_command(ack, body, client):
         view={
             "type": "modal",
             "callback_id": "runner_settings_modal",
-            "title": {"type": "plain_text", "text": "Runner Availability"},
+            "title": {"type": "plain_text", "text": "Offer to Deliver"},
             "submit": {"type": "plain_text", "text": "Raise Hand"},
             "close": {"type": "plain_text", "text": "Just Kidding"},
             "blocks": [
@@ -1546,20 +1558,20 @@ def handle_ready_command(ack, body, client):
                         "type": "static_select",
                         "action_id": "input",
                         "initial_option": {
-                            "text": {"type": "plain_text", "text": "10 Minutes"},
+                            "text": {"type": "plain_text", "text": "10 minutes"},
                             "value": "10"
                         },
                         "options": [
-                            {"text": {"type": "plain_text", "text": "5 Minutes"}, "value": "5"},
-                            {"text": {"type": "plain_text", "text": "10 Minutes"}, "value": "10"},
-                            {"text": {"type": "plain_text", "text": "15 Minutes"}, "value": "15"}
+                            {"text": {"type": "plain_text", "text": "5 minutes"}, "value": "5"},
+                            {"text": {"type": "plain_text", "text": "10 minutes"}, "value": "10"},
+                            {"text": {"type": "plain_text", "text": "15 minutes"}, "value": "15"}
                         ]
                     }
                 },
                 {
                     "type": "input",
                     "block_id": "capabilities",
-                    "label": {"type": "plain_text", "text": "MARK YOUR CAPABILITIES"},
+                    "label": {"type": "plain_text", "text": "What drinks can you make?"},
                     "element": {
                         "type": "checkboxes",
                         "action_id": "input",
