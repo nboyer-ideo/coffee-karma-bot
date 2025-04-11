@@ -830,6 +830,10 @@ def handle_cancel_ready_offer(ack, body, client):
 
 def update_ready_countdown(client, remaining, ts, channel, user_id, original_total_time):
     print(f"🕵️ Entered update_ready_countdown: remaining={remaining}, ts={ts}, user_id={user_id}")
+    extras = order_extras.get(ts)
+    if extras and extras.get("status") in ["delivered", "canceled"]:
+        print(f"⛔ Skipping expiration — order {ts} is already marked as {extras.get('status')}")
+        return
     print(f"🧪 Checking if message should expire: remaining={remaining}")
     if ts in order_extras:
         status = order_extras[ts].get("status", "")
@@ -1253,13 +1257,61 @@ def handle_modal_submission(ack, body, client):
         print("❌ Modal submission blocked: location not selected — refreshing modal with error")
         modal = build_order_modal(trigger_id="")
         blocks = modal["view"]["blocks"]
+        error_block = {
+            "type": "context",
+            "block_id": "location_error",
+            "elements": [
+                { "type": "mrkdwn", "text": "↗ You must select a location before submitting." }
+            ]
+        }
+        blocks.insert(3, error_block)
+ 
+        # Preserve previous inputs
+        drink_value = values["drink_category"]["input"]["selected_option"]["value"]
+        drink_detail = values["drink_detail"]["input"]["value"]
+        notes = values["notes"]["input"]["value"] if "notes" in values and "input" in values["notes"] and isinstance(values["notes"]["input"]["value"], str) else ""
+        gifted_id = values["gift_to"]["input"].get("selected_user") if "gift_to" in values and "input" in values["gift_to"] else None
+ 
+        for block in blocks:
+            if block.get("block_id") == "drink_category":
+                for option in block["element"]["options"]:
+                    if option["value"] == drink_value:
+                        block["element"]["initial_option"] = option
+                        break
+            elif block.get("block_id") == "drink_detail":
+                block["element"]["initial_value"] = drink_detail
+            elif block.get("block_id") == "notes":
+                block["element"]["initial_value"] = notes
+            elif block.get("block_id") == "gift_to" and gifted_id:
+                block["element"]["initial_user"] = gifted_id
+            elif block.get("block_id") == "location":
+                for ascii_block in blocks:
+                    if ascii_block.get("block_id") == "ascii_map_block":
+                        from app import format_full_map_with_legend, build_mini_map
+                        ascii_block["text"]["text"] = "```" + format_full_map_with_legend(build_mini_map("")) + "```"
+ 
+        client.views_open(
+            trigger_id=body["trigger_id"],
+            view={
+                "type": "modal",
+                "callback_id": "koffee_request_modal",
+                "title": {"type": "plain_text", "text": "Place An Order"},
+                "submit": {"type": "plain_text", "text": "Submit Drop"},
+                "close": {"type": "plain_text", "text": "Nevermind"},
+                "private_metadata": body["view"].get("private_metadata", ""),
+                "blocks": blocks
+            }
+        )
+
+        modal = build_order_modal(trigger_id="")
+        blocks = modal["view"]["blocks"]
 
         # Insert error message below location dropdown
         error_block = {
             "type": "context",
             "block_id": "location_error",
             "elements": [
-                { "type": "mrkdwn", "text": "⌂ You must select a location before submitting." }
+                { "type": "mrkdwn", "text": "↗ You must select a location before submitting." }
             ]
         }
         blocks.insert(3, error_block)
@@ -1351,11 +1403,31 @@ def handle_modal_submission(ack, body, client):
     deduct_karma(user_id, karma_cost)
     
     runner_id = body["view"].get("private_metadata", "")
-    # Mark runner offer as fulfilled to stop its countdown expiration
     if runner_id:
-        if runner_id not in runner_offer_claims:
-            runner_offer_claims[runner_id] = {}
-        runner_offer_claims[runner_id]["fulfilled"] = True
+        print(f"🧪 Logging /deliver-initiated order to sheet for ts={order_ts} and user_id={user_id}")
+        order_ts = posted["ts"]
+        order_channel = posted["channel"]
+        order_data["order_id"] = order_ts
+        order_data["initiated_by"] = "runner"
+        order_data["status"] = "offered"
+        order_data["runner_id"] = runner_id
+        order_data["runner_real_name"] = order_data.get("runner_real_name", "")
+        log_order_to_sheet(order_data)
+    else:
+        order_ts = posted["ts"]
+        order_data["order_id"] = order_ts
+        log_order_to_sheet(order_data)
+        order_channel = posted["channel"]
+        formatted_blocks = format_order_message(order_data)
+        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
+        if order_ts not in order_extras:
+            print(f"🧪 Logging runner-submitted order: {order_data}")
+        if not order_channel:
+            order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
+        from threading import Timer
+        Timer(60, update_countdown, args=(
+            client, 9, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost
+        )).start()
     order_data = {
         "order_id": "",
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -1416,19 +1488,13 @@ def handle_modal_submission(ack, body, client):
         log_order_to_sheet(order_data)
     if runner_id:
         print(f"🧪 Logging /deliver-initiated order to sheet for ts={order_ts} and user_id={user_id}")
-        order_ts = body.get("container", {}).get("message_ts", "")
-        order_channel = body.get("container", {}).get("channel_id", "")
-        if not order_channel:
-            print("⚠️ order_channel is missing. Trying to fall back from view or other message context.")
-            order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")  # fallback to default channel
+        order_ts = posted["ts"]
+        order_channel = posted["channel"]
         order_data["order_id"] = order_ts
         order_data["initiated_by"] = "runner"
         order_data["status"] = "offered"
         order_data["runner_id"] = runner_id
         order_data["runner_real_name"] = order_data.get("runner_real_name", "")
-        print("🚚 Entered runner-initiated order block")
-        print(f"🧪 [DELIVER] Logging runner order: {order_data}")
-        print(f"🧪 [DELIVER] Order status: {order_data.get('status')}, runner_id: {order_data.get('runner_id')}")
         log_order_to_sheet(order_data)
     else:
         order_ts = posted["ts"]
@@ -1437,7 +1503,6 @@ def handle_modal_submission(ack, body, client):
         order_channel = posted["channel"]
         formatted_blocks = format_order_message(order_data)
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
-        # Only log the order if it hasn't been logged before.
         if order_ts not in order_extras:
             print(f"🧪 Logging runner-submitted order: {order_data}")
             log_order_to_sheet(order_data)

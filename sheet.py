@@ -130,7 +130,7 @@ def mark_code_redeemed(code, user_id):
                         from slack_sdk import WebClient
                         slack_token = os.environ.get("SLACK_BOT_TOKEN")
                         slack_client = WebClient(token=slack_token)
-                        slack_client.chat_postMessage(channel=user_id, text="§ CODE EXPIRED. NO KARMA GRANTED.")
+                        slack_client.chat_postEphemeral(channel=user_id, user=user_id, text="`{code}` expired. No karma granted.")
                         return "expired"
                 except ValueError:
                     pass  # ignore bad date formats
@@ -144,7 +144,7 @@ def mark_code_redeemed(code, user_id):
                 from slack_sdk import WebClient
                 slack_token = os.environ.get("SLACK_BOT_TOKEN")
                 slack_client = WebClient(token=slack_token)
-                slack_client.chat_postMessage(channel=user_id, text="§ CODE ALREADY USED. NO KARMA GRANTED.")
+                slack_client.chat_postEphemeral(channel=user_id, user=user_id, text="`{code}` already used. No karma granted.")
                 return "already_used"
  
             try:
@@ -162,7 +162,7 @@ def mark_code_redeemed(code, user_id):
                 from slack_sdk import WebClient
                 slack_token = os.environ.get("SLACK_BOT_TOKEN")
                 slack_client = WebClient(token=slack_token)
-                slack_client.chat_postMessage(channel=user_id, text="§ CODE LIMIT REACHED. NO KARMA GRANTED.")
+                slack_client.chat_postEphemeral(channel=user_id, user=user_id, text="`{code}` limit reached. No karma granted.")
                 return "limit_reached"
  
             from slack_sdk import WebClient
@@ -191,9 +191,10 @@ def mark_code_redeemed(code, user_id):
                 points = 1
  
             add_karma(user_id, points)
+            total_karma = get_karma(user_id)
             slack_client.chat_postMessage(
                 channel=user_id,
-                text=f"¤ CODE REDEEMED. +{points} KARMA ADDED TO YOUR BALANCE."
+                text=f"`{code}` accepted → +{points} karma granted ({total_karma} total)"
             )
             return f"success:{points}"
     return False
