@@ -1368,6 +1368,7 @@ def handle_modal_submission(ack, body, client):
     print(f"📋 Modal values: {json.dumps(values, indent=2)}")
     print(f"📦 private_metadata (runner_id): {body['view'].get('private_metadata', '')}")
     runner_id = body['view'].get('private_metadata', '')
+    print(f"🧪 DEBUG: runner_id extracted from private_metadata = '{runner_id}'")
     if runner_id:
         print(f"🚨 ENTERED /deliver modal submission branch for runner_id={runner_id}")
         try:
