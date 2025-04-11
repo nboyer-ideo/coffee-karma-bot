@@ -829,60 +829,60 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
     cannot_make = [pretty_caps[c] for c in all_options if c not in saved_caps]
     can_make_str = ", ".join(can_make) if can_make else "NONE"
     cannot_make_str = ", ".join(cannot_make) if cannot_make else "NONE"
-
-        total_blocks = 20
-        filled_blocks = round((remaining / original_total_time) * total_blocks)
-        empty_blocks = total_blocks - filled_blocks
-        progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
-
-        blocks = [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "```"
-                        + "+----------------------------------------+\n"
-                        + "|       𐂀 DRINK RUNNER AVAILABLE 𐂀       |\n"
-                        + "+----------------------------------------+\n"
-                        + "\n".join(box_line(label="RUNNER", value=real_name.upper(), width=42)) + "\n"
-                        + "\n".join(box_line(label="CAN MAKE", value=can_make_str, width=42)) + "\n"
-                        + "\n".join(box_line(label="CAN'T MAKE", value=cannot_make_str, width=42)) + "\n"
-                        + "+----------------------------------------+\n"
-                        + "\n".join(box_line(text=f"TIME LEFT ON SHIFT: {remaining} MINUTES", width=42, align="center")) + "\n"
-                        + "\n".join(box_line(text=progress_bar, width=42, align="center")) + "\n"
-                        + "\n".join(box_line(text="------------------------------------", width=42, align="center")) + "\n"
-                        + "\n".join(box_line(text="↓ CLICK BELOW TO PLACE AN ORDER ↓", width=42, align="center")) + "\n"
-                        + "\n".join(box_line(text="------------------------------------", width=42, align="center")) + "\n"
-                        + "+----------------------------------------+```"
-                }
-            },
-            {
-                "type": "actions",
-                "elements": [
-                    {
-                        "type": "button",
-                        "action_id": "open_order_modal_for_runner",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "ORDER NOW",
-                            "emoji": True
-                        },
-                        "value": json.dumps({"runner_id": user_id})
-                    },
-                    {
-                        "type": "button",
-                        "action_id": "cancel_ready_offer",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "CANCEL",
-                            "emoji": True
-                        },
-                        "style": "danger",
-                        "value": user_id
-                    }
-                ]
+    
+    total_blocks = 20
+    filled_blocks = round((remaining / original_total_time) * total_blocks)
+    empty_blocks = total_blocks - filled_blocks
+    progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
+    
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "```"
+                    + "+----------------------------------------+\n"
+                    + "|       𐂀 DRINK RUNNER AVAILABLE 𐂀       |\n"
+                    + "+----------------------------------------+\n"
+                    + "\n".join(box_line(label="RUNNER", value=real_name.upper(), width=42)) + "\n"
+                    + "\n".join(box_line(label="CAN MAKE", value=can_make_str, width=42)) + "\n"
+                    + "\n".join(box_line(label="CAN'T MAKE", value=cannot_make_str, width=42)) + "\n"
+                    + "+----------------------------------------+\n"
+                    + "\n".join(box_line(text=f"TIME LEFT ON SHIFT: {remaining} MINUTES", width=42, align="center")) + "\n"
+                    + "\n".join(box_line(text=progress_bar, width=42, align="center")) + "\n"
+                    + "\n".join(box_line(text="------------------------------------", width=42, align="center")) + "\n"
+                    + "\n".join(box_line(text="↓ CLICK BELOW TO PLACE AN ORDER ↓", width=42, align="center")) + "\n"
+                    + "\n".join(box_line(text="------------------------------------", width=42, align="center")) + "\n"
+                    + "+----------------------------------------+```"
             }
-        ]
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "action_id": "open_order_modal_for_runner",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "ORDER NOW",
+                        "emoji": True
+                    },
+                    "value": json.dumps({"runner_id": user_id})
+                },
+                {
+                    "type": "button",
+                    "action_id": "cancel_ready_offer",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "CANCEL",
+                        "emoji": True
+                    },
+                    "style": "danger",
+                    "value": user_id
+                }
+            ]
+        }
+    ]
 
         safe_chat_update(
             client,
