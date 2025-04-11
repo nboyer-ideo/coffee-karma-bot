@@ -960,30 +960,6 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         f"<@{user_id}> IS READY TO DELIVER — {remaining} MINUTES LEFT.",
         blocks
     )
-    if remaining == original_total_time:
-        print("📝 Logging /deliver order to sheet for ts=", ts)
-        from sheet import log_order_to_sheet
-        import datetime
-        log_order_to_sheet({
-            "order_id": ts,
-            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "initiated_by": "runner",
-            "requester_id": user_id,
-            "requester_real_name": real_name,
-            "runner_id": user_id,
-            "runner_name": real_name,
-            "recipient_id": "",
-            "recipient_real_name": "",
-            "drink": "",
-            "location": "",
-            "notes": "Runner offer",
-            "karma_cost": 0,
-            "status": "offered",
-            "bonus_multiplier": "",
-            "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "time_claimed": "",
-            "time_delivered": ""
-        })
 
         # 🔁 Always schedule next tick if countdown is not done
     import threading
