@@ -917,6 +917,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         blocks
     )
     if remaining == original_total_time:
+        print(f"📝 Logging /deliver order to sheet for ts={ts} and user_id={user_id}")
         # Log initial delivery offer
         from sheet import log_order_to_sheet
         import datetime
@@ -942,6 +943,9 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         })
 
         # 🔁 Always schedule next tick if countdown is not done
+    import threading
+    if remaining != original_total_time:
+        print(f"🟡 WARNING: log_order_to_sheet() was NOT called this cycle (remaining={remaining})")
     import threading
     threading.Timer(60, update_ready_countdown, args=(client, remaining - 1, ts, channel, user_id, original_total_time)).start()
     print(f"🕓 Next tick scheduled for ts={ts}, remaining={remaining - 1}")
@@ -1027,7 +1031,6 @@ def build_order_modal(trigger_id, runner_id=""):
                 {
                     "type": "section",
                     "block_id": "location",
-                    "optional": False,
                     "text": {"type": "mrkdwn", "text": "*Drop location?*"},
                     "accessory": {
                         "type": "static_select",
@@ -1215,6 +1218,15 @@ def handle_modal_submission(ack, body, client):
         print("⚠️ runner_offer_metadata not defined — initializing.")
         runner_offer_metadata = {}
     values = body["view"]["state"]["values"]
+    # Validate location selection
+    location_block = values.get("location", {})
+    location_selected = location_block.get("location_select", {}).get("selected_option")
+    if not location_selected:
+        ack(response_action="errors", errors={
+            "location": "You must select a location from the dropdown."
+        })
+        print("❌ Modal submission blocked: location not selected")
+        return
     print(f"📋 Modal values: {json.dumps(values, indent=2)}")
     print(f"📦 private_metadata (runner_id): {body['view'].get('private_metadata', '')}")
     user_id = body["user"]["id"]
