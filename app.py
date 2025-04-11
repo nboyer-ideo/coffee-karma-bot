@@ -620,7 +620,7 @@ def handle_location_select(ack, body, client):
         "title": {"type": "plain_text", "text": "Place An Order"},
         "submit": {"type": "plain_text", "text": "Submit Drop"},
         "close": {"type": "plain_text", "text": "Nevermind"},
-        "private_metadata": body["view"].get("private_metadata", ""),
+        "private_metadata": selected_location,
         "blocks": modal["view"]["blocks"]
     })
 
@@ -1248,12 +1248,12 @@ def handle_open_order_modal_for_runner(ack, body, client):
 @app.view("koffee_request_modal")
 def handle_modal_submission(ack, body, client):
     ack()
+    location = body["view"].get("private_metadata", "")
     print("📥 Modal submission received")
     global runner_offer_metadata
     if 'runner_offer_metadata' not in globals():
         print("⚠️ runner_offer_metadata not defined — initializing.")
         runner_offer_metadata = {}
-    location = body["view"].get("private_metadata", "")
     values = body["view"]["state"]["values"]
     # Validate location selection
     if not location:
