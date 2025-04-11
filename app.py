@@ -1253,6 +1253,16 @@ def handle_karma(ack, body, client):
     message = f"¤ Balance: {points} karma — Title: {title}."
     client.chat_postEphemeral(channel=body["channel_id"], user=user_id, text=message)
 
+@app.action("open_order_modal_for_runner")
+def handle_open_order_modal_for_runner(ack, body, client):
+    ack()
+    user_id = body["user"]["id"]
+    trigger_id = body["trigger_id"]
+    client.views_open(
+        trigger_id=trigger_id,
+        view=build_order_modal(trigger_id, runner_id=user_id)["view"]
+    )
+
 @app.view("koffee_request_modal")
 def handle_modal_submission(ack, body, client):
     ack()
