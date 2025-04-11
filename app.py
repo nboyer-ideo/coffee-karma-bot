@@ -1157,6 +1157,10 @@ def handle_modal_submission(ack, body, client):
             log_order_to_sheet(order_data)
         if not order_channel:
             order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
+        from threading import Timer
+        Timer(60, update_countdown, args=(
+            client, 9, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost
+        )).start()
     else:
         # Reuse the existing message posted by /ready
         posted_ready = body.get("view", {}).get("root_view_id")
