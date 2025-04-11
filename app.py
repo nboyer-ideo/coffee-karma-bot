@@ -1353,7 +1353,7 @@ def handle_modal_submission(ack, body, client):
     print(f"📦 private_metadata (runner_id): {body['view'].get('private_metadata', '')}")
     runner_id = body['view'].get('private_metadata', '')
     print(f"🧪 DEBUG: runner_id extracted from private_metadata = '{runner_id}'")
-    else:
+    if not runner_id:
         posted = client.chat_postMessage(
             channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
             text="New Koffee Karma order posted...",
