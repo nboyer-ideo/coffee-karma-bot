@@ -1222,10 +1222,59 @@ def handle_modal_submission(ack, body, client):
     location_block = values.get("location", {})
     location_selected = location_block.get("location_select", {}).get("selected_option")
     if not location_selected:
-        ack(response_action="errors", errors={
-            "location": "You must select a location from the dropdown."
-        })
-        print("❌ Modal submission blocked: location not selected")
+        print("❌ Modal submission blocked: location not selected — refreshing modal with error")
+        modal = build_order_modal(trigger_id="")
+        blocks = modal["view"]["blocks"]
+
+        # Insert error message below location dropdown
+        error_block = {
+            "type": "context",
+            "block_id": "location_error",
+            "elements": [
+                { "type": "mrkdwn", "text": "⚠️ You must select a location before submitting." }
+            ]
+        }
+        blocks.insert(4, error_block)
+
+        # Preserve previous selections/input
+        drink_value = values["drink_category"]["input"]["selected_option"]["value"]
+        drink_detail = values["drink_detail"]["input"]["value"]
+        notes = values["notes"]["input"]["value"] if "notes" in values and "input" in values["notes"] else ""
+        gifted_id = values["gift_to"]["input"]["selected_user"] if "gift_to" in values and "input" in values["gift_to"] else None
+
+        for block in blocks:
+            if block.get("block_id") == "drink_category":
+                block["element"]["initial_option"] = {
+                    "text": {"type": "plain_text", "text": drink_value},
+                    "value": drink_value
+                }
+            elif block.get("block_id") == "drink_detail":
+                block["element"]["initial_value"] = drink_detail
+            elif block.get("block_id") == "notes":
+                block["element"]["initial_value"] = notes
+            elif block.get("block_id") == "gift_to" and gifted_id:
+                block["element"]["initial_user"] = gifted_id
+            elif block.get("block_id") == "location":
+                # No location selected, so do not set initial_option
+
+                # Refresh the map to blank
+                for ascii_block in blocks:
+                    if ascii_block.get("block_id") == "ascii_map_block":
+                        from app import format_full_map_with_legend, build_mini_map
+                        ascii_block["text"]["text"] = "```" + format_full_map_with_legend(build_mini_map("")) + "```"
+
+        client.views_update(
+            view_id=body["view"]["id"],
+            view={
+                "type": "modal",
+                "callback_id": "koffee_request_modal",
+                "title": {"type": "plain_text", "text": "Place An Order"},
+                "submit": {"type": "plain_text", "text": "Submit Drop"},
+                "close": {"type": "plain_text", "text": "Nevermind"},
+                "private_metadata": body["view"].get("private_metadata", ""),
+                "blocks": blocks
+            }
+        )
         return
     print(f"📋 Modal values: {json.dumps(values, indent=2)}")
     print(f"📦 private_metadata (runner_id): {body['view'].get('private_metadata', '')}")
