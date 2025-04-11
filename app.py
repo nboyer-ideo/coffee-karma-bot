@@ -608,6 +608,7 @@ def handle_location_select(ack, body, client):
     # Rebuild the modal with the new map based on selected location
     print("📐 [DEBUG] Calling build_order_modal with selected_location...")
     modal = build_order_modal(trigger_id, selected_location=selected_location)
+    modal["view"]["private_metadata"] = selected_location
     print("🧱 [DEBUG] modal['view']['blocks'] =")
     for block in modal["view"]["blocks"]:
         print(json.dumps(block, indent=2))
@@ -1252,11 +1253,10 @@ def handle_modal_submission(ack, body, client):
     if 'runner_offer_metadata' not in globals():
         print("⚠️ runner_offer_metadata not defined — initializing.")
         runner_offer_metadata = {}
+    location = body["view"].get("private_metadata", "")
     values = body["view"]["state"]["values"]
     # Validate location selection
-    location_block = values.get("location", {})
-    location_selected = location_block.get("location_select", {}).get("selected_option")
-    if not location_selected:
+    if not location:
         print("❌ Modal submission blocked: location not selected — refreshing modal with error")
         modal = build_order_modal(trigger_id="", selected_location=location)
         blocks = modal["view"]["blocks"]
@@ -1291,7 +1291,7 @@ def handle_modal_submission(ack, body, client):
                 for ascii_block in blocks:
                     if ascii_block.get("block_id") == "ascii_map_block":
                         from app import format_full_map_with_legend, build_mini_map
-                        ascii_block["text"]["text"] = "```" + format_full_map_with_legend(build_mini_map("")) + "```"
+                        ascii_block["text"]["text"] = "```" + format_full_map_with_legend(build_mini_map(location)) + "```"
  
         ack(response_action="update", view={
             "type": "modal",
@@ -1336,12 +1336,12 @@ def handle_modal_submission(ack, body, client):
                 block["element"]["initial_user"] = gifted_id
             elif block.get("block_id") == "location":
                 # No location selected, so do not set initial_option
-
-                # Refresh the map to blank
+ 
+                # Refresh the map using the selected location
                 for ascii_block in blocks:
                     if ascii_block.get("block_id") == "ascii_map_block":
                         from app import format_full_map_with_legend, build_mini_map
-                        ascii_block["text"]["text"] = "```" + format_full_map_with_legend(build_mini_map("")) + "```"
+                        ascii_block["text"]["text"] = "```" + format_full_map_with_legend(build_mini_map(location)) + "```"
 
         client.views_open(
             trigger_id=body["trigger_id"],
