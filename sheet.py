@@ -197,7 +197,7 @@ def mark_code_redeemed(code, user_id):
 def log_order_to_sheet(order_data):
     print("🟡 Starting log_order_to_sheet")
     # Only log initial orders (status 'pending'); skip updates for claimed or delivered orders.
-    if order_data.get("status", "pending") != "pending":
+    if order_data.get("status", "ordered") != "ordered":
         print("ℹ️ Order status is not pending; skipping initial logging.")
         return
 
@@ -236,7 +236,7 @@ def log_order_to_sheet(order_data):
             worksheet.append_row([
                 order_data.get("order_id", ""),
                 order_data.get("timestamp", ""),
-                "runner" if order_data.get("runner_id") else "requester",
+                order_data.get("initiated_by", ""),
                 order_data.get("requester_id", ""),
                 order_data.get("requester_real_name", ""),
                 order_data.get("runner_id", ""),

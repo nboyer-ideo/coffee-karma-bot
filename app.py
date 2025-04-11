@@ -11,7 +11,16 @@ import datetime
 import copy
 import re
 import csv
-from sheet import get_runner_capabilities
+from sheet import (
+    add_karma,
+    get_karma,
+    get_leaderboard,
+    ensure_user,
+    deduct_karma,
+    get_runner_capabilities,
+    log_order_to_sheet,
+    fetch_order_data,
+)
 
 def send_koffee_welcome(client, user_id):
     welcome_message = (
@@ -23,7 +32,7 @@ def send_koffee_welcome(client, user_id):
         "2. Select one of the commands below.\n"
         "3. Hit enter to activate the command.\n\n"
         "`/order` — Summon your drink\n"
-        "`/runner` — Pledge to deliver\n"
+        "`/deliver` — Pledge to deliver\n"
         "`/karma` — Check your path\n"
         "`/redeem` — Activate codes\n"
         "`/leaderboard` — Witness the rankings\n\n"
@@ -32,16 +41,16 @@ def send_koffee_welcome(client, user_id):
     client.chat_postMessage(channel=user_id, text=welcome_message)
 
     public_welcome_templates = [
-        "§ <@{user}> joined the rebellion. Brew responsibly.\nUse `/order` to request. `/runner` to offer.",
-        "¤ New operative detected: <@{user}>.\nRun a drop with `/order` or offer to deliver with `/runner`.",
-        "‡ Transmission inbound — <@{user}> enters the grid.\nKick things off: `/order` or `/runner` to volunteer.",
-        ":: Alert :: <@{user}> has entered the cycle.\nInitiate contact via `/order` or offer with `/runner`.",
-        "§ The order grows — <@{user}> now among us.\nUse `/order` to summon. `/runner` to volunteer.",
-        "¤ Initiate registered: <@{user}>.\nStart your descent with `/order` or offer a run with `/runner`.",
-        "‡ <@{user}> breaches the brewline.\nFirst move: `/order` to place. `/runner` to serve.",
-        ":: Access granted: <@{user}> onboarded to the grind.\nReady up — `/order` to request, `/runner` to offer.",
-        "§ System notification: <@{user}> is now in play.\nDispatch via `/order`. Volunteer via `/runner`.",
-        "¤ <@{user}> joins the collective.\nStir the system with `/order` or offer with `/runner`."
+        "§ <@{user}> joined the rebellion. Brew responsibly.\nUse `/order` to request. `/deliver` to offer.",
+        "¤ New operative detected: <@{user}>.\nRun a drop with `/order` or offer to deliver with `/deliver`.",
+        "‡ Transmission inbound — <@{user}> enters the grid.\nKick things off: `/order` or `/deliver` to volunteer.",
+        ":: Alert :: <@{user}> has entered the cycle.\nInitiate contact via `/order` or offer with `/deliver`.",
+        "§ The order grows — <@{user}> now among us.\nUse `/order` to summon. `/deliver` to volunteer.",
+        "¤ Initiate registered: <@{user}>.\nStart your descent with `/order` or offer a run with `/deliver`.",
+        "‡ <@{user}> breaches the brewline.\nFirst move: `/order` to place. `/deliver` to serve.",
+        ":: Access granted: <@{user}> onboarded to the grind.\nReady up — `/order` to request, `/deliver` to offer.",
+        "§ System notification: <@{user}> is now in play.\nDispatch via `/order`. Volunteer via `/deliver`.",
+        "¤ <@{user}> joins the collective.\nStir the system with `/order` or offer with `/deliver`."
     ]
     public_message = random.choice(public_welcome_templates).replace("{user}", user_id)
     client.chat_postMessage(channel=os.environ.get("KOFFEE_KARMA_CHANNEL"), text=public_message)
@@ -315,7 +324,7 @@ def format_order_message(order_data):
         lines.append("| ---------------------------------------------- |")
         earned = order_data.get('karma_cost', 1) * int(order_data.get('bonus_multiplier', 1))
         total = order_data.get('runner_karma', 0)
-        karma_line = f"+{earned} Karma Earned — Total: {total} Karma"
+        karma_line = f"+{earned} KARMA EARNED — TOTAL: {total} KARMA"
         total_width = 46
         karma_line_centered = karma_line.center(total_width)
         lines.append(f"| {karma_line_centered} |")
@@ -345,9 +354,9 @@ def format_order_message(order_data):
     lines.append(border_bot)
     lines += [
         "| /ORDER        PLACE AN ORDER                   |",
+        "| /DELIVER      DELIVER ORDERS                   |",
         "| /KARMA        CHECK YOUR KARMA                 |",
         "| /LEADERBOARD  TOP KARMA EARNERS                |",
-        "| /REDEEM       BONUS KARMA CODES                |",
         border_bot
     ]
  
@@ -503,7 +512,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "location": location,
             "notes": notes,
             "karma_cost": karma_cost,
-            "status": "pending",
+            "status": "ordered",
             "bonus_multiplier": "",
             "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "time_claimed": "",
@@ -547,6 +556,9 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             safe_chat_update(client, order_channel, order_ts, f"‡ Order from <@{user_id}> EXPIRED — No claimant arose.", [])
  
         if remaining > 1 and extras.get("active", True):
+            if extras.get("status") in ["claimed", "delivered"]:
+                print(f"🛑 Stopping countdown loop — order already {extras.get('status')}")
+                return
             print(f"🕒 Scheduling next countdown tick — remaining: {remaining - 1}")
             t = threading.Timer(60, update_countdown, args=(
                 client, remaining - 1, order_ts, order_channel,
@@ -829,6 +841,29 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
             f"<@{user_id}> IS READY TO DELIVER — {remaining} MINUTES LEFT.",
             blocks
         )
+        if remaining == original_total_time:
+            from sheet import log_order_to_sheet
+            import datetime
+            log_order_to_sheet({
+                "order_id": ts,
+                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "initiated_by": "runner",
+                "requester_id": user_id,
+                "requester_real_name": real_name,
+                "runner_id": user_id,
+                "runner_name": real_name,
+                "recipient_id": "",
+                "recipient_real_name": "",
+                "drink": "",
+                "location": "",
+                "notes": "Runner offer",
+                "karma_cost": 0,
+                "status": "offered",
+                "bonus_multiplier": "",
+                "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "time_claimed": "",
+                "time_delivered": ""
+            })
 
         if remaining > 1:
             import threading
@@ -1015,7 +1050,7 @@ def handle_leaderboard(ack, body, client):
     leaderboard = get_leaderboard()
 
     lines = []
-    lines.append("+===================[ THE BREW SCROLL ]===================+")
+    lines.append("||================[ ⚙ THE BREW SCROLL ⚙ ]================||")
     lines.append("| RANK |        NAME        | KARMA |         TITLE       |")
     lines.append("|------|--------------------|-------|---------------------|")
     for i, entry in enumerate(leaderboard):
@@ -1024,7 +1059,7 @@ def handle_leaderboard(ack, body, client):
         title = get_title(int(entry.get("Karma", 0))).ljust(21)
         lines.append(f"|  {i+1:<3} | {name} |  {karma} | {title} |")
     lines.append("+=========================================================+")
-    lines.append("|      /ORDER     /KARMA     /LEADERBOARD     /REDEEM     |")
+    lines.append("|     /ORDER  /DELIVER  /KARMA  /LEADERBOARD  /REDEEM     |")
     lines.append("+=========================================================+")
     leaderboard_text = "```" + "\n".join(lines) + "```"
 
@@ -1118,7 +1153,7 @@ def handle_modal_submission(ack, body, client):
         "location": location,
         "notes": notes,
         "karma_cost": karma_cost,
-        "status": "pending",
+        "status": "ordered",
         "bonus_multiplier": "",
         "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "time_claimed": "",
@@ -1352,7 +1387,7 @@ def handle_modal_submission(ack, body, client):
             )
             return
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
-@app.command("/runner")
+@app.command("/deliver")
 def handle_ready_command(ack, body, client):
     ack()
     user_id = body["user_id"]
@@ -1465,7 +1500,7 @@ def handle_ready_command(ack, body, client):
         "location": "",
         "notes": "",
         "karma_cost": "",
-        "status": "pending",
+        "status": "ordered",
         "bonus_multiplier": "",
         "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "time_claimed": "",
