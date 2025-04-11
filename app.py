@@ -1250,7 +1250,7 @@ def handle_modal_submission(ack, body, client):
     location_selected = location_block.get("location_select", {}).get("selected_option")
     if not location_selected:
         print("❌ Modal submission blocked: location not selected — refreshing modal with error")
-        modal = build_order_modal(trigger_id="")
+        modal = build_order_modal(trigger_id="", selected_location=location)
         blocks = modal["view"]["blocks"]
         error_block = {
             "type": "context",
@@ -1295,7 +1295,7 @@ def handle_modal_submission(ack, body, client):
             "blocks": modal["view"]["blocks"]
         })
 
-        modal = build_order_modal(trigger_id="")
+        modal = build_order_modal(trigger_id="", selected_location=location)
         blocks = modal["view"]["blocks"]
 
         # Insert error message below location dropdown
