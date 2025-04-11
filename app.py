@@ -548,8 +548,8 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         order_extras[order_ts]["runner_real_name"] = order_data.get("runner_real_name", "")
         order_extras[order_ts]["delivered_by"] = order_data.get("delivered_by", "")
  
-       if extras.get("status", "ordered") == "ordered":
-           order_extras[order_ts]["status"] = "ordered"
+        if extras.get("status", "ordered") == "ordered":
+            order_extras[order_ts]["status"] = "ordered"
         updated_blocks = format_order_message(order_data)
  
         current_blocks = current_message["messages"][0].get("blocks", [])
