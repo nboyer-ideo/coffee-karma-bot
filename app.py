@@ -1054,7 +1054,7 @@ def handle_leaderboard(ack, body, client):
  
     lines = []
     # Header bar (unchanged, though note it won't perfectly match new column widths)
-    lines.append("||==============[ ⚙ THE BREW SCROLL ⚙ ]=============||")
+    lines.append("||=================[ ⚙ THE BREW SCROLL ⚙ ]=================||")
  
     # Column headings:
     # - RANK and KARMA get a single space padding on both sides: " RANK ", " KARMA "
@@ -1090,9 +1090,9 @@ def handle_leaderboard(ack, body, client):
         ))
  
     # Bottom navigation commands
-    lines.append("+====================================================+")
-    lines.append("|   /ORDER  /DELIVER  /KARMA  /LEADERBOARD  /REDEEM  |")
-    lines.append("+====================================================+")
+    lines.append("+===========================================================+")
+    lines.append("|      /ORDER  /DELIVER  /KARMA  /LEADERBOARD  /REDEEM      |")
+    lines.append("+===========================================================+")
  
     leaderboard_text = "```" + "\n".join(lines) + "```"
  
