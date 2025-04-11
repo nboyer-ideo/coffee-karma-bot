@@ -1144,6 +1144,7 @@ def handle_modal_submission(ack, body, client):
     if not runner_id:
         posted = client.chat_postMessage(
             channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+            text="New Koffee Karma order posted...",
             blocks=[]
         )
         order_ts = posted["ts"]

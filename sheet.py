@@ -8,21 +8,21 @@ from io import StringIO
 
 def get_title(karma):
     if karma >= 20:
-        return "CAFE SHADE MYSTIC"
+        return "The Last Barista"
     elif karma >= 16:
-        return "ORDER ORACLE"
+        return "Café Shade Mystic"
     elif karma >= 12:
-        return "STEAM WHISPERER"
+        return "Foam Scryer"
     elif karma >= 8:
-        return "FOAM SCRYER"
+        return "Roast Prophet"
     elif karma >= 5:
-        return "KEEPER OF THE DRIP"
+        return "Keeper of the Drip"
     elif karma >= 3:
-        return "BEAN SEEKER"
+        return "The Initiate"
     elif karma >= 1:
-        return "THE INITIATE"
+        return "Cold Pour"
     else:
-        return "THE PARCHED"
+        return "Parched"
 
 def get_sheet():
     creds_json = os.environ.get("GOOGLE_CREDS_JSON", "")
