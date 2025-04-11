@@ -2089,6 +2089,33 @@ def handle_ready_command(ack, body, client):
 @app.view("runner_settings_modal")
 def handle_runner_settings_modal(ack, body, client):
     ack()
+    print("📥 /deliver modal submission received")
+    from sheet import log_order_to_sheet
+    import datetime
+    
+    user_id = body["user"]["id"]
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    order_id = f"runner_{user_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
+    
+    order_data = {
+        "order_id": order_id,
+        "timestamp": timestamp,
+        "initiated_by": "runner",
+        "requester_id": user_id,
+        "requester_real_name": "",
+        "runner_id": user_id,
+        "runner_name": "",
+        "status": "offered",
+        "drink": "",
+        "location": "",
+        "notes": "Runner offer via /deliver modal",
+        "karma_cost": 0,
+        "bonus_multiplier": "",
+        "time_ordered": timestamp,
+        "time_claimed": "",
+        "time_delivered": ""
+    }
+    log_order_to_sheet(order_data)
     from app import wrap_line
     user_id = body["user"]["id"]
     values = body["view"]["state"]["values"]
@@ -2244,6 +2271,41 @@ def handle_open_order_modal_for_runner(ack, body, client):
         trigger_id=body["trigger_id"],
         view=build_order_modal(trigger_id=body["trigger_id"], runner_id=runner_id)["view"]
     )
+
+@app.view("runner_settings_modal")
+def handle_runner_settings_modal(ack, body, client):
+    ack()
+    print("📥 /deliver modal submission received")
+
+    from sheet import log_order_to_sheet
+    import datetime
+
+    user_id = body["user"]["id"]
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    order_id = f"runner_{user_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+    order_data = {
+        "order_id": order_id,
+        "timestamp": timestamp,
+        "initiated_by": "runner",
+        "requester_id": user_id,
+        "requester_real_name": "",
+        "runner_id": user_id,
+        "runner_name": "",
+        "status": "offered",
+        "drink": "",
+        "location": "",
+        "notes": "Runner offer via /deliver modal",
+        "karma_cost": 0,
+        "bonus_multiplier": "",
+        "time_ordered": timestamp,
+        "time_claimed": "",
+        "time_delivered": "",
+        "recipient_id": "",
+        "recipient_real_name": ""
+    }
+
+    log_order_to_sheet(order_data)
 
 if __name__ == "__main__":
     flask_app.run(host="0.0.0.0", port=10000)
