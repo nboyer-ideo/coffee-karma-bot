@@ -720,9 +720,9 @@ def handle_mark_delivered(ack, body, client):
     )
     order_data["status"] = "delivered"
     
-    # Clear runner_offer_claims once delivery is completed
+    # Mark runner's claim as delivered
     if order_data.get("runner_id") in runner_offer_claims:
-        del runner_offer_claims[order_data["runner_id"]]
+        runner_offer_claims[order_data["runner_id"]]["delivered"] = True
 
     if multiplier > 1:
         msg = f"<@{user_id}> earned {multiplier}x karma on this run."
@@ -1340,13 +1340,36 @@ def handle_modal_submission(ack, body, client):
 
         # Prevent double-claiming runner offers unless cleared
         existing_claim = runner_offer_claims.get(order_data["runner_id"])
+        now = datetime.datetime.now()
         if existing_claim:
-            client.chat_postEphemeral(
-                channel=user_id,
-                user=user_id,
-                text="‡ TOO LATE. This runner is already bound to another order."
-            )
-            return
+            claim_info = existing_claim
+            claim_time = claim_info.get("timestamp")
+            is_expired = (now - claim_time).total_seconds() > 900  # 15 minutes
+            is_delivered = claim_info.get("delivered", False)
+
+            if not is_expired and not is_delivered:
+                client.chat_postEphemeral(
+                    channel=user_id,
+                    user=user_id,
+                    text="‡ TOO LATE. This runner is already bound to another order."
+                )
+                return
+
+        # Set new claim
+        runner_offer_claims[order_data["runner_id"]] = {
+            "user_id": user_id,
+            "timestamp": now,
+            "delivered": False
+        }
+
+        # Schedule fallback cleanup after 15 minutes
+        import threading
+        def clear_runner_offer():
+            current = runner_offer_claims.get(order_data["runner_id"])
+            if current and current["user_id"] == user_id and not current["delivered"]:
+                del runner_offer_claims[order_data["runner_id"]]
+
+        threading.Timer(900, clear_runner_offer).start()
 
         runner_offer_claims[order_data["runner_id"]] = user_id
 
