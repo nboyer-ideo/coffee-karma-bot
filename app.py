@@ -2050,7 +2050,7 @@ def handle_runner_settings_modal(ack, body, client):
 
     posted_ready = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text="",
+        text=" ",
         blocks=[]
     )
     order_ts = posted_ready["ts"]
