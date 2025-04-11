@@ -2283,7 +2283,7 @@ def handle_runner_settings_modal(ack, body, client):
     user_id = body["user"]["id"]
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Post Slack message and get ts
+    # Post Slack message and extract actual ts
     posted = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
         text="🧃 Runner available for delivery!",
@@ -2292,24 +2292,24 @@ def handle_runner_settings_modal(ack, body, client):
     order_ts = posted["ts"]
 
     order_data = {
-        "order_id": order_ts,                     # ✅ use Slack ts instead of custom ID
+        "order_id": order_ts,                # ✅ actual Slack ts
         "timestamp": timestamp,
         "initiated_by": "runner",
-        "requester_id": "",                       # ✅ requester is unknown at this point
-        "requester_real_name": "",
-        "runner_id": user_id,                     # ✅ correct assignment
-        "runner_name": "",                        # real name will be fetched by log_order_to_sheet
-        "status": "offered",
+        "requester_id": "",                  # ✅ blank
+        "requester_real_name": "",           # ✅ blank
+        "runner_id": user_id,                # ✅ set properly
+        "runner_name": "",                   # will be filled by log_order_to_sheet
+        "recipient_id": "",
+        "recipient_real_name": "",
         "drink": "",
         "location": "",
-        "notes": "",                              # ✅ no notes
-        "karma_cost": "",                         # ✅ leave karma cost blank
+        "notes": "",                         # ✅ no notes
+        "karma_cost": "",                    # ✅ blank
+        "status": "offered",
         "bonus_multiplier": "",
         "time_ordered": timestamp,
         "time_claimed": "",
-        "time_delivered": "",
-        "recipient_id": "",
-        "recipient_real_name": ""
+        "time_delivered": ""
     }
 
     log_order_to_sheet(order_data)
