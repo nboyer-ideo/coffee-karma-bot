@@ -1353,43 +1353,6 @@ def handle_modal_submission(ack, body, client):
     print(f"📦 private_metadata (runner_id): {body['view'].get('private_metadata', '')}")
     runner_id = body['view'].get('private_metadata', '')
     print(f"🧪 DEBUG: runner_id extracted from private_metadata = '{runner_id}'")
-    if runner_id:
-        print(f"🚨 ENTERED /deliver modal submission branch for runner_id={runner_id}")
-        try:
-            posted = client.chat_postMessage(
-                channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-                text="🧃 Runner available for delivery!",
-                blocks=[]
-            )
-            print("✅ /deliver modal posted:", posted)
-            order_ts = posted["ts"]
-            order_channel = posted["channel"]
-            import datetime
-            order_data = {
-                "order_id": order_ts,
-                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "initiated_by": "runner",
-                "requester_id": "",
-                "requester_real_name": "",
-                "runner_id": runner_id,
-                "runner_name": "",
-                "recipient_id": "",
-                "recipient_real_name": "",
-                "drink": "",
-                "location": "",
-                "notes": "",
-                "karma_cost": "",
-                "status": "offered",
-                "bonus_multiplier": "",
-                "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "time_claimed": "",
-                "time_delivered": ""
-            }
-            print("🧪 Logging order_data to sheet:", order_data)
-            log_order_to_sheet(order_data)
-            print("✅ /deliver order successfully logged.")
-        except Exception as e:
-            print("🚨 ERROR in /deliver modal submission branch:", e)
     else:
         posted = client.chat_postMessage(
             channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
@@ -2068,32 +2031,7 @@ def handle_runner_settings_modal(ack, body, client):
     import datetime
     
     user_id = body["user"]["id"]
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    order_id = f"runner_{user_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
-    
-    order_data = {
-        "order_id": order_id,
-        "timestamp": timestamp,
-        "initiated_by": "runner",
-        "requester_id": user_id,
-        "requester_real_name": "",
-        "runner_id": user_id,
-        "runner_name": "",
-        "status": "offered",
-        "drink": "",
-        "location": "",
-        "notes": "Runner offer via /deliver modal",
-        "karma_cost": 0,
-        "bonus_multiplier": "",
-        "time_ordered": timestamp,
-        "time_claimed": "",
-        "time_delivered": ""
-    }
-    log_order_to_sheet(order_data)
-    from app import wrap_line
-    user_id = body["user"]["id"]
     values = body["view"]["state"]["values"]
- 
     selected = []
     if "capabilities" in values and "input" in values["capabilities"]:
         selected = [opt["value"] for opt in values["capabilities"]["input"].get("selected_options", [])]
@@ -2118,27 +2056,6 @@ def handle_runner_settings_modal(ack, body, client):
         print("⚠️ Failed to fetch user real name for settings save:", e)
         real_name = f"<@{user_id}>"
  
-    save_runner_capabilities(user_id, real_name, selected)
-    from sheet import log_order_to_sheet
-    import datetime
-    log_order_to_sheet({
-        "order_id": f"runner_{user_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}",
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "initiated_by": "runner",
-        "requester_id": user_id,
-        "requester_real_name": real_name,
-        "runner_id": user_id,
-        "runner_name": real_name,
-        "status": "runner_available",
-        "drink": "",
-        "location": "",
-        "notes": "",
-        "karma_cost": "",
-        "bonus_multiplier": "",
-        "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "time_claimed": "",
-        "time_delivered": ""
-    })
  
     # post terminal message with the selected time and capabilities
     pretty_caps = {
@@ -2256,7 +2173,23 @@ def handle_runner_settings_modal(ack, body, client):
 
     user_id = body["user"]["id"]
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
+    
+    from sheet import save_runner_capabilities
+    selected = []
+    values = body["view"]["state"]["values"]
+    if "capabilities" in values and "input" in values["capabilities"]:
+        selected = [opt["value"] for opt in values["capabilities"]["input"].get("selected_options", [])]
+    try:
+        from slack_sdk import WebClient
+        slack_token = os.environ.get("SLACK_BOT_TOKEN")
+        slack_client = WebClient(token=slack_token)
+        user_info = slack_client.users_info(user=user_id)
+        real_name = user_info["user"]["real_name"]
+    except Exception as e:
+        print("⚠️ Failed to fetch user real name for settings save:", e)
+        real_name = f"<@{user_id}>"
+    save_runner_capabilities(user_id, real_name, selected)
+    
     # Post Slack message and extract actual ts
     posted = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
