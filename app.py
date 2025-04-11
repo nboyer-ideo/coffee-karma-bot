@@ -548,8 +548,6 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         order_extras[order_ts]["runner_real_name"] = order_data.get("runner_real_name", "")
         order_extras[order_ts]["delivered_by"] = order_data.get("delivered_by", "")
  
-        if extras.get("status", "ordered") == "ordered":
-            order_extras[order_ts]["status"] = "ordered"
         updated_blocks = format_order_message(order_data)
  
         current_blocks = current_message["messages"][0].get("blocks", [])
@@ -688,6 +686,10 @@ def handle_claim_order(ack, body, client):
         order_data = fetch_order_data(order_id)
         order_data["order_id"] = order_id
         order_data["status"] = "claimed"
+        if order_id not in order_extras:
+            order_extras[order_id] = {}
+        order_extras[order_id]["status"] = "claimed"
+        order_extras[order_id]["active"] = False
         blocks = format_order_message(order_data)
         safe_chat_update(client, channel, ts, "Order update: Order claimed", blocks)
 
@@ -757,6 +759,10 @@ def handle_mark_delivered(ack, body, client):
         delivered_time=order_data["time_delivered"]
     )
     order_data["status"] = "delivered"
+    if order_id not in order_extras:
+        order_extras[order_id] = {}
+    order_extras[order_id]["status"] = "delivered"
+    order_extras[order_id]["active"] = False
     
     # Mark runner's claim as delivered
     if order_data.get("runner_id") in runner_offer_claims:
@@ -812,8 +818,11 @@ def handle_cancel_ready_offer(ack, body, client):
         client.chat_update(channel=channel, ts=ts, text=cancel_text, blocks=[])
 
         # Cleanup any existing claim
-        if user_id in runner_offer_claims:
-            del runner_offer_claims[user_id]
+        runner_offer_claims[user_id] = {"canceled": True}
+        if ts not in order_extras:
+            order_extras[ts] = {}
+        order_extras[ts]["status"] = "canceled"
+        order_extras[ts]["active"] = False
 
         print(f"🛑 Runner offer canceled by {user_id}")
     except Exception as e:
@@ -822,6 +831,13 @@ def handle_cancel_ready_offer(ack, body, client):
 def update_ready_countdown(client, remaining, ts, channel, user_id, original_total_time):
     print(f"🕵️ Entered update_ready_countdown: remaining={remaining}, ts={ts}, user_id={user_id}")
     print(f"🧪 Checking if message should expire: remaining={remaining}")
+    if user_id in runner_offer_claims and runner_offer_claims[user_id].get("delivered") is True:
+        print(f"⛔ Countdown halted — delivery offer by {user_id} already completed.")
+        return
+
+    if user_id in runner_offer_claims and runner_offer_claims[user_id].get("canceled") is True:
+        print(f"⛔ Countdown halted — delivery offer by {user_id} already canceled.")
+        return
     if remaining <= 0:
         print("🚨 Countdown reached zero — attempting to expire message")
         try:
