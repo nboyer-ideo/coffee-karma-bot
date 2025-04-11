@@ -598,13 +598,21 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 
 @app.action("location_select")
 def handle_location_select(ack, body, client):
+    print("📩 [DEBUG] location_select triggered")
+    print(f"📬 body = {json.dumps(body, indent=2)}")
     user_id = body["user"]["id"]
     trigger_id = body["trigger_id"]
     selected_location = body["actions"][0]["selected_option"]["value"]
+    print(f"📍 [DEBUG] selected_location from dropdown = {selected_location}")
 
     # Rebuild the modal with the new map based on selected location
+    print("📐 [DEBUG] Calling build_order_modal with selected_location...")
     modal = build_order_modal(trigger_id, selected_location=selected_location)
+    print("🧱 [DEBUG] modal['view']['blocks'] =")
+    for block in modal["view"]["blocks"]:
+        print(json.dumps(block, indent=2))
 
+    print("🚀 [DEBUG] Sending modal update back to Slack")
     ack(response_action="update", view={
         "type": "modal",
         "callback_id": "koffee_request_modal",
