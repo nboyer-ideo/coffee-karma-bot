@@ -1248,8 +1248,10 @@ def handle_open_order_modal_for_runner(ack, body, client):
 @app.view("koffee_request_modal")
 def handle_modal_submission(ack, body, client):
     ack()
+    print("📥 [DEBUG] In submission handler, view raw payload:")
+    print(json.dumps(body["view"], indent=2))
     location = body["view"].get("private_metadata", "")
-    print("📥 Modal submission received")
+    print(f"📦 [DEBUG] Extracted location from private_metadata: '{location}'")
     global runner_offer_metadata
     if 'runner_offer_metadata' not in globals():
         print("⚠️ runner_offer_metadata not defined — initializing.")
