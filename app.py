@@ -1093,7 +1093,7 @@ def build_order_modal(trigger_id, runner_id="", selected_location=""):
             "title": {"type": "plain_text", "text": "Place An Order"},
             "submit": {"type": "plain_text", "text": "Submit Drop"},
             "close": {"type": "plain_text", "text": "Nevermind"},
-            "private_metadata": runner_id,
+            "private_metadata": selected_location,
             "blocks": [
                 { 
                     "type": "input",
