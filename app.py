@@ -1299,7 +1299,7 @@ def handle_modal_submission(ack, body, client):
             "title": {"type": "plain_text", "text": "Place An Order"},
             "submit": {"type": "plain_text", "text": "Submit Drop"},
             "close": {"type": "plain_text", "text": "Nevermind"},
-            "private_metadata": body["view"].get("private_metadata", ""),
+            "private_metadata": location,
             "blocks": modal["view"]["blocks"]
         })
 
