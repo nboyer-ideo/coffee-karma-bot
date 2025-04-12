@@ -608,7 +608,7 @@ def handle_location_select(ack, body, client):
     # Rebuild the modal with the new map based on selected location
     print("📐 [DEBUG] Calling build_order_modal with selected_location...")
     modal = build_order_modal(trigger_id, selected_location=selected_location)
-    modal["view"]["private_metadata"] = selected_location
+    ack(response_action="update", view=modal["view"])
     print("🧱 [DEBUG] modal['view']['blocks'] =")
     for block in modal["view"]["blocks"]:
         print(json.dumps(block, indent=2))
