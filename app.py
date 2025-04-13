@@ -1246,6 +1246,7 @@ def handle_open_order_modal_for_runner(ack, body, client):
 def handle_modal_submission(ack, body, client):
     ack()
     print("📥 [DEBUG] In submission handler, view raw payload:")
+    user_id = body["user"]["id"]
 
     location = body["view"].get("private_metadata", "")
     if not location:
@@ -1392,6 +1393,10 @@ def handle_modal_submission(ack, body, client):
             "requester_real_name": real_name,
             "runner_id": "",
             "runner_name": "",
+            # Define gifted_id safely
+            gifted_id = None
+            if "gift_to" in values and "input" in values["gift_to"]:
+                gifted_id = values["gift_to"]["input"].get("selected_user")
             "recipient_id": gifted_id if gifted_id else user_id,
             "recipient_real_name": "",
             "drink": drink,
