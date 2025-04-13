@@ -1321,7 +1321,7 @@ def handle_modal_submission(ack, body, client):
             "type": "context",
             "block_id": "location_error",
             "elements": [
-                { "type": "mrkdwn", "text": "↗ You must select a location before submitting." }
+                { "type": "mrkdwn", "text": "∆ You must select a location before submitting." }
             ]
         }
         blocks.insert(3, error_block)
