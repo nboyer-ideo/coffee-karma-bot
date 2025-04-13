@@ -1259,24 +1259,23 @@ def handle_modal_submission(ack, body, client):
     print(f"🔁 Entered handle_modal_submission for order from {user_id} at {datetime.datetime.now()}")
     order_data = {}
 
-    location = body["view"].get("private_metadata", "")
-    if not location:
-        user_id = body["user"]["id"]
-        global last_selected_location
-        location = last_selected_location.get(user_id, "")
-    print(f"📦 [DEBUG] Extracted location from submission: '{location}'")
+    private_metadata_raw = body["view"].get("private_metadata", "{}")
+    try:
+        metadata = json.loads(private_metadata_raw)
+    except json.JSONDecodeError:
+        print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
+        metadata = {}
+
+    location = metadata.get("location", "")
+    runner_id = metadata.get("runner_id", "")
+    mode = metadata.get("mode", "order")
+    print(f"📦 [DEBUG] Extracted metadata: location={location}, runner_id={runner_id}, mode={mode}")
 
     global runner_offer_metadata
     if 'runner_offer_metadata' not in globals():
         print("⚠️ runner_offer_metadata not defined — initializing.")
         runner_offer_metadata = {}
     values = body["view"]["state"]["values"]
-    # Validate location selection
-    if not location:
-        if "location" in values and "location_select" in values["location"]:
-            selected = values["location"]["location_select"]
-            if selected and selected.get("selected_option"):
-                location = selected["selected_option"]["value"]
     if not location:
         print("❌ Modal submission blocked: location not selected — refreshing modal with error")
         modal = build_order_modal(trigger_id="", selected_location=location)
@@ -1320,7 +1319,11 @@ def handle_modal_submission(ack, body, client):
             "title": {"type": "plain_text", "text": "Place An Order"},
             "submit": {"type": "plain_text", "text": "Submit Drop"},
             "close": {"type": "plain_text", "text": "Nevermind"},
-            "private_metadata": location,
+            "private_metadata": json.dumps({
+                "mode": mode,
+                "location": location,
+                "runner_id": runner_id
+            }),
             "blocks": modal["view"]["blocks"]
         })
 
@@ -1372,21 +1375,16 @@ def handle_modal_submission(ack, body, client):
                 "title": {"type": "plain_text", "text": "Place An Order"},
                 "submit": {"type": "plain_text", "text": "Submit Drop"},
                 "close": {"type": "plain_text", "text": "Nevermind"},
-                "private_metadata": location,
+                "private_metadata": json.dumps({
+                    "mode": mode,
+                    "location": location,
+                    "runner_id": runner_id
+                }),
                 "blocks": blocks
             }
         )
         return
     print(f"📦 private_metadata raw: {body['view'].get('private_metadata', '')}")
-    try:
-        metadata = json.loads(body["view"].get("private_metadata", "{}"))
-    except json.JSONDecodeError:
-        metadata = {}
-
-    location = metadata.get("location", location)
-    runner_id = metadata.get("runner_id", "")
-    mode = metadata.get("mode", "order")
-    print(f"🧪 DEBUG: Extracted metadata: location={location}, runner_id={runner_id}, mode={mode}")
     if not runner_id:
         print("🛠 DEBUG: Order submission path triggered (runner_id not provided).")
         print("🛠 DEBUG: Initialized order_data =", order_data)
