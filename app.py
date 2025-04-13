@@ -1003,7 +1003,9 @@ def handle_app_home_opened_events(body, logger):
 
 def build_order_modal(trigger_id, runner_id="", selected_location=""):
     print(f"📍 [DEBUG] build_order_modal called with selected_location: {selected_location}")
-    
+    if selected_location is None:
+        selected_location = ""
+
     location_block = {
     "type": "section",
     "block_id": "location",
@@ -1222,7 +1224,7 @@ def handle_order(ack, body, client):
     ack()
     client.views_open(
         trigger_id=body["trigger_id"],
-        view=build_order_modal(body["trigger_id"])["view"]
+        view=build_order_modal(body["trigger_id"], selected_location="")["view"]
     )
 
 @app.command("/karma")
@@ -1258,6 +1260,9 @@ def handle_modal_submission(ack, body, client):
         runner_offer_metadata = {}
     values = body["view"]["state"]["values"]
     # Validate location selection
+    if not location:
+    if "location" in values and "location_select" in values["location"]:
+        location = values["location"]["location_select"]["selected_option"]["value"]
     if not location:
         print("❌ Modal submission blocked: location not selected — refreshing modal with error")
         modal = build_order_modal(trigger_id="", selected_location=location)
