@@ -1411,52 +1411,28 @@ def handle_modal_submission(ack, body, client):
         print("DEBUG: /order modal posted:", posted)
         print("DEBUG: order_ts =", posted["ts"], ", order_channel =", posted["channel"])
         order_ts = posted["ts"]
-        import datetime
-        try:
-            user_info = client.users_info(user=user_id)
-            real_name = user_info["user"]["real_name"]
-        except Exception as e:
-            print("⚠️ Failed to fetch real name for requester:", e)
-            real_name = f"<@{user_id}>"
-
-        order_data["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print("🛠 DEBUG: Set order_data[\"timestamp\"] =", order_data["timestamp"])
-        order_data["initiated_by"] = "requester"
-        print("🛠 DEBUG: Set order_data[\"initiated_by\"] =", order_data["initiated_by"])
-        order_data["requester_id"] = user_id
-        print("🛠 DEBUG: Set order_data[\"requester_id\"] =", order_data["requester_id"])
-        order_data["requester_real_name"] = real_name
-        print("🛠 DEBUG: Set order_data[\"requester_real_name\"] =", order_data["requester_real_name"])
-        order_data["runner_id"] = ""
-        order_data["status"] = "ordered"
-        print("🛠 DEBUG: Set order_data[\"runner_id\"] =", order_data["runner_id"])
-        order_data["runner_name"] = ""
-        print("🛠 DEBUG: Set order_data[\"runner_name\"] =", order_data["runner_name"])
-        order_data["recipient_id"] = gifted_id if gifted_id else user_id
-        print("🛠 DEBUG: Set order_data[\"recipient_id\"] =", order_data["recipient_id"])
-        order_data["recipient_real_name"] = ""
-        print("🛠 DEBUG: Set order_data[\"recipient_real_name\"] =", order_data["recipient_real_name"])
-        order_data["drink"] = drink
-        print("🛠 DEBUG: Set order_data[\"drink\"] =", order_data["drink"])
-        order_data["location"] = location
-        print("🛠 DEBUG: Set order_data[\"location\"] =", order_data["location"])
-        order_data["notes"] = notes
-        print("🛠 DEBUG: Set order_data[\"notes\"] =", order_data["notes"])
-        order_data["karma_cost"] = karma_cost
-        print("🛠 DEBUG: Set order_data[\"karma_cost\"] =", order_data["karma_cost"])
-        order_data["status"] = "ordered"
-        print("🛠 DEBUG: Set order_data[\"status\"] =", order_data["status"])
-        order_data["bonus_multiplier"] = ""
-        print("🛠 DEBUG: Set order_data[\"bonus_multiplier\"] =", order_data["bonus_multiplier"])
-        order_data["time_ordered"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print("🛠 DEBUG: Set order_data[\"time_ordered\"] =", order_data["time_ordered"])
-        order_data["time_claimed"] = ""
-        print("🛠 DEBUG: Set order_data[\"time_claimed\"] =", order_data["time_claimed"])
-        order_data["time_delivered"] = ""
-        print("🛠 DEBUG: Set order_data[\"time_delivered\"] =", order_data["time_delivered"])
-        order_data["order_id"] = order_ts
-        print("🛠 DEBUG: Set order_data[\"order_id\"] =", order_data["order_id"])
-        print("🛠 DEBUG: Final order_data before logging:", order_data)
+        order_channel = posted["channel"]
+        order_data = {
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "initiated_by": "requester",
+            "requester_id": user_id,
+            "requester_real_name": real_name,
+            "runner_id": "",
+            "runner_name": "",
+            "recipient_id": gifted_id if gifted_id else user_id,
+            "recipient_real_name": "",
+            "drink": drink.strip(),
+            "location": location,
+            "notes": notes,
+            "karma_cost": karma_cost,
+            "status": "ordered",
+            "bonus_multiplier": "",
+            "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "time_claimed": "",
+            "time_delivered": "",
+            "order_id": order_ts
+        }
+        print("🛠 DEBUG: Final order_data for logging:", order_data)
         print(f"📝 [DEBUG] Final order_data payload: {json.dumps(order_data, indent=2)}")
         log_order_to_sheet(order_data)
         order_channel = posted["channel"]
@@ -1588,19 +1564,6 @@ def handle_modal_submission(ack, body, client):
     print(f"🏃 runner_id: {runner_id}")
     order_ts = ""
     order_channel = ""
-    posted = client.chat_postMessage(
-        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text="New Koffee Karma order posted...",
-        blocks=[]
-    )
-    print("DEBUG: /order modal posted:", posted)
-    print("DEBUG: order_ts =", posted["ts"], ", order_channel =", posted["channel"])
-    order_ts = posted["ts"]
-    order_data["order_id"] = order_ts
-    log_order_to_sheet(order_data)
-    order_channel = posted["channel"]
-    formatted_blocks = format_order_message(order_data)
-    safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
     if runner_id:
         print(f"🧪 Logging /deliver-initiated order to sheet for ts={order_ts} and user_id={user_id}")
         order_ts = posted["ts"]
