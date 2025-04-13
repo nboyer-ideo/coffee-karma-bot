@@ -1490,39 +1490,6 @@ def handle_modal_submission(ack, body, client):
             text="⊘ You do not have enough karma to place this order. Deliver drinks to earn more."
         )
         return
-    deduct_karma(user_id, karma_cost)
-    
-    runner_id = body["view"].get("private_metadata", "")
-    if runner_id:
-        print(f"🧪 Logging /deliver-initiated order to sheet for runner_id={runner_id}")
-        posted = client.chat_postMessage(
-            channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-            text="New Koffee Karma order posted...",
-            blocks=[]
-        )
-        print("DEBUG: /deliver modal posted:", posted)
-        order_ts = posted["ts"]
-        order_channel = posted["channel"]
-        order_data["order_id"] = order_ts
-        order_data["initiated_by"] = "runner"
-        order_data["status"] = "offered"
-        order_data["runner_id"] = runner_id
-        order_data["runner_real_name"] = order_data.get("runner_real_name", "")
-        print("DEBUG: /deliver order_data to log:", order_data)
-        log_order_to_sheet(order_data)
-    else:
-        order_ts = posted["ts"]
-        order_data["order_id"] = order_ts
-        log_order_to_sheet(order_data)
-        order_channel = posted["channel"]
-        formatted_blocks = format_order_message(order_data)
-        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
-        if not order_channel:
-            order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
-        from threading import Timer
-        Timer(60, update_countdown, args=(
-            client, 9, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost
-        )).start()
     order_data = {
         "order_id": "",
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
