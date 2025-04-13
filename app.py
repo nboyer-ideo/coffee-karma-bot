@@ -615,12 +615,9 @@ def handle_location_select(ack, body, client):
 
     print("📐 [DEBUG] Calling build_order_modal with selected_location...")
     modal = build_order_modal(trigger_id, selected_location=selected_location)
-    print(json.dumps(modal["view"], indent=2))
     client.views_update(view_id=body["container"]["view_id"], view=modal["view"])
     ack()
     print("🧱 [DEBUG] Updated modal blocks:")
-    for block in modal["view"]["blocks"]:
-        print(json.dumps(block, indent=2))
 
 @app.action("claim_order")
 def handle_claim_order(ack, body, client):
@@ -1137,17 +1134,7 @@ def build_order_modal(trigger_id, runner_id="", selected_location=""):
                     "type": "mrkdwn",
                     "text": "```" + format_full_map_with_legend(build_mini_map(selected_location)) + "```"
                 }
-            },
-            {
-                "type": "context",
-                "block_id": "map_refresh_debug",
-                "elements": [
-                    {
-                        "type": "mrkdwn",
-                        "text": f"*Map regenerated at:* `{datetime.datetime.now().isoformat(timespec='seconds')}`"
-                    }
-                ]
-            },
+                },
                 {
                     "type": "input",
                     "block_id": "gift_to",
@@ -1260,7 +1247,6 @@ def handle_open_order_modal_for_runner(ack, body, client):
 def handle_modal_submission(ack, body, client):
     ack()
     print("📥 [DEBUG] In submission handler, view raw payload:")
-    print(json.dumps(body["view"], indent=2))
 
     location = body["view"].get("private_metadata", "")
     if not location:
