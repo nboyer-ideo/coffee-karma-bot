@@ -2050,6 +2050,7 @@ def handle_runner_settings_modal(ack, body, client):
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    order_ts = ts  # Ensure order_ts is defined before use
     order_data = {
         "order_id": order_ts,
         "timestamp": timestamp,
