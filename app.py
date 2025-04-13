@@ -1403,15 +1403,16 @@ def handle_modal_submission(ack, body, client):
 
         drink = drink_detail.strip()
 
-        posted = client.chat_postMessage(
+        placeholder = client.chat_postMessage(
             channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
             text="...",  # Temporary placeholder to be overwritten
             blocks=[]
         )
-        print("DEBUG: /order modal posted:", posted)
-        print("DEBUG: order_ts =", posted["ts"], ", order_channel =", posted["channel"])
-        order_ts = posted["ts"]
-        order_channel = posted["channel"]
+        print("DEBUG: /order modal posted:", placeholder)
+        ts = placeholder["ts"]
+        channel = placeholder["channel"]
+        order_ts = ts
+        order_channel = channel
 
         try:
             user_info = client.users_info(user=user_id)
