@@ -1254,9 +1254,9 @@ def handle_open_order_modal_for_runner(ack, body, client):
 def handle_modal_submission(ack, body, client):
     ack()
     import datetime
+    user_id = body["user"]["id"]
     print("📥 [DEBUG] In submission handler, view raw payload:")
     print(f"🔁 Entered handle_modal_submission for order from {user_id} at {datetime.datetime.now()}")
-    user_id = body["user"]["id"]
     order_data = {}
 
     location = body["view"].get("private_metadata", "")
