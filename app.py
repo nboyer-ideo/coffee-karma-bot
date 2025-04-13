@@ -1262,7 +1262,9 @@ def handle_modal_submission(ack, body, client):
     # Validate location selection
     if not location:
         if "location" in values and "location_select" in values["location"]:
-            location = values["location"]["location_select"]["selected_option"]["value"]
+            selected = values["location"]["location_select"]
+            if selected and selected.get("selected_option"):
+                location = selected["selected_option"]["value"]
     if not location:
         print("❌ Modal submission blocked: location not selected — refreshing modal with error")
         modal = build_order_modal(trigger_id="", selected_location=location)
