@@ -615,6 +615,7 @@ def handle_location_select(ack, body, client):
 
     print("📐 [DEBUG] Calling build_order_modal with selected_location...")
     modal = build_order_modal(trigger_id, selected_location=selected_location)
+    print(json.dumps(modal["view"], indent=2))
     ack(response_action="update", view=modal["view"])
     print("🧱 [DEBUG] Updated modal blocks:")
     for block in modal["view"]["blocks"]:
@@ -1133,7 +1134,7 @@ def build_order_modal(trigger_id, runner_id="", selected_location=""):
                     "block_id": "ascii_map_block",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "```" + format_full_map_with_legend(build_mini_map(selected_location)) + f"\nRANDOM ID: {random.randint(1000,9999)}```"
+                "text": "```" + format_full_map_with_legend(build_mini_map(selected_location)) + "```"
                     }
                 },
                 {
