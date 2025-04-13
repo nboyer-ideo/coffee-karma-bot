@@ -601,7 +601,6 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 @app.action("location_select")
 def handle_location_select(ack, body, client):
     print("📩 [DEBUG] location_select triggered")
-    print(f"📬 body = {json.dumps(body, indent=2)}")
     user_id = body["user"]["id"]
     trigger_id = body["trigger_id"]
     selected_location = body["actions"][0]["selected_option"]["value"]
@@ -1364,7 +1363,6 @@ def handle_modal_submission(ack, body, client):
             }
         )
         return
-    print(f"📋 Modal values: {json.dumps(values, indent=2)}")
     print(f"📦 private_metadata (runner_id): {body['view'].get('private_metadata', '')}")
     runner_id = body['view'].get('private_metadata', '')
     print(f"🧪 DEBUG: runner_id extracted from private_metadata = '{runner_id}'")
