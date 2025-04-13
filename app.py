@@ -1247,6 +1247,7 @@ def handle_modal_submission(ack, body, client):
     ack()
     print("📥 [DEBUG] In submission handler, view raw payload:")
     user_id = body["user"]["id"]
+    order_data = {}
 
     location = body["view"].get("private_metadata", "")
     if not location:
@@ -1370,7 +1371,6 @@ def handle_modal_submission(ack, body, client):
     runner_id = body['view'].get('private_metadata', '')
     print(f"🧪 DEBUG: runner_id extracted from private_metadata = '{runner_id}'")
     if not runner_id:
-        order_data = {}
         print("🛠 DEBUG: Initialized order_data = {}", order_data)
         # Initialize order_data and extract modal state values
         drink = values["drink_category"]["input"]["selected_option"]["value"]
