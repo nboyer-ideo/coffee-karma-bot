@@ -2046,6 +2046,7 @@ def handle_runner_settings_modal(ack, body, client):
     )
     ts = placeholder["ts"]
     channel = placeholder["channel"]
+    order_ts = ts  # assign the placeholder timestamp to order_ts before using it
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
