@@ -1386,6 +1386,10 @@ def handle_modal_submission(ack, body, client):
             print("⚠️ Failed to fetch real name for requester:", e)
             real_name = f"<@{user_id}>"
 
+        gifted_id = None
+        if "gift_to" in values and "input" in values["gift_to"]:
+            gifted_id = values["gift_to"]["input"].get("selected_user")
+
         order_data = {
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "initiated_by": "requester",
@@ -1393,10 +1397,6 @@ def handle_modal_submission(ack, body, client):
             "requester_real_name": real_name,
             "runner_id": "",
             "runner_name": "",
-            # Define gifted_id safely
-            gifted_id = None
-            if "gift_to" in values and "input" in values["gift_to"]:
-                gifted_id = values["gift_to"]["input"].get("selected_user")
             "recipient_id": gifted_id if gifted_id else user_id,
             "recipient_real_name": "",
             "drink": drink,
