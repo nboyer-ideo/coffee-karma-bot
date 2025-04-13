@@ -1570,31 +1570,6 @@ def handle_modal_submission(ack, body, client):
     except Exception as e:
         print("⚠️ Failed to fetch runner real name:", e)
     print(f"🏃 runner_id: {runner_id}")
-    order_ts = ""
-    order_channel = ""
-    if runner_id:
-        print(f"🧪 Logging /deliver-initiated order to sheet for ts={order_ts} and user_id={user_id}")
-        order_ts = posted["ts"]
-        order_channel = posted["channel"]
-        order_data["order_id"] = order_ts
-        order_data["initiated_by"] = "runner"
-        order_data["status"] = "offered"
-        order_data["runner_id"] = runner_id
-        order_data["runner_real_name"] = order_data.get("runner_real_name", "")
-        log_order_to_sheet(order_data)
-    else:
-        order_ts = posted["ts"]
-        order_data["order_id"] = order_ts
-        log_order_to_sheet(order_data)
-        order_channel = posted["channel"]
-        formatted_blocks = format_order_message(order_data)
-        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
-        if not order_channel:
-            order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
-        from threading import Timer
-        Timer(60, update_countdown, args=(
-            client, 9, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost
-        )).start()
 
     context_line = random.choice([
         "*☕ Caffeine + Chaos* — IDE☕O forever.",
