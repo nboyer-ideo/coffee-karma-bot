@@ -2147,8 +2147,6 @@ def handle_runner_settings_modal(ack, body, client):
     order_ts = ts
     order_channel = channel
 
-    from utils import safe_chat_update  # if not already imported
-
     blocks = [
         {
             "type": "section",
