@@ -1244,8 +1244,18 @@ def handle_modal_submission(ack, body, client):
     ack()
     print("📥 [DEBUG] In submission handler, view raw payload:")
     print(json.dumps(body["view"], indent=2))
+
     location = body["view"].get("private_metadata", "")
-    print(f"📦 [DEBUG] Extracted location from private_metadata: '{location}'")
+    values = body["view"].get("state", {}).get("values", {})
+    if not location:
+        # Iterate over state blocks looking for the "location_select" field
+        for block_id, block_values in values.items():
+            if "location_select" in block_values:
+                location = block_values["location_select"].get("selected_option", {}).get("value", "")
+                if location:
+                    break
+    print(f"📦 [DEBUG] Extracted location from submission: '{location}'")
+
     global runner_offer_metadata
     if 'runner_offer_metadata' not in globals():
         print("⚠️ runner_offer_metadata not defined — initializing.")
