@@ -616,7 +616,8 @@ def handle_location_select(ack, body, client):
     print("📐 [DEBUG] Calling build_order_modal with selected_location...")
     modal = build_order_modal(trigger_id, selected_location=selected_location)
     print(json.dumps(modal["view"], indent=2))
-    ack(response_action="update", view=modal["view"])
+    client.views_update(view_id=body["container"]["view_id"], view=modal["view"])
+    ack()
     print("🧱 [DEBUG] Updated modal blocks:")
     for block in modal["view"]["blocks"]:
         print(json.dumps(block, indent=2))
