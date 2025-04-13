@@ -1370,6 +1370,22 @@ def handle_modal_submission(ack, body, client):
     runner_id = body['view'].get('private_metadata', '')
     print(f"🧪 DEBUG: runner_id extracted from private_metadata = '{runner_id}'")
     if not runner_id:
+        # Initialize order_data and extract modal state values
+        order_data = {}
+        drink = values["drink_category"]["input"]["selected_option"]["value"]
+        drink_detail = values["drink_detail"]["input"]["value"]
+        notes = values["notes"]["input"]["value"] if "notes" in values and "input" in values["notes"] and isinstance(values["notes"]["input"]["value"], str) else ""
+        gifted_id = values["gift_to"]["input"].get("selected_user") if "gift_to" in values and "input" in values["gift_to"] else None
+
+        if drink == "water":
+            karma_cost = 1
+        elif drink in ["tea", "drip"]:
+            karma_cost = 2
+        else:
+            karma_cost = 3
+
+        drink = drink_detail.strip()
+
         posted = client.chat_postMessage(
             channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
             text="New Koffee Karma order posted...",
@@ -1386,11 +1402,6 @@ def handle_modal_submission(ack, body, client):
             print("⚠️ Failed to fetch real name for requester:", e)
             real_name = f"<@{user_id}>"
 
-        gifted_id = None
-        if "gift_to" in values and "input" in values["gift_to"]:
-            gifted_id = values["gift_to"]["input"].get("selected_user")
-
-        order_data = {}
         order_data["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         order_data["initiated_by"] = "requester"
         order_data["requester_id"] = user_id
