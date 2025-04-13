@@ -1002,6 +1002,7 @@ def handle_app_home_opened_events(body, logger):
     pass
 
 def build_order_modal(trigger_id, runner_id="", selected_location=""):
+    
     print(f"📍 [DEBUG] build_order_modal called with selected_location: {selected_location}")
     if selected_location is None:
         selected_location = ""
@@ -1136,7 +1137,7 @@ def build_order_modal(trigger_id, runner_id="", selected_location=""):
                     "block_id": "ascii_map_block",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "```" + format_full_map_with_legend(build_mini_map(selected_location)) + "```"
+                        "text": "```" + format_full_map_with_legend(build_mini_map(selected_location)) + f"\nRANDOM ID: {random.randint(1000,9999)}```"
                     }
                 },
                 {
