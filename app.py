@@ -2138,9 +2138,12 @@ def handle_runner_settings_modal(ack, body, client):
     )
     ts = placeholder["ts"]
     channel = placeholder["channel"]
-
+    
+    order_ts = ts
+    order_channel = channel
+    
     from utils import safe_chat_update  # if not already imported
-
+    
     blocks = [
         {
             "type": "section",
@@ -2178,10 +2181,7 @@ def handle_runner_settings_modal(ack, body, client):
             ]
         }
     ]
-    safe_chat_update(client, channel, ts, "New Koffee Karma order posted", blocks)
-
-    order_ts = ts
-    order_channel = channel
+    safe_chat_update(client, order_channel, order_ts, text, blocks)
     global runner_offer_metadata
     if 'runner_offer_metadata' not in globals():
         runner_offer_metadata = {}
