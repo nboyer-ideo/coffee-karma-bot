@@ -1412,6 +1412,14 @@ def handle_modal_submission(ack, body, client):
         print("DEBUG: order_ts =", posted["ts"], ", order_channel =", posted["channel"])
         order_ts = posted["ts"]
         order_channel = posted["channel"]
+
+        try:
+            user_info = client.users_info(user=user_id)
+            real_name = user_info["user"]["real_name"]
+        except Exception as e:
+            print("⚠️ Failed to fetch real name for requester:", e)
+            real_name = f"<@{user_id}>"
+
         order_data = {
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "initiated_by": "requester",
