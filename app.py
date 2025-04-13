@@ -23,6 +23,8 @@ from sheet import (
     mark_code_redeemed,
 )
 
+last_selected_location = {}
+
 def send_koffee_welcome(client, user_id):
     welcome_message = (
         "¤ A new vessel joins the order.\n"
@@ -604,14 +606,17 @@ def handle_location_select(ack, body, client):
     trigger_id = body["trigger_id"]
     selected_location = body["actions"][0]["selected_option"]["value"]
     if not selected_location:
-        selected_location = body["view"]["state"]["values"].get("location", {}).get("location_select", {}).get("selected_option", {}).get("value", "")
+        selected_location = body["view"].get("private_metadata", "")
     print(f"📍 [DEBUG] selected_location from dropdown = {selected_location}")
 
-    # Rebuild the modal with the new map based on selected location
+    global last_selected_location
+    last_selected_location[user_id] = selected_location
+    print(f"📝 [DEBUG] Saved last_selected_location for {user_id} = {selected_location}")
+
     print("📐 [DEBUG] Calling build_order_modal with selected_location...")
     modal = build_order_modal(trigger_id, selected_location=selected_location)
     ack(response_action="update", view=modal["view"])
-    print("🧱 [DEBUG] modal['view']['blocks'] =")
+    print("🧱 [DEBUG] Updated modal blocks:")
     for block in modal["view"]["blocks"]:
         print(json.dumps(block, indent=2))
 
@@ -1246,14 +1251,10 @@ def handle_modal_submission(ack, body, client):
     print(json.dumps(body["view"], indent=2))
 
     location = body["view"].get("private_metadata", "")
-    values = body["view"].get("state", {}).get("values", {})
     if not location:
-        # Iterate over state blocks looking for the "location_select" field
-        for block_id, block_values in values.items():
-            if "location_select" in block_values:
-                location = block_values["location_select"].get("selected_option", {}).get("value", "")
-                if location:
-                    break
+        user_id = body["user"]["id"]
+        global last_selected_location
+        location = last_selected_location.get(user_id, "")
     print(f"📦 [DEBUG] Extracted location from submission: '{location}'")
 
     global runner_offer_metadata
