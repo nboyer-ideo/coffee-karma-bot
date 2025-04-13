@@ -1090,7 +1090,11 @@ def build_order_modal(trigger_id, runner_id="", selected_location=""):
             "title": {"type": "plain_text", "text": "Place An Order"},
             "submit": {"type": "plain_text", "text": "Submit Drop"},
             "close": {"type": "plain_text", "text": "Nevermind"},
-            "private_metadata": selected_location,
+            "private_metadata": json.dumps({
+                "mode": "order",
+                "location": selected_location,
+                "runner_id": runner_id
+            }),
             "blocks": [
                 { 
                     "type": "input",
@@ -1368,9 +1372,16 @@ def handle_modal_submission(ack, body, client):
             }
         )
         return
-    print(f"📦 private_metadata (runner_id): {body['view'].get('private_metadata', '')}")
-    runner_id = body['view'].get('private_metadata', '')
-    print(f"🧪 DEBUG: runner_id extracted from private_metadata = '{runner_id}'")
+    print(f"📦 private_metadata raw: {body['view'].get('private_metadata', '')}")
+    try:
+        metadata = json.loads(body["view"].get("private_metadata", "{}"))
+    except json.JSONDecodeError:
+        metadata = {}
+
+    location = metadata.get("location", location)
+    runner_id = metadata.get("runner_id", "")
+    mode = metadata.get("mode", "order")
+    print(f"🧪 DEBUG: Extracted metadata: location={location}, runner_id={runner_id}, mode={mode}")
     if not runner_id:
         print("🛠 DEBUG: Initialized order_data = {}", order_data)
         # Initialize order_data and extract modal state values
