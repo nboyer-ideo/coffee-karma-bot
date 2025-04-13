@@ -603,6 +603,8 @@ def handle_location_select(ack, body, client):
     user_id = body["user"]["id"]
     trigger_id = body["trigger_id"]
     selected_location = body["actions"][0]["selected_option"]["value"]
+    if not selected_location:
+        selected_location = body["view"]["state"]["values"].get("location", {}).get("location_select", {}).get("selected_option", {}).get("value", "")
     print(f"📍 [DEBUG] selected_location from dropdown = {selected_location}")
 
     # Rebuild the modal with the new map based on selected location
