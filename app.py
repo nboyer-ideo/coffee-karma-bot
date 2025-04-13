@@ -1255,6 +1255,7 @@ def handle_modal_submission(ack, body, client):
     ack()
     import datetime
     print("📥 [DEBUG] In submission handler, view raw payload:")
+    print(f"🔁 Entered handle_modal_submission for order from {user_id} at {datetime.datetime.now()}")
     user_id = body["user"]["id"]
     order_data = {}
 
@@ -1387,7 +1388,8 @@ def handle_modal_submission(ack, body, client):
     mode = metadata.get("mode", "order")
     print(f"🧪 DEBUG: Extracted metadata: location={location}, runner_id={runner_id}, mode={mode}")
     if not runner_id:
-        print("🛠 DEBUG: Initialized order_data = {}", order_data)
+        print("🛠 DEBUG: Order submission path triggered (runner_id not provided).")
+        print("🛠 DEBUG: Initialized order_data =", order_data)
         # Initialize order_data and extract modal state values
         drink = values["drink_category"]["input"]["selected_option"]["value"]
         drink_detail = values["drink_detail"]["input"]["value"]
@@ -1457,6 +1459,7 @@ def handle_modal_submission(ack, body, client):
         order_data["order_id"] = order_ts
         print("🛠 DEBUG: Set order_data[\"order_id\"] =", order_data["order_id"])
         print("🛠 DEBUG: Final order_data before logging:", order_data)
+        print(f"📝 [DEBUG] Final order_data payload: {json.dumps(order_data, indent=2)}")
         log_order_to_sheet(order_data)
         order_channel = posted["channel"]
         formatted_blocks = format_order_message(order_data)
