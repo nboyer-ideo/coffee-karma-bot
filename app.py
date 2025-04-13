@@ -1390,7 +1390,7 @@ def handle_modal_submission(ack, body, client):
 
         posted = client.chat_postMessage(
             channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-            text="New Koffee Karma order posted...",
+            text="...",  # Temporary placeholder to be overwritten
             blocks=[]
         )
         print("DEBUG: /order modal posted:", posted)
@@ -1413,6 +1413,7 @@ def handle_modal_submission(ack, body, client):
         order_data["requester_real_name"] = real_name
         print("🛠 DEBUG: Set order_data[\"requester_real_name\"] =", order_data["requester_real_name"])
         order_data["runner_id"] = ""
+        order_data["status"] = "ordered"
         print("🛠 DEBUG: Set order_data[\"runner_id\"] =", order_data["runner_id"])
         order_data["runner_name"] = ""
         print("🛠 DEBUG: Set order_data[\"runner_name\"] =", order_data["runner_name"])
