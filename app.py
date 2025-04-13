@@ -1130,13 +1130,23 @@ def build_order_modal(trigger_id, runner_id="", selected_location=""):
                 },
                 location_block,
                 {
-                    "type": "section",
-                    "block_id": "ascii_map_block",
-                    "text": {
+                "type": "section",
+                "block_id": "ascii_map_block",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "```" + format_full_map_with_legend(build_mini_map(selected_location)) + "```"
+                }
+            },
+            {
+                "type": "context",
+                "block_id": "map_refresh_debug",
+                "elements": [
+                    {
                         "type": "mrkdwn",
-                "text": "```" + format_full_map_with_legend(build_mini_map(selected_location)) + "```"
+                        "text": f"*Map regenerated at:* `{datetime.datetime.now().isoformat(timespec='seconds')}`"
                     }
-                },
+                ]
+            },
                 {
                     "type": "input",
                     "block_id": "gift_to",
