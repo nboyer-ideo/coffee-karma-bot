@@ -1390,25 +1390,24 @@ def handle_modal_submission(ack, body, client):
         if "gift_to" in values and "input" in values["gift_to"]:
             gifted_id = values["gift_to"]["input"].get("selected_user")
 
-        order_data = {
-            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "initiated_by": "requester",
-            "requester_id": user_id,
-            "requester_real_name": real_name,
-            "runner_id": "",
-            "runner_name": "",
-            "recipient_id": gifted_id if gifted_id else user_id,
-            "recipient_real_name": "",
-            "drink": drink,
-            "location": location,
-            "notes": notes,
-            "karma_cost": karma_cost,
-            "status": "ordered",
-            "bonus_multiplier": "",
-            "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "time_claimed": "",
-            "time_delivered": ""
-        }
+        order_data = {}
+        order_data["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        order_data["initiated_by"] = "requester"
+        order_data["requester_id"] = user_id
+        order_data["requester_real_name"] = real_name
+        order_data["runner_id"] = ""
+        order_data["runner_name"] = ""
+        order_data["recipient_id"] = gifted_id if gifted_id else user_id
+        order_data["recipient_real_name"] = ""
+        order_data["drink"] = drink
+        order_data["location"] = location
+        order_data["notes"] = notes
+        order_data["karma_cost"] = karma_cost
+        order_data["status"] = "ordered"
+        order_data["bonus_multiplier"] = ""
+        order_data["time_ordered"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        order_data["time_claimed"] = ""
+        order_data["time_delivered"] = ""
         order_data["order_id"] = order_ts
         log_order_to_sheet(order_data)
         order_channel = posted["channel"]
