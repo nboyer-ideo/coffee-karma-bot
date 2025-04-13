@@ -613,17 +613,6 @@ def handle_location_select(ack, body, client):
     for block in modal["view"]["blocks"]:
         print(json.dumps(block, indent=2))
 
-    print("🚀 [DEBUG] Sending modal update back to Slack")
-    ack(response_action="update", view={
-        "type": "modal",
-        "callback_id": "koffee_request_modal",
-        "title": {"type": "plain_text", "text": "Place An Order"},
-        "submit": {"type": "plain_text", "text": "Submit Drop"},
-        "close": {"type": "plain_text", "text": "Nevermind"},
-        "private_metadata": selected_location,
-        "blocks": modal["view"]["blocks"]
-    })
-
 @app.action("claim_order")
 def handle_claim_order(ack, body, client):
     print("🎯 claim_order button clicked!")
