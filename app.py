@@ -2131,7 +2131,7 @@ def handle_runner_settings_modal(ack, body, client):
     
     msg = "✅ Your delivery offer is now live."
     client.chat_postMessage(channel=user_id, text=msg)
-    
+
     placeholder = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
         text="...",
@@ -2139,12 +2139,12 @@ def handle_runner_settings_modal(ack, body, client):
     )
     ts = placeholder["ts"]
     channel = placeholder["channel"]
-    
+
     order_ts = ts
     order_channel = channel
-    
+
     from utils import safe_chat_update  # if not already imported
-    
+
     blocks = [
         {
             "type": "section",
@@ -2184,16 +2184,21 @@ def handle_runner_settings_modal(ack, body, client):
     ]
 
     safe_chat_update(client, order_channel, order_ts, text, blocks)
-    
-    global runner_offer_metadata
+
+    # Then set the metadata
     if 'runner_offer_metadata' not in globals():
         runner_offer_metadata = {}
     runner_offer_metadata[user_id] = {
         "ts": order_ts,
         "channel": order_channel
     }
+
     import threading
-    threading.Timer(60, update_ready_countdown, args=(client, selected_time - 1, order_ts, order_channel, user_id, selected_time)).start() 
+    threading.Timer(
+        60,
+        update_ready_countdown,
+        args=(client, selected_time - 1, order_ts, order_channel, user_id, selected_time)
+    ).start()
 
 @app.action("open_order_modal_for_runner")
 def handle_open_order_modal_for_runner(ack, body, client):
