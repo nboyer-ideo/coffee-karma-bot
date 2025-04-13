@@ -1092,6 +1092,10 @@ def build_order_modal(trigger_id, runner_id="", selected_location=""):
             "close": {"type": "plain_text", "text": "Nevermind"},
             "private_metadata": json.dumps({
                 "mode": "order",
+                "location": selected_location
+                # runner_id is removed entirely for /order
+            } if not runner_id else {
+                "mode": "order",
                 "location": selected_location,
                 "runner_id": runner_id
             }),
