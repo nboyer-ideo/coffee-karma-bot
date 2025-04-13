@@ -2038,12 +2038,13 @@ def handle_runner_settings_modal(ack, body, client):
     from sheet import save_runner_capabilities
     save_runner_capabilities(user_id, real_name, selected)
 
-    posted_ready = client.chat_postMessage(
+    placeholder = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text=" ",
+        text="...",
         blocks=[]
     )
-    order_ts = posted_ready["ts"]
+    ts = placeholder["ts"]
+    channel = placeholder["channel"]
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -2130,49 +2131,57 @@ def handle_runner_settings_modal(ack, body, client):
 
     client.chat_postMessage(channel=user_id, text=msg)
     
-    posted_ready = client.chat_postMessage(
+    placeholder = client.chat_postMessage(
         channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text=f"🖐️ {real_name.upper()} is *on the clock* as a runner.\n*⏳ {selected_time} minutes left to send them an order.*",
-        blocks=[
-            {
-                "type": "section",
-                "block_id": "runner_text_block",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": text
-                }
-            },
-            {
-                "type": "actions",
-                "block_id": "runner_buttons",
-                "elements": [
-                    {
-                        "type": "button",
-                        "action_id": "open_order_modal_for_runner",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "ORDER NOW",
-                            "emoji": True
-                        },
-                        "value": json.dumps({"runner_id": user_id})
-                    },
-                    {
-                        "type": "button",
-                        "action_id": "cancel_ready_offer",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "CANCEL",
-                            "emoji": True
-                        },
-                        "style": "danger",
-                        "value": user_id
-                    }
-                ]
-            }
-        ]
+        text="...",
+        blocks=[]
     )
-    order_ts = posted_ready["ts"]
-    order_channel = posted_ready["channel"]
+    ts = placeholder["ts"]
+    channel = placeholder["channel"]
+
+    from utils import safe_chat_update  # if not already imported
+
+    blocks = [
+        {
+            "type": "section",
+            "block_id": "runner_text_block",
+            "text": {
+                "type": "mrkdwn",
+                "text": text
+            }
+        },
+        {
+            "type": "actions",
+            "block_id": "runner_buttons",
+            "elements": [
+                {
+                    "type": "button",
+                    "action_id": "open_order_modal_for_runner",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "ORDER NOW",
+                        "emoji": True
+                    },
+                    "value": json.dumps({"runner_id": user_id})
+                },
+                {
+                    "type": "button",
+                    "action_id": "cancel_ready_offer",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "CANCEL",
+                        "emoji": True
+                    },
+                    "style": "danger",
+                    "value": user_id
+                }
+            ]
+        }
+    ]
+    safe_chat_update(client, channel, ts, "New Koffee Karma order posted", blocks)
+
+    order_ts = ts
+    order_channel = channel
     global runner_offer_metadata
     if 'runner_offer_metadata' not in globals():
         runner_offer_metadata = {}
