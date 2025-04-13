@@ -1370,8 +1370,9 @@ def handle_modal_submission(ack, body, client):
     runner_id = body['view'].get('private_metadata', '')
     print(f"🧪 DEBUG: runner_id extracted from private_metadata = '{runner_id}'")
     if not runner_id:
-        # Initialize order_data and extract modal state values
         order_data = {}
+        print("🛠 DEBUG: Initialized order_data = {}", order_data)
+        # Initialize order_data and extract modal state values
         drink = values["drink_category"]["input"]["selected_option"]["value"]
         drink_detail = values["drink_detail"]["input"]["value"]
         notes = values["notes"]["input"]["value"] if "notes" in values and "input" in values["notes"] and isinstance(values["notes"]["input"]["value"], str) else ""
@@ -1403,26 +1404,47 @@ def handle_modal_submission(ack, body, client):
             real_name = f"<@{user_id}>"
 
         order_data["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print("🛠 DEBUG: Set order_data[\"timestamp\"] =", order_data["timestamp"])
         order_data["initiated_by"] = "requester"
+        print("🛠 DEBUG: Set order_data[\"initiated_by\"] =", order_data["initiated_by"])
         order_data["requester_id"] = user_id
+        print("🛠 DEBUG: Set order_data[\"requester_id\"] =", order_data["requester_id"])
         order_data["requester_real_name"] = real_name
+        print("🛠 DEBUG: Set order_data[\"requester_real_name\"] =", order_data["requester_real_name"])
         order_data["runner_id"] = ""
+        print("🛠 DEBUG: Set order_data[\"runner_id\"] =", order_data["runner_id"])
         order_data["runner_name"] = ""
+        print("🛠 DEBUG: Set order_data[\"runner_name\"] =", order_data["runner_name"])
         order_data["recipient_id"] = gifted_id if gifted_id else user_id
+        print("🛠 DEBUG: Set order_data[\"recipient_id\"] =", order_data["recipient_id"])
         order_data["recipient_real_name"] = ""
+        print("🛠 DEBUG: Set order_data[\"recipient_real_name\"] =", order_data["recipient_real_name"])
         order_data["drink"] = drink
+        print("🛠 DEBUG: Set order_data[\"drink\"] =", order_data["drink"])
         order_data["location"] = location
+        print("🛠 DEBUG: Set order_data[\"location\"] =", order_data["location"])
         order_data["notes"] = notes
+        print("🛠 DEBUG: Set order_data[\"notes\"] =", order_data["notes"])
         order_data["karma_cost"] = karma_cost
+        print("🛠 DEBUG: Set order_data[\"karma_cost\"] =", order_data["karma_cost"])
         order_data["status"] = "ordered"
+        print("🛠 DEBUG: Set order_data[\"status\"] =", order_data["status"])
         order_data["bonus_multiplier"] = ""
+        print("🛠 DEBUG: Set order_data[\"bonus_multiplier\"] =", order_data["bonus_multiplier"])
         order_data["time_ordered"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print("🛠 DEBUG: Set order_data[\"time_ordered\"] =", order_data["time_ordered"])
         order_data["time_claimed"] = ""
+        print("🛠 DEBUG: Set order_data[\"time_claimed\"] =", order_data["time_claimed"])
         order_data["time_delivered"] = ""
+        print("🛠 DEBUG: Set order_data[\"time_delivered\"] =", order_data["time_delivered"])
         order_data["order_id"] = order_ts
+        print("🛠 DEBUG: Set order_data[\"order_id\"] =", order_data["order_id"])
+        print("🛠 DEBUG: Final order_data before logging:", order_data)
         log_order_to_sheet(order_data)
         order_channel = posted["channel"]
         formatted_blocks = format_order_message(order_data)
+        print("🛠 DEBUG: Calling safe_chat_update with channel =", order_channel, ", ts =", order_ts)
+        print("🛠 DEBUG: Using blocks:", formatted_blocks)
         safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
     user_id = body["user"]["id"]
     drink_value = values["drink_category"]["input"]["selected_option"]["value"]
