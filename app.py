@@ -1330,9 +1330,11 @@ def handle_modal_submission(ack, body, client):
     from sheet import log_order_to_sheet
     import datetime
     user_id = body["user"]["id"]
+    meta = json.loads(body["view"]["private_metadata"])
+    parent_ts = meta.get("parent_ts")  # this is the ts of the /deliver post
     print("📥 [DEBUG] In submission handler, view raw payload:")
     print(f"🔁 Entered handle_modal_submission for order from {user_id} at {datetime.datetime.now()}")
-    order_id = str(datetime.datetime.now().timestamp())
+    order_id = parent_ts or str(datetime.datetime.now().timestamp())
     order_data = {
         "drink": "",  # Initialize empty drink to prevent KeyError
     }
@@ -1761,6 +1763,18 @@ def handle_modal_submission(ack, body, client):
             "time_delivered": "",
             "order_id": order_ts
         }
+
+        if parent_ts:
+            from sheet import update_order_status
+            update_order_status(
+                order_id=parent_ts,
+                status="ordered",
+                claimed_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                requester_name=order_data.get("requester_real_name", ""),
+                recipient_name=order_data.get("recipient_real_name", ""),
+                order_data=order_data
+            )
+
         print("🛠 DEBUG: Final order_data for logging:", order_data)
         print(f"📝 [DEBUG] Final order_data payload: {json.dumps(order_data, indent=2)}")
         log_order_to_sheet(order_data)
