@@ -579,16 +579,22 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         safe_chat_update(client, order_channel, order_ts, "Order update: Countdown updated", updated_blocks)
         print("✅ Countdown block update pushed to Slack")
         print(f"📣 client.chat_update call completed for order {order_ts}")
-        if remaining <= 1 and extras.get("status") == "ordered":
+        if remaining == 0 and extras.get("status") == "ordered":
             from sheet import add_karma
             add_karma(user_id, karma_cost)
             client.chat_postMessage(
                 channel=user_id,
                 text="∴ Order UNCLAIMED. Karma returned to your balance.."
             )
+            if extras:
+                extras["active"] = False
+                extras["status"] = "expired"
             safe_chat_update(client, order_channel, order_ts, f"Order from <@{user_id}> EXPIRED — No claimant arose.", [])
- 
-        if remaining > 1:
+            from sheet import update_order_status
+            update_order_status(order_ts, status="expired")
+            return
+
+        if remaining > 0:
             print(f"🕒 Scheduling next countdown tick — remaining: {remaining - 1}")
             t = threading.Timer(60, update_countdown, args=(
                 client, remaining - 1, order_ts, order_channel,
@@ -1421,6 +1427,16 @@ def handle_modal_submission(ack, body, client):
         ts = placeholder["ts"]
         channel = placeholder["channel"]
         order_ts = ts
+        order_extras[order_ts] = {
+            "active": True,
+            "status": "ordered",
+            "requester_real_name": order_data.get("requester_real_name", ""),
+            "recipient_real_name": order_data.get("recipient_real_name", ""),
+            "drink": drink,
+            "location": location,
+            "notes": notes,
+            "karma_cost": karma_cost
+        }
         order_channel = channel
         order_data["order_id"] = order_ts  # ✅ Ensure order_id exists
         order_extras[order_ts] = {}
