@@ -1346,13 +1346,9 @@ def handle_modal_submission(ack, body, client):
     meta = json.loads(body["view"]["private_metadata"])
     generated_ts = str(datetime.datetime.now().timestamp())
     parent_ts = meta.get("parent_ts", "")
-
-    parent_ts = meta.get("parent_ts", "")  # this is the ts of the /deliver post
     channel_id = meta.get("channel_id", "")
     order_id = parent_ts if parent_ts else generated_ts
-    order_data["order_id"] = order_id
-    order_data["status"] = "claimed"
-    order_data["time_claimed"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     order_data = {
         "order_id": order_id,
         "status": "claimed",
