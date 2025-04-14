@@ -554,6 +554,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         order_extras[order_ts]["claimed_by"] = order_data.get("claimed_by", "")
         order_extras[order_ts]["runner_real_name"] = order_data.get("runner_real_name", "")
         order_extras[order_ts]["delivered_by"] = order_data.get("delivered_by", "")
+        order_extras[order_ts]["remaining_minutes"] = remaining
  
         updated_blocks = format_order_message(order_data)
  
@@ -816,6 +817,8 @@ def handle_cancel_ready_offer(ack, body, client):
         # Replace the runner terminal with a cancellation message
         cancel_text = f"Delivery offer canceled by <@{user_id}>."
         client.chat_update(channel=channel, ts=ts, text=cancel_text, blocks=[])
+        from sheet import update_order_status
+        update_order_status(ts, status="canceled")
 
         # Cleanup any existing claim
         runner_offer_claims[user_id] = {"canceled": True}
@@ -872,7 +875,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                 blocks=[]
             )
             from sheet import update_order_status
-            update_order_status(ts, status="canceled")
+            update_order_status(ts, status="expired")
             print(f"✅ Successfully expired runner message ts={ts} for user_id={user_id}")
             print("☠️ Runner offer expired and message replaced.")
         except SlackApiError as e:
@@ -1420,6 +1423,26 @@ def handle_modal_submission(ack, body, client):
         order_ts = ts
         order_channel = channel
         order_data["order_id"] = order_ts  # ✅ Ensure order_id exists
+        order_extras[order_ts] = {}
+        import threading
+        countdown_timers[order_ts] = karma_cost  # or 10 if that's the default
+        order_extras[order_ts]["status"] = "ordered"
+        order_extras[order_ts]["active"] = True
+        order_extras[order_ts]["requester_real_name"] = requester_real_name
+        order_extras[order_ts]["recipient_real_name"] = recipient_real_name
+        order_extras[order_ts]["drink"] = drink
+        order_extras[order_ts]["location"] = location
+        order_extras[order_ts]["notes"] = notes
+        order_extras[order_ts]["claimed_by"] = ""
+        order_extras[order_ts]["runner_real_name"] = ""
+        order_extras[order_ts]["delivered_by"] = ""
+        order_extras[order_ts]["remaining_minutes"] = 10
+
+        threading.Timer(60, update_countdown, args=(
+            client, 9, order_ts, order_channel,
+            user_id, gifted_id, drink, location,
+            notes, karma_cost
+        )).start()
         
         order_data["location"] = location or "UNKNOWN"
         order_data["notes"] = notes or "NONE"
