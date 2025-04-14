@@ -1258,7 +1258,9 @@ def handle_modal_submission(ack, body, client):
     user_id = body["user"]["id"]
     print("📥 [DEBUG] In submission handler, view raw payload:")
     print(f"🔁 Entered handle_modal_submission for order from {user_id} at {datetime.datetime.now()}")
-    order_data = {}
+    order_data = {
+        "drink": "",  # Initialize empty drink to prevent KeyError
+    }
 
     private_metadata_raw = body["view"].get("private_metadata", "{}")
     try:
