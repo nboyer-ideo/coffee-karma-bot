@@ -512,7 +512,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print(f"✅ Countdown proceeding for {order_ts}, remaining: {remaining}")
 
         current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
-        order_ts = ts
+        # order_ts = ts
         order_data = {
             "order_id": "",
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -581,6 +581,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print(f"🧪 Sending to Slack with FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
         print(f"🧭 Preparing to push update to Slack for ts={order_ts} — countdown: {remaining}")
         safe_chat_update(client, order_channel, order_ts, "Order update: Countdown updated", updated_blocks)
+        print(f"✅ Countdown update pushed to ts={order_ts} in channel={order_channel}")
         print("✅ Countdown block update pushed to Slack")
         print(f"📣 client.chat_update call completed for order {order_ts}")
         if remaining == 0 and extras.get("status") == "ordered":
