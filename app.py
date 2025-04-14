@@ -1322,8 +1322,101 @@ def handle_modal_submission(ack, body, client):
     order_data = {
         "drink": "",  # Initialize empty drink to prevent KeyError
     }
-    order_data["order_id"] = str(datetime.datetime.now().timestamp())
+    private_metadata_raw = body["view"].get("private_metadata", "{}")
+    try:
+        metadata = json.loads(private_metadata_raw)
+    except json.JSONDecodeError:
+        print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
+        metadata = {}
+    location = metadata.get("location", "")
+    runner_id = metadata.get("runner_id", "")
+    mode = metadata.get("mode", "order")
+    if mode == "order" and runner_id:
+        state = body["view"]["state"]["values"]
+        category = state["drink_category"]["input"]["selected_option"]["value"]
+        drink = state["drink_detail"]["input"]["value"]
+        notes = state["notes"]["input"]["value"]
+        gifted_id = state["gift_to"]["input"].get("selected_user") or user_id
+
+        order_data["drink"] = drink
+        order_data["location"] = location
+        order_data["notes"] = notes
+        order_data["recipient_id"] = gifted_id
+        order_data["recipient_real_name"] = resolve_real_name(gifted_id, client)
+
+        order_data["karma_cost"] = (
+            1 if category == "water" else
+            2 if category in ["tea", "drip"] else
+            3
+        )
+
+        # In /deliver flow, the runner_id (actually the message_ts) is the order_id
+        order_data["order_id"] = runner_id
+        existing = fetch_order_data(runner_id)
+        order_data.update(existing)  # Start with the original row data
+        order_data["requester_id"] = user_id
+        order_data["requester_real_name"] = resolve_real_name(user_id, client)
+        order_data["recipient_id"] = user_id
+        order_data["recipient_real_name"] = resolve_real_name(user_id, client)
+        order_data["status"] = "claimed"
+        order_data["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        order_data["claimed_by"] = existing.get("runner_name") or existing.get("runner_real_name") or order_data.get("runner_id")
+        order_data["runner_name"] = existing.get("runner_name") or resolve_real_name(existing.get("runner_id"), client)
+        order_data["runner_real_name"] = order_data["runner_name"]
+        order_data["status"] = "claimed"
+        countdown_timers[order_data["order_id"]] = 10
+        order_data["runner_id"] = existing.get("runner_id")
+        order_data["initiated_by"] = "runner"
+        order_data["time_claimed"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        order_extras[order_data["order_id"]] = {"active": False, "status": "claimed"}
+        # Mark the runner offer as fulfilled
+        if runner_id:
+            if runner_id not in runner_offer_claims:
+                runner_offer_claims[runner_id] = {}
+            runner_offer_claims[runner_id]["fulfilled"] = True
+    else:
+        order_data["order_id"] = str(datetime.datetime.now().timestamp())
     print(f"🧪 [DEBUG] Assigned order_id = {order_data['order_id']}")
+    if mode == "order" and runner_id:
+        blocks = format_order_message(order_data)
+        safe_chat_update(
+            client,
+            channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+            ts=order_data["order_id"],
+            text="Order update: Order placed from delivery offer",
+            blocks=blocks
+        )
+        from sheet import update_order_status, log_order_to_sheet
+        countdown_timers[order_data["order_id"]] = 10
+        update_order_status(
+            order_data["order_id"],
+            status="claimed",
+            claimed_time=order_data["time_claimed"],
+            requester_name=order_data["requester_real_name"],
+            recipient_name=order_data["recipient_real_name"],
+            drink=order_data["drink"],
+            location=order_data["location"],
+            notes=order_data["notes"],
+            karma_cost=order_data["karma_cost"]
+        )
+        order_data["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_order_to_sheet(order_data)
+        order_extras[order_data["order_id"]] = {
+            "active": False,
+            "status": "claimed",
+            "requester_real_name": order_data["requester_real_name"],
+            "recipient_real_name": order_data["recipient_real_name"],
+            "runner_real_name": order_data["runner_real_name"],
+            "drink": order_data["drink"],
+            "location": order_data["location"],
+            "notes": order_data["notes"],
+            "karma_cost": order_data["karma_cost"],
+            "claimed_by": order_data["runner_real_name"],
+            "delivered_by": "",
+            "remaining_minutes": 10
+        }
+        countdown_timers[order_data["order_id"]] = 10
+        return  # prevent further logic from treating it like a new order
     print(f"🆕 Initializing order_extras for order_id={order_data['order_id']}")
     order_extras[order_data["order_id"]] = {"active": True, "status": "ordered"}
     print(f"📦 [DEBUG] Initialized order_extras[{order_data['order_id']}] = {order_extras[order_data['order_id']]}")

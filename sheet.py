@@ -275,7 +275,9 @@ def update_order_status(order_id, status=None, runner_id=None, runner_name=None,
         data = worksheet.get_all_records()
         for i, row in enumerate(data):
             if str(row.get("Order ID")) == str(order_id):
+                print(f"✅ Found matching row for order_id {order_id} at index {i+2}")
                 if status is not None:
+                    print(f"🔄 Updating status for order {order_id} to '{status}' at row {i+2}")
                     worksheet.update_cell(i + 2, 14, status)
                 if runner_id is not None:
                     worksheet.update_cell(i + 2, 6, runner_id)  # Runner ID
