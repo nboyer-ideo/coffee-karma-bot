@@ -863,7 +863,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                 return
         print("🚨 Countdown reached zero — attempting to expire message")
         try:
-        from slack_sdk.errors import SlackApiError
+            from slack_sdk.errors import SlackApiError
         expired_text = f"Delivery offer from <@{user_id}> EXPIRED — No order was placed."
         client.chat_update(
             channel=channel,
