@@ -552,16 +552,13 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "runner_real_name": extras.get("runner_real_name", ""),
             "delivered_by": extras.get("delivered_by", "")
         }
-        # Validate order_id and fallback only if absolutely needed
         fallback_candidate = order_extras.get(order_ts, {}).get("order_id")
-        if fallback_candidate and not (" " in fallback_candidate or ":" in fallback_candidate):
-            print(f"✅ Fallback order_id from extras: {fallback_candidate}")
+        if fallback_candidate:
+            print(f"✅ Using fallback order_id from extras: {fallback_candidate}")
             order_data["order_id"] = fallback_candidate
-        elif not order_data["order_id"] or " " in order_data["order_id"] or ":" in order_data["order_id"]:
-            print(f"⚠️ Invalid or missing order_id '{order_data.get('order_id')}' — falling back to Slack ts")
-            order_data["order_id"] = order_ts
         else:
-            print(f"✅ order_id is valid: {order_data['order_id']}")
+            print(f"⚠️ order_id missing — falling back to TS: {order_ts}")
+            order_data["order_id"] = order_ts
         # Ensure real names are resolved if missing or defaulting to Slack IDs
         if not order_data.get("requester_real_name") or order_data["requester_real_name"].startswith("U0"):
             order_data["requester_real_name"] = resolve_real_name(user_id, client)
