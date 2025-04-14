@@ -543,6 +543,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         order_data["claimed_by"] = extras.get("claimed_by", "")
         order_data["runner_real_name"] = extras.get("runner_real_name", "")
         order_data["delivered_by"] = extras.get("delivered_by", "")
+        order_data["remaining_minutes"] = remaining
         order_data["status"] = extras.get("status", "ordered")
  
         order_extras[order_ts]["requester_real_name"] = order_data["requester_real_name"]
