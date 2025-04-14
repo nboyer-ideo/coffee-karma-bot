@@ -1427,6 +1427,8 @@ def handle_modal_submission(ack, body, client):
         ts = placeholder["ts"]
         channel = placeholder["channel"]
         order_ts = ts
+        order_channel = channel
+        order_data["order_id"] = order_ts  # ✅ Ensure order_id exists
         order_extras[order_ts] = {
             "active": True,
             "status": "ordered",
@@ -1437,9 +1439,6 @@ def handle_modal_submission(ack, body, client):
             "notes": notes,
             "karma_cost": karma_cost
         }
-        order_channel = channel
-        order_data["order_id"] = order_ts  # ✅ Ensure order_id exists
-        order_extras[order_ts] = {}
         import threading
         countdown_timers[order_ts] = karma_cost  # or 10 if that's the default
         order_extras[order_ts]["status"] = "ordered"
