@@ -1322,6 +1322,7 @@ def handle_open_order_modal_for_runner(ack, body, client):
 def handle_modal_submission(ack, body, client):
     ack()
     import datetime
+    global runner_offer_metadata
     user_id = body["user"]["id"]
     print("📥 [DEBUG] In submission handler, view raw payload:")
     print(f"🔁 Entered handle_modal_submission for order from {user_id} at {datetime.datetime.now()}")
@@ -1516,7 +1517,6 @@ def handle_modal_submission(ack, body, client):
     mode = metadata.get("mode", "order")
     print(f"📦 [DEBUG] Extracted metadata: location={location}, runner_id={runner_id}, mode={mode}")
 
-    global runner_offer_metadata
     if 'runner_offer_metadata' not in globals():
         print("⚠️ runner_offer_metadata not defined — initializing.")
         runner_offer_metadata = {}
