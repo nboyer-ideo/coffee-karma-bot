@@ -1692,7 +1692,7 @@ def handle_modal_submission(ack, body, client):
         print("🛠 DEBUG: Initialized order_data =", order_data)
         # Initialize order_data and extract modal state values
 
-        order_data["order_id"] = order_ts
+        order_data["order_id"] = order_id
         order_data["status"] = "ordered"
         order_data["time_ordered"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
