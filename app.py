@@ -1514,7 +1514,8 @@ def handle_modal_submission(ack, body, client):
         print("🛠 DEBUG: Final order_data for logging:", order_data)
         print(f"📝 [DEBUG] Final order_data payload: {json.dumps(order_data, indent=2)}")
         log_order_to_sheet(order_data)
-        order_channel = posted["channel"]
+        print(f"🧭 Extracted order_channel from placeholder: {placeholder['channel']}")
+        order_channel = placeholder["channel"]
         formatted_blocks = format_order_message(order_data)
         print("🛠 DEBUG: Calling safe_chat_update with channel =", order_channel, ", ts =", order_ts)
         print("🛠 DEBUG: Using blocks:", formatted_blocks)
