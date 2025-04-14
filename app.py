@@ -1321,6 +1321,7 @@ def handle_open_order_modal_for_runner(ack, body, client):
 @app.view("koffee_request_modal")
 def handle_modal_submission(ack, body, client):
     global runner_offer_metadata
+    from sheet import log_order_to_sheet
     ack()
     import datetime
     user_id = body["user"]["id"]
