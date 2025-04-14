@@ -2051,11 +2051,11 @@ def handle_runner_settings_modal(ack, body, client):
     )
     ts = placeholder["ts"]
     channel = placeholder["channel"]
-    order_ts = ts  # assign the placeholder timestamp to order_ts before using it
+    order_ts = ts
+    order_channel = channel
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    order_ts = ts  # Ensure order_ts is defined before use
     order_data = {
         "order_id": order_ts,
         "timestamp": timestamp,
