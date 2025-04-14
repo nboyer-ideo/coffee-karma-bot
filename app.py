@@ -308,15 +308,15 @@ def format_order_message(order_data):
     print(f"🧩 Raw input keys: {list(order_data.keys())}")
     print(f"🧩 Raw order_id type: {type(order_data.get('order_id'))}, value: {order_data.get('order_id')}")
     print(f"🧩 Fallback check? missing: {not order_data.get('order_id')}, space: {' ' in str(order_data.get('order_id', ''))}, colon: {':' in str(order_data.get('order_id', ''))}")
-    if not order_data.get("order_id") or " " in str(order_data.get("order_id", "")):
-        print("⚠️ Missing or malformed order_id — assigning fallback from order_ts")
-        possible_ts = order_data.get("ts") or order_data.get("timestamp")
-        fallback_id = order_extras.get(possible_ts, {}).get("order_id") if possible_ts else None
-        if not fallback_id:
-            fallback_id = str(possible_ts or "[MISSING]")
+    current_id = str(order_data.get("order_id", "")).strip()
+    if not current_id:
+        print("⚠️ [format_order_message] Missing order_id — falling back to order_ts")
+        fallback_id = order_extras.get(order_data.get("ts", ""), {}).get("order_id", str(order_data.get("ts", "[NO TS]")))
         order_data["order_id"] = fallback_id
-        print(f"✅ Fallback order_id set to: {order_data['order_id']}")
-        print(f"📛 Final DROP ID after fallback check: {order_data['order_id']}")
+        print(f"✅ [format_order_message] order_id fallback assigned: {fallback_id}")
+    else:
+        order_data["order_id"] = current_id
+        print(f"🧷 [format_order_message] Using provided order_id: {current_id}")
     print(f"🧪 ENTERING format_order_message with order_id={order_data.get('order_id', '[MISSING]')}")
     print(f"📨 format_order_message called with order_data: {order_data}")
     print(f"🧪 format_order_message FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
