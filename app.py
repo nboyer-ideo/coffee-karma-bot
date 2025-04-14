@@ -309,6 +309,8 @@ def format_order_message(order_data):
     print(f"🧩 Raw order_id type: {type(order_data.get('order_id'))}, value: {order_data.get('order_id')}")
     print(f"🧩 Fallback check? missing: {not order_data.get('order_id')}, space: {' ' in str(order_data.get('order_id', ''))}, colon: {':' in str(order_data.get('order_id', ''))}")
     current_id = str(order_data.get("order_id", "")).strip()
+    if " " in str(current_id) or ":" in str(current_id):
+        raise RuntimeError(f"Invalid order_id format detected during countdown: {current_id}")
     if not current_id or current_id.strip() == "":
         print("⚠️ [format_order_message] Missing or blank order_id — attempting fallback from known TS")
         possible_ts = order_data.get("ts") or order_data.get("timestamp")
