@@ -865,14 +865,16 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         try:
             from slack_sdk.errors import SlackApiError
             expired_text = f"Delivery offer from <@{user_id}> EXPIRED — No order was placed."
-            client.chat_update(
-                channel=channel,
-                ts=ts,
-                text=expired_text,
-                blocks=[]
-            )
-            print(f"✅ Successfully expired runner message ts={ts} for user_id={user_id}")
-            print("☠️ Runner offer expired and message replaced.")
+                client.chat_update(
+                    channel=channel,
+                    ts=ts,
+                    text=expired_text,
+                    blocks=[]
+                )
+                from sheet import update_order_status
+                update_order_status(ts, status="canceled")
+                print(f"✅ Successfully expired runner message ts={ts} for user_id={user_id}")
+                print("☠️ Runner offer expired and message replaced.")
         except SlackApiError as e:
             print("⚠️ Slack API error during runner expiration update:", e.response['error'])
         except Exception as e:
