@@ -1329,8 +1329,23 @@ def handle_modal_submission(ack, body, client):
     ack()
     from sheet import log_order_to_sheet
     # Insert update_order_status block before logging or Slack updates
-    from sheet import update_order_status
+
+    import datetime
+    user_id = body["user"]["id"]
+    meta = json.loads(body["view"]["private_metadata"])
     
+    generated_ts = str(datetime.datetime.now().timestamp())
+    parent_ts = meta.get("parent_ts", "")
+    channel_id = meta.get("channel_id", "")
+    order_id = parent_ts if parent_ts else generated_ts
+    
+    order_data = {
+        "order_id": order_id,
+        "status": "claimed",
+        "time_claimed": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    
+    from sheet import update_order_status
     if parent_ts:
         update_order_status(
             order_id=parent_ts,
@@ -1341,19 +1356,17 @@ def handle_modal_submission(ack, body, client):
             order_data=order_data
         )
 
-    import datetime
-    user_id = body["user"]["id"]
-    meta = json.loads(body["view"]["private_metadata"])
-    generated_ts = str(datetime.datetime.now().timestamp())
-    parent_ts = meta.get("parent_ts", "")
-    channel_id = meta.get("channel_id", "")
-    order_id = parent_ts if parent_ts else generated_ts
+    print("📥 [DEBUG] In submission handler, view raw payload:")
+    print(f"🔁 Entered handle_modal_submission for order from {user_id} at {datetime.datetime.now()}")
 
-    order_data = {
-        "order_id": order_id,
-        "status": "claimed",
-        "time_claimed": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    order_extras[order_id] = {
+        'active': True,
+        'status': 'ordered',
+        'order_id': order_id,
+        'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'ts': body.get("container", {}).get("message_ts", "")
     }
+
     print("📥 [DEBUG] In submission handler, view raw payload:")
     print(f"🔁 Entered handle_modal_submission for order from {user_id} at {datetime.datetime.now()}")
     order_extras[order_id] = {
@@ -1378,7 +1391,9 @@ def handle_modal_submission(ack, body, client):
     mode = metadata.get("mode", "order")
     print(f"🧪 [DEBUG] handle_modal_submission mode={mode}, runner_id={runner_id}")
     if mode == "order" and runner_id:
-        order_data["order_id"] = runner_id
+        order_data["order_id"] = runner_id  # runner_id holds the original /deliver ts
+        order_data["status"] = "claimed"
+        order_data["time_claimed"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # Update the existing Slack message for the delivery offer with order details
         blocks = format_order_message(order_data)
         safe_chat_update(
@@ -1676,6 +1691,11 @@ def handle_modal_submission(ack, body, client):
         print("🛠 DEBUG: Order submission path triggered (runner_id not provided).")
         print("🛠 DEBUG: Initialized order_data =", order_data)
         # Initialize order_data and extract modal state values
+
+        order_data["order_id"] = order_ts
+        order_data["status"] = "ordered"
+        order_data["time_ordered"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
         drink = values["drink_category"]["input"]["selected_option"]["value"]
         drink_detail = values["drink_detail"]["input"]["value"]
         notes = values["notes"]["input"]["value"] if "notes" in values and "input" in values["notes"] and isinstance(values["notes"]["input"]["value"], str) else ""
@@ -1758,7 +1778,28 @@ def handle_modal_submission(ack, body, client):
             print("⚠️ Failed to fetch real name for requester:", e)
             real_name = f"<@{user_id}>"
 
-        order_data = {
+        # order_data = {
+        #     "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        #     "initiated_by": "requester",
+        #     "requester_id": user_id,
+        #     "requester_real_name": real_name,
+        #     "runner_id": "",
+        #     "runner_name": "",
+        #     "recipient_id": gifted_id if gifted_id else user_id,
+        #     "recipient_real_name": "",
+        #     "drink": drink.strip(),
+        #     "location": location,
+        #     "notes": notes,
+        #     "karma_cost": karma_cost,
+        #     "status": "ordered",
+        #     "bonus_multiplier": "",
+        #     "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        #     "time_claimed": "",
+        #     "time_delivered": "",
+        #     "order_id": order_ts
+        # }
+
+        order_data.update({
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "initiated_by": "requester",
             "requester_id": user_id,
@@ -1771,34 +1812,30 @@ def handle_modal_submission(ack, body, client):
             "location": location,
             "notes": notes,
             "karma_cost": karma_cost,
-            "status": "ordered",
             "bonus_multiplier": "",
-            "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "time_claimed": "",
-            "time_delivered": "",
-            "order_id": order_ts
-        }
+            "time_delivered": ""
+        })
 
-        if parent_ts:
+        print("🛠 DEBUG: Final order_data for logging:", order_data)
+        print(f"📝 [DEBUG] Final order_data payload: {json.dumps(order_data, indent=2)}")
+        
+        if order_data.get("status") == "claimed":
+            print("ℹ️ Skipping log_order_to_sheet for claimed status.")
             from sheet import update_order_status
             update_order_status(
                 order_id=parent_ts,
-                status="ordered",
+                status="claimed",
                 claimed_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 requester_name=order_data.get("requester_real_name", ""),
                 recipient_name=order_data.get("recipient_real_name", ""),
                 order_data=order_data
             )
+            return
 
-        print("🛠 DEBUG: Final order_data for logging:", order_data)
-        print(f"📝 [DEBUG] Final order_data payload: {json.dumps(order_data, indent=2)}")
         log_order_to_sheet(order_data)
-        print(f"🧭 Extracted order_channel from placeholder: {placeholder['channel']}")
-        order_channel = placeholder["channel"]
-        formatted_blocks = format_order_message(order_data)
-        print("🛠 DEBUG: Calling safe_chat_update with channel =", order_channel, ", ts =", order_ts)
-        print("🛠 DEBUG: Using blocks:", formatted_blocks)
-        safe_chat_update(client, order_channel, order_ts, "New Koffee Karma order posted", formatted_blocks)
+
+        
     user_id = body["user"]["id"]
     drink_value = values["drink_category"]["input"]["selected_option"]["value"]
     if drink_value == "espresso":
