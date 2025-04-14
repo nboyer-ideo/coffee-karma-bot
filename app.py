@@ -304,6 +304,7 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
     return map_lines
  
 def format_order_message(order_data):
+    print(f"🧪 ENTERING format_order_message with order_id={order_data.get('order_id', '[MISSING]')}")
     print(f"📨 format_order_message called with order_data: {order_data}")
     print(f"🧪 format_order_message FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
     border_top = "+------------------------------------------------+"
@@ -538,6 +539,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         }
         print("🛠️ Calling format_order_message with updated remaining time")
         order_data["order_id"] = order_ts
+        print(f"🧪 Debug: order_data['order_id'] at countdown tick = {order_data['order_id']}")
         order_data["requester_real_name"] = extras.get("requester_real_name") or user_id
         order_data["recipient_real_name"] = extras.get("recipient_real_name") or gifted_id or user_id
         order_data["drink"] = extras.get("drink", drink)
@@ -559,6 +561,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         order_extras[order_ts]["delivered_by"] = order_data.get("delivered_by", "")
         order_extras[order_ts]["remaining_minutes"] = remaining
  
+        print(f"🧪 Calling format_order_message with order_id={order_data.get('order_id', '[MISSING]')}")
         updated_blocks = format_order_message(order_data)
  
         current_blocks = current_message["messages"][0].get("blocks", [])
@@ -1749,6 +1752,7 @@ def handle_modal_submission(ack, body, client):
     # Ensure requester_real_name is added to order_extras early for countdown updates
     if order_ts not in order_extras:
         order_extras[order_ts] = {}
+    order_extras[order_ts]["order_id"] = order_ts
     order_extras[order_ts]["requester_real_name"] = order_data["requester_real_name"]
 
     if gifted_id:
