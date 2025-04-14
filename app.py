@@ -25,6 +25,14 @@ from sheet import (
 
 last_selected_location = {}
 
+def resolve_real_name(user_id, client):
+    try:
+        user_info = client.users_info(user=user_id)
+        return user_info["user"]["real_name"]
+    except Exception as e:
+        print(f"⚠️ Failed to resolve real name for {user_id}:", e)
+        return f"<@{user_id}>"
+
 def send_koffee_welcome(client, user_id):
     welcome_message = (
         "¤ A new vessel joins the order.\n"
@@ -1335,6 +1343,32 @@ def handle_modal_submission(ack, body, client):
     mode = metadata.get("mode", "order")
     print(f"🧪 [DEBUG] handle_modal_submission mode={mode}, runner_id={runner_id}")
     if mode == "order" and runner_id:
+        order_data["order_id"] = runner_id
+        # Update the existing Slack message for the delivery offer with order details
+        blocks = format_order_message(order_data)
+        safe_chat_update(
+            client,
+            channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+            ts=order_data["order_id"],
+            text="Order update: Order placed from delivery offer",
+            blocks=blocks
+        )
+        from sheet import update_order_status
+        print(f"🧪 Updating existing order_id: {order_data['order_id']}")
+        update_order_status(
+            order_id=order_data["order_id"],
+            status="claimed",
+            claimed_time=order_data["time_ordered"],
+            requester_name=order_data["requester_real_name"],
+            recipient_name=order_data["recipient_real_name"],
+            drink=order_data["drink"],
+            location=order_data["location"],
+            notes=order_data["notes"],
+            karma_cost=order_data["karma_cost"],
+            order_data=order_data
+        )
+        print(f"📤 [DEBUG] safe_chat_update called — channel={os.environ.get('KOFFEE_KARMA_CHANNEL')}, ts={order_data['order_id']}")
+        print(f"📤 [DEBUG] Updating Slack message for /deliver flow — ts={order_data['order_id']}, order_id={order_data['order_id']}")
         from sheet import log_order_to_sheet
         state = body["view"]["state"]["values"]
         category = state["drink_category"]["input"]["selected_option"]["value"]
@@ -1410,7 +1444,7 @@ def handle_modal_submission(ack, body, client):
         )
         print("✅ update_order_status completed for delivery-initiated order")
 
-        # log_order_to_sheet(order_data)  # Removed to prevent duplicate logging
+        
         # Mark the runner offer as fulfilled
         if runner_id:
             if runner_id not in runner_offer_claims:
