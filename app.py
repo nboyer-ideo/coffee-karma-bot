@@ -111,6 +111,7 @@ def format_full_map_with_legend(mini_map_lines):
 if 'runner_offer_metadata' not in globals():
     runner_offer_metadata = {}
 
+print(f"📤 [DEBUG] Updating Slack message for /deliver flow — ts={order_data['ts']}, order_id={order_data['order_id']}")
 def safe_chat_update(client, channel, ts, text, blocks=None):
     try:
         client.chat_update(channel=channel, ts=ts, text=text, blocks=blocks)
@@ -727,6 +728,7 @@ def handle_claim_order(ack, body, client):
     ts = body.get("container", {}).get("message_ts")
     if channel and ts:
         from sheet import update_order_status
+        print(f"📝 update_order_status(order_id={order_data['order_id']}, status={order_data['status']}, claimed_time={order_data['time_claimed']})")
         update_order_status(
             order_id,
             status="claimed",
@@ -743,6 +745,7 @@ def handle_claim_order(ack, body, client):
         order_extras[order_id]["status"] = "claimed"
         order_extras[order_id]["active"] = False
         blocks = format_order_message(order_data)
+        print(f"🧪 [DEBUG] Final blocks length: {len(blocks)} — intended update to ts={order_data['order_id']}")
         safe_chat_update(client, channel, ts, "Order update: Order claimed", blocks)
 
     try:
@@ -1331,6 +1334,7 @@ def handle_modal_submission(ack, body, client):
     location = metadata.get("location", "")
     runner_id = metadata.get("runner_id", "")
     mode = metadata.get("mode", "order")
+    print(f"🧪 [DEBUG] handle_modal_submission mode={mode}, runner_id={runner_id}")
     if mode == "order" and runner_id:
         from sheet import log_order_to_sheet
         state = body["view"]["state"]["values"]
@@ -1353,8 +1357,10 @@ def handle_modal_submission(ack, body, client):
 
         # In /deliver flow, the runner_id (actually the message_ts) is the order_id
         order_data["order_id"] = runner_id
+        print(f"🧪 Using runner_id as order_id (for /deliver flow): {order_data['order_id']}")
         existing = fetch_order_data(runner_id)
         order_data.update(existing)  # Start with the original row data
+        print(f"🧩 [DEBUG] After merge — order_data keys: {list(order_data.keys())}, order_id: {order_data.get('order_id')}")
         order_data["requester_id"] = user_id
         order_data["requester_real_name"] = resolve_real_name(user_id, client)
         order_data["recipient_id"] = user_id
@@ -1374,6 +1380,8 @@ def handle_modal_submission(ack, body, client):
         order_extras[order_data["order_id"]] = {"active": False, "status": "claimed"}
         # Update Slack message and log order to sheet
         blocks = format_order_message(order_data)
+        print(f"🧪 [DEBUG] Final blocks length: {len(blocks)} — intended update to ts={order_data['order_id']}")
+        print(f"🛠️ [DEBUG] Updating Slack message for order_id={order_data['order_id']} in /deliver flow")
         safe_chat_update(
             client,
             channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
