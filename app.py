@@ -539,6 +539,19 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "runner_real_name": extras.get("runner_real_name", ""),
             "delivered_by": extras.get("delivered_by", "")
         }
+        if not order_data.get("requester_real_name") or order_data["requester_real_name"].startswith("U0"):
+            try:
+                user_info = client.users_info(user=order_data["requester_id"])
+                order_data["requester_real_name"] = user_info["user"]["real_name"]
+            except Exception as e:
+                print("⚠️ Failed to fetch requester real name in fallback:", e)
+        
+        if not order_data.get("recipient_real_name") or order_data["recipient_real_name"].startswith("U0"):
+            try:
+                user_info = client.users_info(user=order_data["recipient_id"])
+                order_data["recipient_real_name"] = user_info["user"]["real_name"]
+            except Exception as e:
+                print("⚠️ Failed to fetch recipient real name in fallback:", e)
         print("🛠️ Calling format_order_message with updated remaining time")
         print(f"🧪 Debug: order_data['order_id'] at countdown tick = {order_data['order_id']}")
         order_data["requester_real_name"] = extras.get("requester_real_name") or user_id
