@@ -1414,6 +1414,7 @@ def handle_modal_submission(ack, body, client):
         channel = placeholder["channel"]
         order_ts = ts
         order_channel = channel
+        order_data["order_id"] = order_ts  # ✅ Ensure order_id exists
 
         from app import format_order_message, safe_chat_update  # if not already at the top
 
