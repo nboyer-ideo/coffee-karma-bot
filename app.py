@@ -539,8 +539,11 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "runner_real_name": extras.get("runner_real_name", ""),
             "delivered_by": extras.get("delivered_by", "")
         }
-        order_data["requester_real_name"] = resolve_real_name(user_id, client)
-        order_data["recipient_real_name"] = resolve_real_name(gifted_id or user_id, client)
+        # Ensure real names are resolved if missing or defaulting to Slack IDs
+        if not order_data.get("requester_real_name") or order_data["requester_real_name"].startswith("U0"):
+            order_data["requester_real_name"] = resolve_real_name(user_id, client)
+        if not order_data.get("recipient_real_name") or order_data["recipient_real_name"].startswith("U0"):
+            order_data["recipient_real_name"] = resolve_real_name(gifted_id or user_id, client)
         extras["requester_real_name"] = order_data["requester_real_name"]
         extras["recipient_real_name"] = order_data["recipient_real_name"]
         print("🛠️ Calling format_order_message with updated remaining time")
@@ -551,7 +554,6 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         order_data["claimed_by"] = extras.get("claimed_by", "")
         order_data["runner_real_name"] = extras.get("runner_real_name", "")
         order_data["delivered_by"] = extras.get("delivered_by", "")
-        order_data["remaining_minutes"] = remaining
         order_data["status"] = extras.get("status", "ordered")
  
         order_extras[order_ts]["requester_real_name"] = order_data["requester_real_name"]
@@ -567,6 +569,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print(f"🧪 Calling format_order_message with order_id={order_data.get('order_id', '[MISSING]')}")
         if not order_data.get("order_id"):
             order_data["order_id"] = order_ts
+        order_data["remaining_minutes"] = remaining
         updated_blocks = format_order_message(order_data)
  
         current_blocks = current_message["messages"][0].get("blocks", [])
