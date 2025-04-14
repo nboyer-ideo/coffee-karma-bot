@@ -242,6 +242,11 @@ def log_order_to_sheet(order_data):
             print("🧪 [SHEET] Preparing to append row for order:", order_data.get("order_id"))
             print("🧪 [SHEET] Status:", order_data.get("status"))
             print(f"🧪 [DEBUG] order_data['order_id'] before sheet append: {order_data.get('order_id', '[MISSING]')}")
+            if order_data.get("order_id"):
+                existing = fetch_order_data(order_data["order_id"])
+                if existing:
+                    print("🟢 Existing order found; skipping append.")
+                    return
             worksheet.append_row([
                 order_data.get("order_id", ""),
                 order_data.get("timestamp", ""),
@@ -268,8 +273,7 @@ def log_order_to_sheet(order_data):
     except Exception as e:
         print("⚠️ Failed to log order to sheet:", e)
 
-def update_order_status(order_id, status=None, runner_id=None, runner_name=None, bonus_multiplier=None, claimed_time=None, delivered_time=None, requester_name=None, recipient_name=None):
-    try:
+def update_order_status(order_id, status=None, runner_id=None, runner_name=None, bonus_multiplier=None, claimed_time=None, delivered_time=None, requester_name=None, recipient_name=None, order_data=None):    try:
         sheet = get_sheet()
         worksheet = sheet.worksheet("Order Log")
         data = worksheet.get_all_records()
@@ -291,10 +295,32 @@ def update_order_status(order_id, status=None, runner_id=None, runner_name=None,
                     worksheet.update_cell(i + 2, 17, claimed_time)
                 if delivered_time is not None:
                     worksheet.update_cell(i + 2, 18, delivered_time)
+                # New block to write requester_id to the sheet
                 if requester_name is not None:
-                    worksheet.update_cell(i + 2, 5, requester_name)
+                    worksheet.update_cell(i + 2, 5, requester_name)  # Requester Name
                 if recipient_name is not None:
-                    worksheet.update_cell(i + 2, 9, recipient_name)
+                    worksheet.update_cell(i + 2, 9, recipient_name)  # Recipient Name
+                if order_data and order_data.get("timestamp") is not None:
+                    worksheet.update_cell(i + 2, 2, order_data["timestamp"])  # Timestamp
+                if order_data:
+                    if order_data.get("drink") is not None:
+                        worksheet.update_cell(i + 2, 10, order_data["drink"])
+                    if order_data.get("location") is not None:
+                        worksheet.update_cell(i + 2, 11, order_data["location"])
+                    if order_data.get("notes") is not None:
+                        worksheet.update_cell(i + 2, 12, order_data["notes"])
+                    if order_data.get("karma_cost") is not None:
+                        worksheet.update_cell(i + 2, 13, order_data["karma_cost"])
+                if order_data and order_data.get("initiated_by") is not None:
+                    worksheet.update_cell(i + 2, 3, order_data["initiated_by"])  # Initiated By
+                if order_data and order_data.get("requester_id") is not None:
+                    worksheet.update_cell(i + 2, 4, order_data["requester_id"])  # Requester ID
+                if order_data and order_data.get("runner_id") is not None:
+                    worksheet.update_cell(i + 2, 6, order_data["runner_id"])  # Runner ID
+                if order_data and order_data.get("runner_name") is not None:
+                    worksheet.update_cell(i + 2, 7, order_data["runner_name"])  # Runner Name
+                if order_data and order_data.get("recipient_id") is not None:
+                    worksheet.update_cell(i + 2, 8, order_data["recipient_id"])  # Recipient ID
                 return True
     except Exception as e:
         print("⚠️ Failed to update order status:", e)

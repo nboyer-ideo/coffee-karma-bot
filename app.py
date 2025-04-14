@@ -1332,6 +1332,7 @@ def handle_modal_submission(ack, body, client):
     runner_id = metadata.get("runner_id", "")
     mode = metadata.get("mode", "order")
     if mode == "order" and runner_id:
+        from sheet import log_order_to_sheet
         state = body["view"]["state"]["values"]
         category = state["drink_category"]["input"]["selected_option"]["value"]
         drink = state["drink_detail"]["input"]["value"]
@@ -1364,6 +1365,8 @@ def handle_modal_submission(ack, body, client):
         order_data["runner_name"] = existing.get("runner_name") or resolve_real_name(existing.get("runner_id"), client)
         order_data["runner_real_name"] = order_data["runner_name"]
         order_data["status"] = "claimed"
+        order_data["ts"] = order_data["order_id"]
+        order_data["channel"] = os.environ.get("KOFFEE_KARMA_CHANNEL")
         countdown_timers[order_data["order_id"]] = 10
         order_data["runner_id"] = existing.get("runner_id")
         order_data["initiated_by"] = "runner"
@@ -1430,6 +1433,8 @@ def handle_modal_submission(ack, body, client):
             location=order_data["location"],
             notes=order_data["notes"],
             karma_cost=order_data["karma_cost"]
+            order_data=order_data
+
         )
         order_data["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # log_order_to_sheet(order_data)  # Removed to prevent duplicate logging
