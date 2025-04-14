@@ -530,6 +530,14 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print(f"✅ Countdown proceeding for {order_ts}, remaining: {remaining}")
 
         current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
+        # Check if the order_id in order_data is a temporary one, and if so, replace it
+        if order_data.get("order_id") != order_ts:
+            print(f"🔁 Overwriting placeholder order_id {order_data['order_id']} with Slack ts {order_ts}")
+            old_id = order_data["order_id"]
+            order_data["order_id"] = order_ts
+            # Move order_extras from old_id to correct Slack ts
+            if old_id in order_extras:
+                order_extras[order_ts] = order_extras.pop(old_id)
         order_data = {
             "order_id": order_ts,
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
