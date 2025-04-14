@@ -1432,7 +1432,7 @@ def handle_modal_submission(ack, body, client):
             drink=order_data["drink"],
             location=order_data["location"],
             notes=order_data["notes"],
-            karma_cost=order_data["karma_cost"]
+            karma_cost=order_data["karma_cost"],
             order_data=order_data
 
         )
