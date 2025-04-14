@@ -1365,7 +1365,6 @@ def handle_modal_submission(ack, body, client):
         )
         print(f"📤 [DEBUG] safe_chat_update called — channel={os.environ.get('KOFFEE_KARMA_CHANNEL')}, ts={order_data['order_id']}")
         print(f"📤 [DEBUG] Updating Slack message for /deliver flow — ts={order_data['order_id']}, order_id={order_data['order_id']}")
-        from sheet import log_order_to_sheet
         state = body["view"]["state"]["values"]
         category = state["drink_category"]["input"]["selected_option"]["value"]
         drink = state["drink_detail"]["input"]["value"]
@@ -1450,6 +1449,14 @@ def handle_modal_submission(ack, body, client):
         order_data["order_id"] = str(datetime.datetime.now().timestamp())
     print(f"🧪 [DEBUG] Assigned order_id = {order_data['order_id']}")
     if mode == "order" and runner_id:
+        if runner_id in runner_offer_metadata:
+            order_data["order_id"] = runner_offer_metadata[runner_id]["ts"]
+            order_data["channel"] = runner_offer_metadata[runner_id]["channel"]
+            print(f"🧪 Fallback restored ts={order_data['order_id']} and channel={order_data['channel']}")
+        else:
+            print("⚠️ No runner_offer_metadata found — cannot update original runner post")
+            order_data["order_id"] = runner_id  # fallback to raw ts
+            order_data["channel"] = os.environ.get("KOFFEE_KARMA_CHANNEL")
         blocks = format_order_message(order_data)
         print(f"📤 [DEBUG] Updating Slack message for /deliver flow — ts={order_data['order_id']}, order_id={order_data['order_id']}")
         safe_chat_update(

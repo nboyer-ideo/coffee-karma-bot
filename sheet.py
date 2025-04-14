@@ -203,6 +203,9 @@ def log_order_to_sheet(order_data):
     print("🟡 Starting log_order_to_sheet")
     print(f"🧪 Received order_data for logging: {order_data}")
     # Only log initial orders (status 'pending'); skip updates for claimed or delivered orders.
+    if order_data.get("status") == "claimed":
+        print("ℹ️ Skipping log_order_to_sheet for claimed status.")
+        return
     if order_data.get("status") not in ["ordered", "offered"]:
         print("ℹ️ Order status is not eligible for initial logging; skipping.")
         return
@@ -279,6 +282,7 @@ def update_order_status(order_id, status=None, runner_id=None, runner_name=None,
         worksheet = sheet.worksheet("Order Log")
         data = worksheet.get_all_records()
         for i, row in enumerate(data):
+            print(f"[SHEET DEBUG] Matching row.get('Order ID') = {row.get('Order ID')}, target order_id = {order_id}")
             if str(row.get("Order ID")) == str(order_id):
                 print(f"✅ Found matching row for order_id {order_id} at index {i+2}")
                 if status is not None:
