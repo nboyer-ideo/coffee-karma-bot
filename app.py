@@ -1433,17 +1433,16 @@ def handle_modal_submission(ack, body, client):
         channel = placeholder["channel"]
         order_ts = ts
         order_channel = channel
+        order_extras[order_ts] = {}
         order_data["order_id"] = order_ts  # ✅ Ensure order_id exists
-        order_extras[order_ts] = {
-            "active": True,
-            "status": "ordered",
-            "requester_real_name": order_data.get("requester_real_name", ""),
-            "recipient_real_name": order_data.get("recipient_real_name", ""),
-            "drink": drink,
-            "location": location,
-            "notes": notes,
-            "karma_cost": karma_cost
-        }
+        order_extras[order_ts]["active"] = True
+        order_extras[order_ts]["status"] = "ordered"
+        order_extras[order_ts]["requester_real_name"] = order_data.get("requester_real_name", "")
+        order_extras[order_ts]["recipient_real_name"] = order_data.get("recipient_real_name", "")
+        order_extras[order_ts]["drink"] = drink
+        order_extras[order_ts]["location"] = location
+        order_extras[order_ts]["notes"] = notes
+        order_extras[order_ts]["karma_cost"] = karma_cost
         import threading
         countdown_timers[order_ts] = karma_cost  # or 10 if that's the default
         order_extras[order_ts]["status"] = "ordered"
@@ -1682,8 +1681,6 @@ def handle_modal_submission(ack, body, client):
         )
         print("🚨 [MODAL SUBMIT] Fallback failed — cannot update message.")
         return
-    if order_ts not in order_extras:
-        order_extras[order_ts] = {}
     order_data["requester_real_name"] = requester_info["user"]["real_name"]
     order_data["recipient_real_name"] = recipient_info["user"]["real_name"]
     order_extras[order_ts]["requester_real_name"] = order_data["requester_real_name"]
