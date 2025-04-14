@@ -496,6 +496,7 @@ def safe_chat_update(client, channel, ts, text, blocks):
         print("🚨 General error in safe_chat_update:", e)
 
 def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted_id, drink, location, notes, karma_cost):
+    order_ts = str(order_ts)
     import sys
     print("🔥 ENTERED update_countdown()")
     sys.stdout.flush()
@@ -619,7 +620,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         if remaining > 0:
             print(f"🕒 Scheduling next countdown tick — remaining: {remaining - 1}")
             t = threading.Timer(60, update_countdown, args=(
-                client, remaining - 1, order_ts, order_channel,
+                client, remaining - 1, str(order_ts), order_channel,
                 user_id, gifted_id, drink, location, notes, karma_cost
             ))
             print("🌀 Starting new countdown thread with threading.Timer")
