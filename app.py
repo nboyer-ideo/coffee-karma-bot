@@ -305,8 +305,6 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
  
 def format_order_message(order_data):
     print(f"🧪 ENTERING format_order_message with order_id={order_data.get('order_id', '[MISSING]')}")
-    if not order_data.get("order_id"):
-        order_data["order_id"] = order_ts
     print(f"📨 format_order_message called with order_data: {order_data}")
     print(f"🧪 format_order_message FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
     border_top = "+------------------------------------------------+"
