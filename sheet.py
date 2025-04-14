@@ -372,6 +372,7 @@ def save_runner_capabilities(user_id, name, capabilities):
     worksheet.append_row([user_id, name, 3, get_title(3), json.dumps(capabilities)])
 
 def fetch_order_data(order_id):
+    print(f"🔎 [DEBUG] fetch_order_data called with order_id={order_id}")
     try:
         sheet = get_sheet()
         worksheet = sheet.worksheet("Order Log")

@@ -111,7 +111,6 @@ def format_full_map_with_legend(mini_map_lines):
 if 'runner_offer_metadata' not in globals():
     runner_offer_metadata = {}
 
-print(f"📤 [DEBUG] Updating Slack message for /deliver flow — ts={order_data['ts']}, order_id={order_data['order_id']}")
 def safe_chat_update(client, channel, ts, text, blocks=None):
     try:
         client.chat_update(channel=channel, ts=ts, text=text, blocks=blocks)
@@ -1422,6 +1421,7 @@ def handle_modal_submission(ack, body, client):
     print(f"🧪 [DEBUG] Assigned order_id = {order_data['order_id']}")
     if mode == "order" and runner_id:
         blocks = format_order_message(order_data)
+        print(f"📤 [DEBUG] Updating Slack message for /deliver flow — ts={order_data['order_id']}, order_id={order_data['order_id']}")
         safe_chat_update(
             client,
             channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
