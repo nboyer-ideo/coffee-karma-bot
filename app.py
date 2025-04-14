@@ -1428,6 +1428,7 @@ def handle_modal_submission(ack, body, client):
         countdown_timers[order_ts] = karma_cost  # or 10 if that's the default
         order_extras[order_ts]["status"] = "ordered"
         order_extras[order_ts]["active"] = True
+        requester_real_name = order_data.get("requester_real_name", user_id)
         order_extras[order_ts]["requester_real_name"] = requester_real_name
         order_extras[order_ts]["recipient_real_name"] = recipient_real_name
         order_extras[order_ts]["drink"] = drink
