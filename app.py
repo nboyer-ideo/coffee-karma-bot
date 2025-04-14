@@ -1378,6 +1378,15 @@ def handle_modal_submission(ack, body, client):
             text="Order update: Order placed from delivery offer",
             blocks=blocks
         )
+        print("DEBUG: update_order_status called with arguments:")
+        print(f"  status: claimed")
+        print(f"  claimed_time: {order_data['time_claimed']}")
+        print(f"  requester_name: {order_data['requester_real_name']}")
+        print(f"  recipient_name: {order_data['recipient_real_name']}")
+        print(f"  drink: {order_data['drink']}")
+        print(f"  location: {order_data['location']}")
+        print(f"  notes: {order_data['notes']}")
+        print(f"  karma_cost: {order_data['karma_cost']}")
         update_order_status(
             order_data["order_id"],
             status="claimed",
@@ -1389,7 +1398,9 @@ def handle_modal_submission(ack, body, client):
             notes=order_data["notes"],
             karma_cost=order_data["karma_cost"]
         )
-        log_order_to_sheet(order_data)
+        print("✅ update_order_status completed for delivery-initiated order")
+
+        # log_order_to_sheet(order_data)  # Removed to prevent duplicate logging
         # Mark the runner offer as fulfilled
         if runner_id:
             if runner_id not in runner_offer_claims:
@@ -1421,7 +1432,7 @@ def handle_modal_submission(ack, body, client):
             karma_cost=order_data["karma_cost"]
         )
         order_data["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_order_to_sheet(order_data)
+        # log_order_to_sheet(order_data)  # Removed to prevent duplicate logging
         order_extras[order_data["order_id"]] = {
             "active": False,
             "status": "claimed",
