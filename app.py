@@ -1721,7 +1721,6 @@ def handle_modal_submission(ack, body, client):
         order_ts = ts
         order_channel = channel
         order_extras[order_ts] = {}
-        order_data["order_id"] = order_ts  # ✅ Ensure order_id exists
         order_extras[order_ts]["active"] = True
         order_extras[order_ts]["status"] = "ordered"
         order_extras[order_ts]["requester_real_name"] = order_data.get("requester_real_name", "")
