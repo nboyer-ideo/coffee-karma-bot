@@ -273,7 +273,8 @@ def log_order_to_sheet(order_data):
     except Exception as e:
         print("⚠️ Failed to log order to sheet:", e)
 
-def update_order_status(order_id, status=None, runner_id=None, runner_name=None, bonus_multiplier=None, claimed_time=None, delivered_time=None, requester_name=None, recipient_name=None, order_data=None):    try:
+def update_order_status(order_id, status=None, runner_id=None, runner_name=None, bonus_multiplier=None, claimed_time=None, delivered_time=None, requester_name=None, recipient_name=None, order_data=None):
+    try:
         sheet = get_sheet()
         worksheet = sheet.worksheet("Order Log")
         data = worksheet.get_all_records()
