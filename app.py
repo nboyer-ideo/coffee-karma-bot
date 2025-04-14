@@ -1369,6 +1369,27 @@ def handle_modal_submission(ack, body, client):
         order_data["initiated_by"] = "runner"
         order_data["time_claimed"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         order_extras[order_data["order_id"]] = {"active": False, "status": "claimed"}
+        # Update Slack message and log order to sheet
+        blocks = format_order_message(order_data)
+        safe_chat_update(
+            client,
+            channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+            ts=order_data["order_id"],
+            text="Order update: Order placed from delivery offer",
+            blocks=blocks
+        )
+        update_order_status(
+            order_data["order_id"],
+            status="claimed",
+            claimed_time=order_data["time_claimed"],
+            requester_name=order_data["requester_real_name"],
+            recipient_name=order_data["recipient_real_name"],
+            drink=order_data["drink"],
+            location=order_data["location"],
+            notes=order_data["notes"],
+            karma_cost=order_data["karma_cost"]
+        )
+        log_order_to_sheet(order_data)
         # Mark the runner offer as fulfilled
         if runner_id:
             if runner_id not in runner_offer_claims:
