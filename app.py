@@ -530,16 +530,8 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print(f"✅ Countdown proceeding for {order_ts}, remaining: {remaining}")
 
         current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
-        # Check if the order_id in order_data is a temporary one, and if so, replace it
-        if order_data.get("order_id") != order_ts:
-            print(f"🔁 Overwriting placeholder order_id {order_data['order_id']} with Slack ts {order_ts}")
-            old_id = order_data["order_id"]
-            order_data["order_id"] = order_ts
-            # Move order_extras from old_id to correct Slack ts
-            if old_id in order_extras:
-                order_extras[order_ts] = order_extras.pop(old_id)
         order_data = {
-            "order_id": order_ts,
+            "order_id": order_extras.get(order_ts, {}).get("order_id", order_ts),
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "requester_id": user_id,
             "requester_real_name": extras.get("requester_real_name") or "",
@@ -560,16 +552,16 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "runner_real_name": extras.get("runner_real_name", ""),
             "delivered_by": extras.get("delivered_by", "")
         }
-        # Validate and possibly restore a clean order_id from order_extras if needed
-        if not order_data.get("order_id") or " " in str(order_data["order_id"]) or ":" in str(order_data["order_id"]):
-            print(f"⚠️ Placeholder order_id '{order_data['order_id']}' is invalid — trying to restore from order_extras")
-            possible_id = order_extras.get(order_ts, {}).get("order_id")
-            if possible_id and " " not in possible_id and ":" not in possible_id:
-                print(f"✅ Restored clean order_id from order_extras: {possible_id}")
-                order_data["order_id"] = possible_id
-            else:
-                print(f"❌ Could not restore clean order_id — sticking with timestamp fallback: {order_ts}")
-                order_data["order_id"] = order_ts
+        # Validate order_id and fallback only if absolutely needed
+        fallback_candidate = order_extras.get(order_ts, {}).get("order_id")
+        if fallback_candidate and not (" " in fallback_candidate or ":" in fallback_candidate):
+            print(f"✅ Fallback order_id from extras: {fallback_candidate}")
+            order_data["order_id"] = fallback_candidate
+        elif not order_data["order_id"] or " " in order_data["order_id"] or ":" in order_data["order_id"]:
+            print(f"⚠️ Invalid or missing order_id '{order_data.get('order_id')}' — falling back to Slack ts")
+            order_data["order_id"] = order_ts
+        else:
+            print(f"✅ order_id is valid: {order_data['order_id']}")
         # Ensure real names are resolved if missing or defaulting to Slack IDs
         if not order_data.get("requester_real_name") or order_data["requester_real_name"].startswith("U0"):
             order_data["requester_real_name"] = resolve_real_name(user_id, client)
