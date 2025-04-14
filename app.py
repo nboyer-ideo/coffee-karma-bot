@@ -1430,6 +1430,7 @@ def handle_modal_submission(ack, body, client):
         order_extras[order_ts]["active"] = True
         requester_real_name = order_data.get("requester_real_name", user_id)
         order_extras[order_ts]["requester_real_name"] = requester_real_name
+        recipient_real_name = order_data.get("recipient_real_name", gifted_id or user_id)
         order_extras[order_ts]["recipient_real_name"] = recipient_real_name
         order_extras[order_ts]["drink"] = drink
         order_extras[order_ts]["location"] = location
