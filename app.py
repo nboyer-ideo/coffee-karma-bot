@@ -800,11 +800,7 @@ def handle_mark_delivered(ack, body, client):
     })
 
     if order_data.get("order_id"):
-    if order_data.get("order_id"):
         blocks = format_order_message(order_data)
-    else:
-        print(f"⚠️ Skipping format_order_message — missing order_id in payload: {order_data}")
-        blocks = []
     else:
         print(f"⚠️ Skipping format_order_message — missing order_id in payload: {order_data}")
         blocks = []
