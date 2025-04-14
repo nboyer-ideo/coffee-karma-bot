@@ -241,6 +241,7 @@ def log_order_to_sheet(order_data):
         try:
             print("🧪 [SHEET] Preparing to append row for order:", order_data.get("order_id"))
             print("🧪 [SHEET] Status:", order_data.get("status"))
+            print(f"🧪 [DEBUG] order_data['order_id'] before sheet append: {order_data.get('order_id', '[MISSING]')}")
             worksheet.append_row([
                 order_data.get("order_id", ""),
                 order_data.get("timestamp", ""),
