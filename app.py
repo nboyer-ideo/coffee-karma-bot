@@ -542,7 +542,23 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print("🛠️ Calling format_order_message with updated remaining time")
         print(f"🧪 Debug: order_data['order_id'] at countdown tick = {order_data['order_id']}")
         order_data["requester_real_name"] = extras.get("requester_real_name") or user_id
+        if not extras.get("requester_real_name") and user_id:
+            try:
+                user_info = client.users_info(user=user_id)
+                extras["requester_real_name"] = user_info["user"]["real_name"]
+            except Exception as e:
+                print("⚠️ Failed to fetch requester real name in countdown:", e)
+                extras["requester_real_name"] = f"<@{user_id}>"
         order_data["recipient_real_name"] = extras.get("recipient_real_name") or gifted_id or user_id
+        if not extras.get("recipient_real_name") and (gifted_id or user_id):
+            try:
+                user_info = client.users_info(user=gifted_id or user_id)
+                extras["recipient_real_name"] = user_info["user"]["real_name"]
+            except Exception as e:
+                print("⚠️ Failed to fetch recipient real name in countdown:", e)
+                extras["recipient_real_name"] = f"<@{gifted_id or user_id}>"
+        order_data["requester_real_name"] = extras.get("requester_real_name", "")
+        order_data["recipient_real_name"] = extras.get("recipient_real_name", "")
         order_data["drink"] = extras.get("drink", drink)
         order_data["location"] = extras.get("location", location)
         order_data["notes"] = extras.get("notes", notes)
