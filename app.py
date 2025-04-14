@@ -591,7 +591,11 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print(f"🧩 [BEFORE format_order_message] gifted_id: {gifted_id} → recipient_real_name: {order_data.get('recipient_real_name')}")
         print(f"🧪 Calling format_order_message with order_id={order_data.get('order_id', '[MISSING]')}")
         order_data["remaining_minutes"] = remaining
-        updated_blocks = format_order_message(order_data)
+        if order_data.get("order_id"):
+            updated_blocks = format_order_message(order_data)
+        else:
+            print(f"⚠️ Skipping format_order_message — missing order_id in payload: {order_data}")
+            updated_blocks = []
  
         current_blocks = current_message["messages"][0].get("blocks", [])
         if any(block.get("block_id") == "reminder_block" for block in current_blocks):
@@ -795,7 +799,15 @@ def handle_mark_delivered(ack, body, client):
         "delivered_by": order_data.get("runner_real_name") or order_data.get("runner_name") or f"<@{user_id}>"
     })
 
-    blocks = format_order_message(order_data)
+    if order_data.get("order_id"):
+    if order_data.get("order_id"):
+        blocks = format_order_message(order_data)
+    else:
+        print(f"⚠️ Skipping format_order_message — missing order_id in payload: {order_data}")
+        blocks = []
+    else:
+        print(f"⚠️ Skipping format_order_message — missing order_id in payload: {order_data}")
+        blocks = []
     safe_chat_update(client, order_channel, order_ts, "Order update: Order delivered", blocks)
 
     update_order_status(
