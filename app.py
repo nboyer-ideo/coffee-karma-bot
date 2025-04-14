@@ -1417,9 +1417,20 @@ def handle_modal_submission(ack, body, client):
         order_ts = ts
         order_channel = channel
         order_data["order_id"] = order_ts  # ✅ Ensure order_id exists
-
+        
+        order_data["location"] = location or "UNKNOWN"
+        order_data["notes"] = notes or "NONE"
+        order_data["drink"] = drink or "UNKNOWN"
+        order_data["karma_cost"] = karma_cost
+        order_data["requester_id"] = user_id
+        order_data["requester_real_name"] = client.users_info(user=user_id)["user"]["real_name"]
+        order_data["recipient_id"] = gifted_id if gifted_id else user_id
+        order_data["recipient_real_name"] = order_data["requester_real_name"]
+        order_data["status"] = "ordered"
+        order_data["time_ordered"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
         from app import format_order_message, safe_chat_update  # if not already at the top
-
+        
         blocks = format_order_message(order_data)
         safe_chat_update(client, order_channel, order_ts, "Order update: Submitted", blocks)
 
