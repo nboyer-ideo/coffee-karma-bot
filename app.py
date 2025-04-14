@@ -1415,6 +1415,11 @@ def handle_modal_submission(ack, body, client):
         order_ts = ts
         order_channel = channel
 
+        from app import format_order_message, safe_chat_update  # if not already at the top
+
+        blocks = format_order_message(order_data)
+        safe_chat_update(client, order_channel, order_ts, "Order update: Submitted", blocks)
+
         try:
             user_info = client.users_info(user=user_id)
             real_name = user_info["user"]["real_name"]
