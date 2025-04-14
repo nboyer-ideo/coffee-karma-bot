@@ -531,7 +531,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 
         current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
         order_data = {
-            "order_id": order_extras.get(order_ts, {}).get("order_id", order_ts),
+            "order_id": "",
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "requester_id": user_id,
             "requester_real_name": extras.get("requester_real_name") or "",
