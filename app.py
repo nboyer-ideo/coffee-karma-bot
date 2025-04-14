@@ -545,14 +545,8 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "runner_real_name": extras.get("runner_real_name", ""),
             "delivered_by": extras.get("delivered_by", "")
         }
-        # Force order_id to match original ts if fallback present or malformed
-        if not order_data.get("order_id") or " " in str(order_data.get("order_id", "")):
-            print("⚠️ Missing or malformed order_id — assigning fallback from order_ts")
-            order_data["order_id"] = str(order_ts)
-            order_extras[order_ts]["order_id"] = order_data["order_id"]
-            print(f"✅ Gifted fallback order_id set to: {order_data['order_id']}")
-            if order_ts in order_extras:
-                order_extras[order_ts]["order_id"] = order_data["order_id"]
+        # Force overwrite the fallback order_id using order_extras
+        order_data["order_id"] = order_extras.get(order_ts, {}).get("order_id", str(order_ts))
         # Ensure real names are resolved if missing or defaulting to Slack IDs
         if not order_data.get("requester_real_name") or order_data["requester_real_name"].startswith("U0"):
             order_data["requester_real_name"] = resolve_real_name(user_id, client)
@@ -581,7 +575,6 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         order_extras[order_ts]["remaining_minutes"] = remaining
  
         print(f"🧪 Calling format_order_message with order_id={order_data.get('order_id', '[MISSING]')}")
-        order_data["order_id"] = order_extras.get(order_ts, {}).get("order_id", order_ts)
         order_data["remaining_minutes"] = remaining
         updated_blocks = format_order_message(order_data)
  
