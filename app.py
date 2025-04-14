@@ -495,6 +495,9 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 
         extras = order_extras.get(order_ts)
         print(f"🧪 Debug: order_extras for {order_ts} = {extras}")
+        print(f"🧭 Entering update_countdown for order_ts: {order_ts} with remaining: {remaining}")
+        print(f"🧭 order_channel: {order_channel}, user_id: {user_id}, gifted_id: {gifted_id}")
+        print(f"🧭 Checking active: {extras.get('active', False)}, status: {extras.get('status')}")
         print(f"📦 order_extras for {order_ts}: {extras}")
         sys.stdout.flush()
         
@@ -576,6 +579,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         print(f"📤 Sending updated Slack message with remaining_minutes = {remaining}")
         print(f"🧾 Updated blocks:\n{updated_blocks}")
         print(f"🧪 Sending to Slack with FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
+        print(f"🧭 Preparing to push update to Slack for ts={order_ts} — countdown: {remaining}")
         safe_chat_update(client, order_channel, order_ts, "Order update: Countdown updated", updated_blocks)
         print("✅ Countdown block update pushed to Slack")
         print(f"📣 client.chat_update call completed for order {order_ts}")
@@ -1460,6 +1464,9 @@ def handle_modal_submission(ack, body, client):
             user_id, gifted_id, drink, location,
             notes, karma_cost
         )).start()
+
+        print(f"🧭 Countdown scheduled for /order — ts: {order_ts}, channel: {order_channel}, user_id: {user_id}")
+        print(f"🧭 Initial extras: {order_extras.get(order_ts)}")
         
         order_data["location"] = location or "UNKNOWN"
         order_data["notes"] = notes or "NONE"
