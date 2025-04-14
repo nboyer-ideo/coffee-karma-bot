@@ -11,7 +11,6 @@ import datetime
 import copy
 import re
 import csv
-from utils import resolve_real_name
 from sheet import (
     add_karma,
     get_karma,
@@ -307,7 +306,7 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
 def format_order_message(order_data):
     print(f"🧪 ENTERING format_order_message with order_id={order_data.get('order_id', '[MISSING]')}")
     if not order_data.get("order_id"):
-        pass
+        order_data["order_id"] = order_ts
     print(f"📨 format_order_message called with order_data: {order_data}")
     print(f"🧪 format_order_message FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
     border_top = "+------------------------------------------------+"
@@ -345,7 +344,7 @@ def format_order_message(order_data):
         lines.append(f'|               WAITING TO BE DELIVERED          |')
     else:
         total_blocks = 20
-        remaining = order_data.get("remaining_minutes", 10)
+        remaining = int(order_data.get("remaining_minutes", 10))
         filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
         empty_blocks = total_blocks - filled_blocks
         progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
@@ -517,29 +516,28 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
 
         current_message = client.conversations_history(channel=order_channel, latest=order_ts, inclusive=True, limit=1)
         # order_ts = ts
-        order_data = {
-            "order_id": order_ts,
-            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "requester_id": user_id,
-            "requester_real_name": extras.get("requester_real_name") or "",
-            "runner_id": "",
-            "runner_real_name": "",
-            "recipient_id": gifted_id if gifted_id else user_id,
-            "recipient_real_name": extras.get("recipient_real_name") or "",
-            "drink": drink,
-            "location": location,
-            "notes": notes,
-            "karma_cost": karma_cost,
-            "status": extras.get("status", "ordered"),
-            "bonus_multiplier": "",
-            "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "time_claimed": "",
-            "time_delivered": "",
-            "remaining_minutes": remaining,
-            "claimed_by": extras.get("claimed_by", ""),
-            "runner_real_name": extras.get("runner_real_name", ""),
-            "delivered_by": extras.get("delivered_by", "")
-        }
+    order_data = {
+        "order_id": order_ts,
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "requester_id": user_id,
+        "requester_real_name": extras.get("requester_real_name") or "",
+        "runner_id": "",
+        "runner_real_name": "",
+        "recipient_id": gifted_id if gifted_id else user_id,
+        "recipient_real_name": extras.get("recipient_real_name") or "",
+        "drink": drink,
+        "location": location,
+        "notes": notes,
+        "karma_cost": karma_cost,
+        "status": extras.get("status", "ordered"),
+        "bonus_multiplier": "",
+        "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "time_claimed": "",
+        "time_delivered": "",
+        "claimed_by": extras.get("claimed_by", ""),
+        "runner_real_name": extras.get("runner_real_name", ""),
+        "delivered_by": extras.get("delivered_by", "")
+    }
         # Ensure real names are resolved if missing or defaulting to Slack IDs
         if not order_data.get("requester_real_name") or order_data["requester_real_name"].startswith("U0"):
             order_data["requester_real_name"] = resolve_real_name(user_id, client)
