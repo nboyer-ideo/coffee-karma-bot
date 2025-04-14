@@ -315,14 +315,15 @@ def format_order_message(order_data):
     current_id = str(order_data.get("order_id", "")).strip()
     if " " in str(current_id) or ":" in str(current_id):
         raise RuntimeError(f"Invalid order_id format detected during countdown: {current_id}")
-    if not current_id or current_id.strip() == "":
-        print("⚠️ [format_order_message] Missing or blank order_id — attempting fallback from known TS")
+    if not current_id or current_id.strip() == "" or ":" in current_id or " " in current_id:
+        print("⚠️ [format_order_message] Missing or invalid order_id — attempting fallback from known TS")
         possible_ts = order_data.get("ts") or order_data.get("timestamp")
         fallback_id = order_extras.get(possible_ts, {}).get("order_id") if possible_ts else None
-        if not fallback_id:
-            fallback_id = str(possible_ts) if possible_ts else f"unknown-{datetime.datetime.now().timestamp()}"
-        order_data["order_id"] = fallback_id
-        print(f"✅ [format_order_message] order_id fallback assigned: {fallback_id}")
+        if fallback_id and ":" not in fallback_id and " " not in fallback_id:
+            order_data["order_id"] = fallback_id
+        else:
+            order_data["order_id"] = str(possible_ts) if possible_ts else f"unknown-{datetime.datetime.now().timestamp()}"
+        print(f"✅ [format_order_message] order_id fallback assigned: {order_data['order_id']}")
     else:
         order_data["order_id"] = current_id.strip()
         print(f"🧷 [format_order_message] Using provided order_id: {current_id.strip()}")
@@ -558,13 +559,14 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             "runner_real_name": extras.get("runner_real_name", ""),
             "delivered_by": extras.get("delivered_by", "")
         }
-        fallback_candidate = order_extras.get(order_ts, {}).get("order_id")
-        if fallback_candidate:
-            print(f"✅ Using fallback order_id from extras: {fallback_candidate}")
-            order_data["order_id"] = fallback_candidate
-        else:
-            print(f"⚠️ order_id missing — falling back to TS: {order_ts}")
-            order_data["order_id"] = order_ts
+        if not order_data.get("order_id") or ":" in str(order_data["order_id"]) or " " in str(order_data["order_id"]):
+            fallback_candidate = order_extras.get(order_ts, {}).get("order_id")
+            if fallback_candidate and ":" not in fallback_candidate and " " not in fallback_candidate:
+                order_data["order_id"] = fallback_candidate
+                print(f"✅ Using fallback order_id from extras: {fallback_candidate}")
+            else:
+                print(f"⚠️ order_id missing or invalid — falling back to TS: {order_ts}")
+                order_data["order_id"] = order_ts
         # Ensure real names are resolved if missing or defaulting to Slack IDs
         if not order_data.get("requester_real_name") or order_data["requester_real_name"].startswith("U0"):
             order_data["requester_real_name"] = resolve_real_name(user_id, client)
@@ -1021,6 +1023,9 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
         f"<@{user_id}> IS READY TO DELIVER — {remaining} MINUTES LEFT.",
         blocks
     )
+    if ts not in order_extras:
+        order_extras[ts] = {}
+    order_extras[ts]["order_id"] = ts
 
         # 🔁 Always schedule next tick if countdown is not done
     import threading
@@ -1321,15 +1326,27 @@ def handle_open_order_modal_for_runner(ack, body, client):
 @app.view("koffee_request_modal")
 def handle_modal_submission(ack, body, client):
     global runner_offer_metadata
-    from sheet import log_order_to_sheet
     ack()
+    from sheet import log_order_to_sheet
     import datetime
     user_id = body["user"]["id"]
     print("📥 [DEBUG] In submission handler, view raw payload:")
     print(f"🔁 Entered handle_modal_submission for order from {user_id} at {datetime.datetime.now()}")
+    order_id = str(datetime.datetime.now().timestamp())
     order_data = {
         "drink": "",  # Initialize empty drink to prevent KeyError
     }
+    order_extras[order_id] = {
+        'active': True,
+        'status': 'ordered',
+        'order_id': order_id,
+        'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'ts': body.get("container", {}).get("message_ts", "")
+    }
+    order_data["order_id"] = order_id
+    if order_id not in order_extras:
+        order_extras[order_id] = {}
+    order_extras[order_id]["order_id"] = order_id
     private_metadata_raw = body["view"].get("private_metadata", "{}")
     try:
         metadata = json.loads(private_metadata_raw)
@@ -1444,6 +1461,13 @@ def handle_modal_submission(ack, body, client):
         
         # Mark the runner offer as fulfilled
         if runner_id:
+            if runner_id and order_id in order_extras:
+                print(f"🛠 Updating existing /deliver row with details from /order modal — order_id: {order_id}")
+                from sheet import update_order_status
+                update_order_status(
+                    order_id,
+                    order_data=order_data
+                )
             if runner_id not in runner_offer_claims:
                 runner_offer_claims[runner_id] = {}
             runner_offer_claims[runner_id]["fulfilled"] = True
