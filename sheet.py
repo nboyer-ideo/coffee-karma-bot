@@ -206,6 +206,11 @@ def log_order_to_sheet(order_data):
     if order_data.get("status") == "claimed":
         print("ℹ️ Skipping log_order_to_sheet for claimed status.")
         return
+    # Check if order already exists in the sheet
+    existing_order = fetch_order_data(order_data.get("order_id", ""))
+    if existing_order:
+        print(f"ℹ️ Order {order_data['order_id']} already exists. Skipping append.")
+        return
     if order_data.get("status") not in ["ordered", "offered"]:
         print("ℹ️ Order status is not eligible for initial logging; skipping.")
         return

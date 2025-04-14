@@ -1328,29 +1328,38 @@ def handle_modal_submission(ack, body, client):
     global runner_offer_metadata
     ack()
     from sheet import log_order_to_sheet
+    # Insert update_order_status block before logging or Slack updates
+    from sheet import update_order_status
+    
+    if parent_ts:
+        update_order_status(
+            order_id=parent_ts,
+            status="claimed",
+            claimed_time=order_data["time_claimed"],
+            requester_name=order_data.get("requester_real_name", ""),
+            recipient_name=order_data.get("recipient_real_name", ""),
+            order_data=order_data
+        )
+
     import datetime
     user_id = body["user"]["id"]
     meta = json.loads(body["view"]["private_metadata"])
     generated_ts = str(datetime.datetime.now().timestamp())
     parent_ts = meta.get("parent_ts", "")
 
-    order_data = {}
-    order_data["order_id"] = parent_ts if parent_ts else generated_ts
+    parent_ts = meta.get("parent_ts", "")  # this is the ts of the /deliver post
+    channel_id = meta.get("channel_id", "")
+    order_id = parent_ts if parent_ts else generated_ts
+    order_data["order_id"] = order_id
     order_data["status"] = "claimed"
     order_data["time_claimed"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    order_data["status"] = "claimed"
-    order_data["time_claimed"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    order_data["status"] = "claimed"
-    order_data["time_claimed"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    parent_ts = meta.get("parent_ts")  # this is the ts of the /deliver post
-    channel_id = meta.get("channel_id")
-    order_data["order_id"] = parent_ts if parent_ts else str(datetime.datetime.now().timestamp())
+    order_data = {
+        "order_id": order_id,
+        "status": "claimed",
+        "time_claimed": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
     print("📥 [DEBUG] In submission handler, view raw payload:")
     print(f"🔁 Entered handle_modal_submission for order from {user_id} at {datetime.datetime.now()}")
-    order_id = parent_ts or str(datetime.datetime.now().timestamp())
-    order_data = {
-        "drink": "",  # Initialize empty drink to prevent KeyError
-    }
     order_extras[order_id] = {
         'active': True,
         'status': 'ordered',
@@ -1427,18 +1436,15 @@ def handle_modal_submission(ack, body, client):
         order_data["requester_real_name"] = resolve_real_name(user_id, client)
         order_data["recipient_id"] = user_id
         order_data["recipient_real_name"] = resolve_real_name(user_id, client)
-        order_data["status"] = "claimed"
         order_data["timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         order_data["claimed_by"] = existing.get("runner_name") or existing.get("runner_real_name") or order_data.get("runner_id")
         order_data["runner_name"] = existing.get("runner_name") or resolve_real_name(existing.get("runner_id"), client)
         order_data["runner_real_name"] = order_data["runner_name"]
-        order_data["status"] = "claimed"
         order_data["ts"] = order_data["order_id"]
         order_data["channel"] = os.environ.get("KOFFEE_KARMA_CHANNEL")
         countdown_timers[order_data["order_id"]] = 10
         order_data["runner_id"] = existing.get("runner_id")
         order_data["initiated_by"] = "runner"
-        order_data["time_claimed"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         order_extras[order_data["order_id"]] = {"active": False, "status": "claimed"}
         # Update Slack message and log order to sheet
         blocks = format_order_message(order_data)
