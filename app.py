@@ -2022,6 +2022,10 @@ def handle_runner_settings_modal(ack, body, client):
     print("📥 /deliver modal submission received")
     from sheet import log_order_to_sheet
     import datetime
+
+    global runner_offer_metadata
+    if 'runner_offer_metadata' not in globals():
+        runner_offer_metadata = {}
     
     user_id = body["user"]["id"]
     values = body["view"]["state"]["values"]
@@ -2135,17 +2139,6 @@ def handle_runner_settings_modal(ack, body, client):
     
     msg = "✅ Your delivery offer is now live."
     client.chat_postMessage(channel=user_id, text=msg)
-
-    placeholder = client.chat_postMessage(
-        channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-        text="...",
-        blocks=[]
-    )
-    ts = placeholder["ts"]
-    channel = placeholder["channel"]
-
-    order_ts = ts
-    order_channel = channel
 
     blocks = [
         {
