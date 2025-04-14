@@ -1564,7 +1564,7 @@ def handle_modal_submission(ack, body, client):
         )
         return
     order_data = {
-        "order_id": "",
+        "order_id": order_ts,
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "initiated_by": "runner" if runner_id else "requester",
         "requester_id": user_id,
