@@ -1331,7 +1331,18 @@ def handle_modal_submission(ack, body, client):
     import datetime
     user_id = body["user"]["id"]
     meta = json.loads(body["view"]["private_metadata"])
+    generated_ts = str(datetime.datetime.now().timestamp())
+    parent_ts = meta.get("parent_ts", "")
+    order_data["order_id"] = parent_ts if parent_ts else generated_ts
+    order_data["status"] = "claimed"
+    order_data["time_claimed"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    order_data["status"] = "claimed"
+    order_data["time_claimed"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    order_data["status"] = "claimed"
+    order_data["time_claimed"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     parent_ts = meta.get("parent_ts")  # this is the ts of the /deliver post
+    channel_id = meta.get("channel_id")
+    order_data["order_id"] = parent_ts if parent_ts else str(datetime.datetime.now().timestamp())
     print("📥 [DEBUG] In submission handler, view raw payload:")
     print(f"🔁 Entered handle_modal_submission for order from {user_id} at {datetime.datetime.now()}")
     order_id = parent_ts or str(datetime.datetime.now().timestamp())
