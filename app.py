@@ -306,10 +306,13 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
 def format_order_message(order_data):
     print(f"🚨 format_order_message invoked — order_id: {order_data.get('order_id')}")
     if not order_data.get("order_id"):
-        print("⚠️ Missing order_id in order_data — assigning fallback from extras if possible")
+        print("⚠️ Missing order_id in order_data — assigning fallback from order_extras or using order_ts")
         possible_ts = order_data.get("ts") or order_data.get("timestamp")
-        if possible_ts:
-            order_data["order_id"] = str(possible_ts)
+        fallback_id = order_extras.get(possible_ts, {}).get("order_id") if possible_ts else None
+        if not fallback_id:
+            fallback_id = str(possible_ts or "[MISSING]")
+        order_data["order_id"] = fallback_id
+        print(f"✅ Fallback order_id set to: {order_data['order_id']}")
     print(f"🧪 ENTERING format_order_message with order_id={order_data.get('order_id', '[MISSING]')}")
     print(f"📨 format_order_message called with order_data: {order_data}")
     print(f"🧪 format_order_message FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
