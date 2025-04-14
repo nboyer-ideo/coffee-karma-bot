@@ -551,6 +551,8 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
             order_data["order_id"] = str(order_ts)
             order_extras[order_ts]["order_id"] = order_data["order_id"]
             print(f"✅ Gifted fallback order_id set to: {order_data['order_id']}")
+            if order_ts in order_extras:
+                order_extras[order_ts]["order_id"] = order_data["order_id"]
         # Ensure real names are resolved if missing or defaulting to Slack IDs
         if not order_data.get("requester_real_name") or order_data["requester_real_name"].startswith("U0"):
             order_data["requester_real_name"] = resolve_real_name(user_id, client)
@@ -579,7 +581,7 @@ def update_countdown(client, remaining, order_ts, order_channel, user_id, gifted
         order_extras[order_ts]["remaining_minutes"] = remaining
  
         print(f"🧪 Calling format_order_message with order_id={order_data.get('order_id', '[MISSING]')}")
-        # (order_id now guaranteed to be valid by fallback check)
+        order_data["order_id"] = order_extras.get(order_ts, {}).get("order_id", order_ts)
         order_data["remaining_minutes"] = remaining
         updated_blocks = format_order_message(order_data)
  
