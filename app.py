@@ -1910,6 +1910,7 @@ def handle_modal_submission(ack, body, client):
             )
             return
 
+        from sheet import log_order_to_sheet
         print(f"🧪 [DEBUG] Committed order_id: {order_data['order_id']}")
         print(f"🧪 [DEBUG] Should update ts = {order_ts}, channel = {order_channel}")
         print(f"🧪 [DEBUG] Logging order_data: {json.dumps(order_data, indent=2)}")
