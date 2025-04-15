@@ -1440,22 +1440,14 @@ def handle_modal_submission(ack, body, client):
         order_extras[order_id] = {}
     order_extras[order_id]["order_id"] = order_id
 
-    # 🧱 Decode metadata BEFORE using it
-    private_metadata_raw = body["view"].get("private_metadata", "{}")
-    try:
-        metadata = json.loads(private_metadata_raw)
-    except json.JSONDecodeError:
-        print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
-        metadata = {}
-
-    source_order_id = metadata.get("source_order_id", "")
-    order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")  # 🛠️ Add this line
+    order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
 
     if source_order_id:
-        print(f"🔁 Updating original runner message at ts={source_order_id}")
+        print(f"🔁 Overriding order_id with source_order_id: {source_order_id}")
+        order_data["order_id"] = source_order_id
+        order_ts = source_order_id
         blocks = format_order_message(order_data)
         safe_chat_update(client, order_channel, source_order_id, "Order update: Claimed", blocks)
-        order_ts = source_order_id
     else:
         response = client.chat_postMessage(
             channel=order_channel,
@@ -1658,8 +1650,6 @@ def handle_modal_submission(ack, body, client):
     except json.JSONDecodeError:
         print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
         metadata = {}
-
-    source_order_id = metadata.get("source_order_id", "")
 
     location = metadata.get("location", "")
     runner_id = metadata.get("runner_id", "")
