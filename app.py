@@ -756,7 +756,6 @@ def handle_claim_order(ack, body, client):
             order_extras[order_id] = {}
         order_extras[order_id]["status"] = "claimed"
         order_extras[order_id]["active"] = False
-        from app import format_order_message
         blocks = format_order_message(order_data)
         print(f"🧪 [DEBUG] Final blocks length: {len(blocks)} — intended update to ts={order_data['order_id']}")
         safe_chat_update(client, channel, ts, "Order update: Order claimed", blocks)
@@ -1455,8 +1454,8 @@ def handle_modal_submission(ack, body, client):
 
     if source_order_id:
         print(f"🔁 Updating original runner message at ts={source_order_id}")
-    from app import format_order_message
-    blocks = format_order_message(order_data)
+        from app import format_order_message
+        blocks = format_order_message(order_data)
         safe_chat_update(client, order_channel, source_order_id, "Order update: Claimed", blocks)
         order_ts = source_order_id
     else:
