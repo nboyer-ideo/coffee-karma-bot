@@ -1,6 +1,7 @@
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
 from flask import Flask, request
+from flask import jsonify
 import schedule
 import time
 import random
@@ -1043,8 +1044,6 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
     if remaining == 1:
         print(f"⚠️ WARNING: This countdown will end after this tick. Watch for expiration.")
 
-from flask import jsonify
-
 @app.command("/redeem")
 def handle_redeem(ack, body, client):
     ack()
@@ -1454,7 +1453,6 @@ def handle_modal_submission(ack, body, client):
 
     if source_order_id:
         print(f"🔁 Updating original runner message at ts={source_order_id}")
-        from app import format_order_message
         blocks = format_order_message(order_data)
         safe_chat_update(client, order_channel, source_order_id, "Order update: Claimed", blocks)
         order_ts = source_order_id
@@ -1867,9 +1865,7 @@ def handle_modal_submission(ack, body, client):
         order_data["recipient_real_name"] = order_data["requester_real_name"]
         order_data["status"] = "ordered"
         order_data["time_ordered"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        from app import format_order_message, safe_chat_update  # if not already at the top
-        
+                
         print(f"🧪 [DEBUG] Committed order_id: {order_id}")
         print(f"🧪 [DEBUG] Should update ts = {order_ts}, channel = {order_channel}")
         print(f"🧪 [DEBUG] Logging order_data: {json.dumps(order_data, indent=2)}")
