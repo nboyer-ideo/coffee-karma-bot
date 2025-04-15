@@ -319,10 +319,14 @@ def format_order_message(order_data):
         print("⚠️ [format_order_message] Missing or invalid order_id — attempting fallback from known TS")
         possible_ts = order_data.get("ts") or order_data.get("timestamp")
         fallback_id = order_extras.get(possible_ts, {}).get("order_id") if possible_ts else None
+        # ⛑️ Only assign fallback if it's clean
         if fallback_id and ":" not in fallback_id and " " not in fallback_id:
             order_data["order_id"] = fallback_id
+        elif str(possible_ts).replace('.', '', 1).isdigit():
+            # Use timestamp as string if it's numeric-ish
+            order_data["order_id"] = str(possible_ts)
         else:
-            order_data["order_id"] = str(possible_ts) if possible_ts else f"unknown-{datetime.datetime.now().timestamp()}"
+            order_data["order_id"] = f"fallback-{int(datetime.datetime.now().timestamp())}"
         print(f"✅ [format_order_message] order_id fallback assigned: {order_data['order_id']}")
     else:
         order_data["order_id"] = current_id.strip()
