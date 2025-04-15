@@ -1449,13 +1449,14 @@ def handle_modal_submission(ack, body, client):
         print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
         metadata = {}
 
-    # ✅ Now it's safe to use metadata
     source_order_id = metadata.get("source_order_id", "")
+    order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")  # 🛠️ Add this line
+
     if source_order_id:
         print(f"🔁 Updating original runner message at ts={source_order_id}")
         blocks = format_order_message(order_data)
         safe_chat_update(client, order_channel, source_order_id, "Order update: Claimed", blocks)
-        order_ts = source_order_id  # Ensure it's reused throughout
+        order_ts = source_order_id
     else:
         response = client.chat_postMessage(
             channel=order_channel,
