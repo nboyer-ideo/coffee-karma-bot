@@ -1344,27 +1344,24 @@ def handle_modal_submission(ack, body, client):
 
     user_id = body["user"]["id"]
 
-    # Safely parse private_metadata
     private_metadata_raw = body["view"].get("private_metadata", "{}")
     try:
         metadata = json.loads(private_metadata_raw)
     except json.JSONDecodeError:
         print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
         metadata = {}
-
     print(f"📦 [DEBUG] Extracted metadata: {metadata}")
 
-    # You can now safely use metadata anywhere below
-    generated_ts = str(datetime.datetime.now().timestamp())
+    # Use metadata here now that it's defined
     parent_ts = metadata.get("parent_ts", "")
     channel_id = metadata.get("channel_id", "")
+    generated_ts = str(datetime.datetime.now().timestamp())
     order_id = parent_ts if parent_ts else generated_ts
 
     source_order_id = metadata.get("source_order_id", "")
     location = metadata.get("location", "")
     runner_id = metadata.get("runner_id", "")
     mode = metadata.get("mode", "order")
-
     print(f"📦 [DEBUG] Extracted metadata: location={location}, runner_id={runner_id}, mode={mode}")
 
     
