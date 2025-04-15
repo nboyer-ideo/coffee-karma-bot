@@ -2126,6 +2126,9 @@ def handle_modal_submission(ack, body, client):
         now = datetime.datetime.now()
         if existing_claim:
             claim_info = existing_claim
+            import json
+            if isinstance(claim_info, str):
+                claim_info = json.loads(claim_info)
             claim_time = claim_info.get("timestamp")
             is_expired = (now - claim_time).total_seconds() > 900  # 15 minutes
             is_delivered = claim_info.get("delivered", False)
