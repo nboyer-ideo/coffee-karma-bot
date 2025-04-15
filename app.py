@@ -1174,7 +1174,7 @@ def build_order_modal(trigger_id, runner_id="", selected_location="", source_ord
                 "location": selected_location,
                 **({"runner_id": runner_id} if runner_id else {}),
                 **({"source_order_id": source_order_id} if source_order_id else {})
-            })
+            }),
             "blocks": [
                 { 
                     "type": "input",
