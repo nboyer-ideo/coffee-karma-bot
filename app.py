@@ -1345,8 +1345,9 @@ def handle_modal_submission(ack, body, client):
         "time_claimed": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
     
-    from sheet import update_order_status
     if parent_ts:
+        print("🧾 [DEBUG] update_order_status invoked because parent_ts is present")
+        from sheet import update_order_status
         update_order_status(
             order_id=parent_ts,
             status="claimed",
@@ -1355,6 +1356,8 @@ def handle_modal_submission(ack, body, client):
             recipient_name=order_data.get("recipient_real_name", ""),
             order_data=order_data
         )
+        print("🧾 [DEBUG] Skipping log_order_to_sheet because update_order_status ran")
+        return
 
     print("📥 [DEBUG] In submission handler, view raw payload:")
     print(f"🔁 Entered handle_modal_submission for order from {user_id} at {datetime.datetime.now()}")
@@ -1389,6 +1392,14 @@ def handle_modal_submission(ack, body, client):
     location = metadata.get("location", "")
     runner_id = metadata.get("runner_id", "")
     mode = metadata.get("mode", "order")
+    if runner_id in runner_offer_metadata:
+        order_ts = runner_offer_metadata[runner_id]["ts"]
+        order_channel = runner_offer_metadata[runner_id]["channel"]
+        print(f"🧠 Using original runner message — order_ts: {order_ts}, order_channel: {order_channel}")
+    else:
+        print("⚠️ runner_offer_metadata missing — fallback to raw runner_id")
+        order_ts = runner_id
+        order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL")
     print(f"🧪 [DEBUG] handle_modal_submission mode={mode}, runner_id={runner_id}")
     if mode == "order" and runner_id:
         order_data["order_id"] = runner_id  # runner_id holds the original /deliver ts
@@ -1710,16 +1721,25 @@ def handle_modal_submission(ack, body, client):
 
         drink = drink_detail.strip()
 
-        placeholder = client.chat_postMessage(
-            channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
-            text="...",  # Temporary placeholder to be overwritten
-            blocks=[]
-        )
-        print("DEBUG: /order modal posted:", placeholder)
-        ts = placeholder["ts"]
-        channel = placeholder["channel"]
-        order_ts = ts
-        order_channel = channel
+        if not parent_ts:
+            placeholder = client.chat_postMessage(
+                channel=os.environ.get("KOFFEE_KARMA_CHANNEL"),
+                text="...",  # Temporary placeholder to be overwritten
+                blocks=[]
+            )
+            ts = placeholder["ts"]
+            channel = placeholder["channel"]
+            order_ts = ts
+            order_channel = channel
+            print(f"🧪 [DEBUG] Assigned order_ts = {order_ts}")
+            print(f"🧪 [DEBUG] Assigned order_channel = {order_channel}")
+        else:
+            order_ts = parent_ts
+            order_channel = channel_id
+            print(f"🔁 Reusing existing Slack message: order_ts={order_ts}, order_channel={order_channel}")
+            print(f"🧪 [DEBUG] Assigned order_ts = {order_ts}")
+            print(f"🧪 [DEBUG] Assigned order_channel = {order_channel}")
+
         order_extras[order_ts] = {}
         order_extras[order_ts]["active"] = True
         order_extras[order_ts]["status"] = "ordered"
