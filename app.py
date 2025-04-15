@@ -1008,7 +1008,7 @@ def update_ready_countdown(client, remaining, ts, channel, user_id, original_tot
                         "text": "ORDER NOW",
                         "emoji": True
                     },
-                    "value": json.dumps({"runner_id": user_id})
+                    "value": json.dumps({"runner_id": user_id, "source_order_id": ts})
                 },
                 {
                     "type": "button",
@@ -1350,6 +1350,7 @@ def handle_modal_submission(ack, body, client):
     except json.JSONDecodeError:
         print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
         metadata = {}
+    print(f"📦 [DEBUG] Extracted metadata: {metadata}")
     
     source_order_id = metadata.get("source_order_id", "")
     location = metadata.get("location", "")
@@ -2693,17 +2694,20 @@ def handle_runner_settings_modal(ack, body, client):
 @app.action("open_order_modal_for_runner")
 def handle_open_order_modal_for_runner(ack, body, client):
     ack()
-    import json
+    user_id = body["user"]["id"]
+    trigger_id = body["trigger_id"]
+    try:
+        payload = json.loads(body["actions"][0]["value"])
+        runner_id = payload.get("runner_id", "")
+        source_order_id = payload.get("source_order_id", "")
+    except Exception as e:
+        print("⚠️ Failed to parse modal value payload:", e)
+        runner_id = user_id
+        source_order_id = ""
 
-    # Parse runner ID from button payload
-    runner_info = json.loads(body["actions"][0]["value"])
-    runner_id = runner_info.get("runner_id", "")
-
-    # Open the shared order modal with runner_id passed in
-    client.views_open(
-        trigger_id=body["trigger_id"],
-        view=build_order_modal(trigger_id=body["trigger_id"], runner_id=runner_id)["view"]
-    )
+    selected_location = last_selected_location.get(user_id, "")
+    modal = build_order_modal(trigger_id, runner_id=runner_id, selected_location=selected_location, source_order_id=source_order_id)
+    client.views_open(trigger_id=trigger_id, view=modal["view"])
 
 if __name__ == "__main__":
     flask_app.run(host="0.0.0.0", port=10000)
