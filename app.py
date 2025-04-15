@@ -909,12 +909,13 @@ def handle_modal_submission(view, client, channel):
     meta = json.loads(view.get("private_metadata", "{}"))
     source_order_id = meta.get("source_order_id", "")
     order_ts = source_order_id or str(datetime.datetime.now().timestamp())
+    order_channel = os.environ.get("KOFFEE_KARMA_CHANNEL", "")
     # Use source_order_id as order_id if provided, otherwise fallback to order_ts
     order_data = {}  # Build order_data from view submission as needed
     order_data["order_id"] = source_order_id or order_ts
 
     # Replace terminal chat_postMessage with safe_chat_update to update the existing message
-    safe_chat_update(client, channel, source_order_id, "Order update: Drop claimed", format_order_message(order_data))
+    safe_chat_update(client, order_channel, order_ts, "Order update: Drop claimed", format_order_message(order_data))
 
 def update_ready_countdown(client, remaining, ts, channel, user_id, original_total_time):
     print(f"🕵️ Entered update_ready_countdown: remaining={remaining}, ts={ts}, user_id={user_id}")
