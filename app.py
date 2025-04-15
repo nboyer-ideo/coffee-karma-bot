@@ -7,8 +7,8 @@ import time
 import random
 import requests
 import os
-import json
 import datetime
+import json
 import copy
 import re
 import csv
@@ -691,6 +691,7 @@ def handle_claim_order(ack, body, client):
     print("🎯 claim_order button clicked!")
     ack()
     import datetime
+    import json
     from sheet import update_order_status
     order_id = body["actions"][0]["value"]
     from sheet import fetch_order_data
@@ -1340,7 +1341,7 @@ def handle_modal_submission(ack, body, client):
 
     import datetime
     user_id = body["user"]["id"]
-    meta = json.loads(body["view"]["private_metadata"])
+    # meta = json.loads(body["view"]["private_metadata"])
     
     generated_ts = str(datetime.datetime.now().timestamp())
     parent_ts = meta.get("parent_ts", "")
@@ -1354,6 +1355,7 @@ def handle_modal_submission(ack, body, client):
         print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
         metadata = {}
     print(f"📦 [DEBUG] Extracted metadata: {metadata}")
+    meta = metadata
     
     source_order_id = metadata.get("source_order_id", "")
     location = metadata.get("location", "")
