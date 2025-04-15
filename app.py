@@ -21,8 +21,181 @@ from sheet import (
     log_order_to_sheet,
     fetch_order_data,
     mark_code_redeemed,
-    format_order_message,
 )
+
+def format_order_message(order_data):
+    print(f"🚨 format_order_message invoked — order_id: {order_data.get('order_id')}")
+    print(f"🧩 Raw input keys: {list(order_data.keys())}")
+    print(f"🧩 Raw order_id type: {type(order_data.get('order_id'))}, value: {order_data.get('order_id')}")
+    print(f"🧩 Fallback check? missing: {not order_data.get('order_id')}, space: {' ' in str(order_data.get('order_id', ''))}, colon: {':' in str(order_data.get('order_id', ''))}")
+    current_id = str(order_data.get("order_id", "")).strip()
+    if " " in str(current_id) or ":" in str(current_id):
+        raise RuntimeError(f"Invalid order_id format detected during countdown: {current_id}")
+    if not current_id or current_id.strip() == "" or ":" in current_id or " " in current_id:
+        print("⚠️ [format_order_message] Missing or invalid order_id — attempting fallback from known TS")
+        possible_ts = order_data.get("ts") or order_data.get("timestamp")
+        fallback_id = order_extras.get(possible_ts, {}).get("order_id") if possible_ts else None
+        # ⛑️ Only assign fallback if it's clean
+        if fallback_id and ":" not in fallback_id and " " not in fallback_id:
+            order_data["order_id"] = fallback_id
+        elif str(possible_ts).replace('.', '', 1).isdigit():
+            # Use timestamp as string if it's numeric-ish
+            order_data["order_id"] = str(possible_ts)
+        else:
+            order_data["order_id"] = f"fallback-{int(datetime.datetime.now().timestamp())}"
+        print(f"✅ [format_order_message] order_id fallback assigned: {order_data['order_id']}")
+    else:
+        order_data["order_id"] = current_id.strip()
+        print(f"🧷 [format_order_message] Using provided order_id: {current_id.strip()}")
+    print(f"🧪 ENTERING format_order_message with order_id={order_data.get('order_id', '[MISSING]')}")
+    print(f"📨 format_order_message called with order_data: {order_data}")
+    print(f"🧪 format_order_message FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
+    border_top = "+------------------------------------------------+"
+    border_mid = "+------------------------------------------------+"
+    border_bot = "+------------------------------------------------+"
+    lines = [
+        border_top,
+        *wrap_line("", "☠ DRINK ORDER ☠", width=50),
+    ]
+    lines.append(border_mid)
+    lines.append(f'| DROP ID:      {order_data["order_id"]:<32} |')
+    requester_display = order_data.get("requester_real_name", "")
+    recipient_display = order_data.get("recipient_real_name", "")
+    lines.append(f'| FROM:         {requester_display.upper():<32} |')
+    lines.append(f'| TO:           {recipient_display.upper():<32} |')
+    lines.append(f'| DRINK:        {order_data["drink"].upper():<32} |')
+    lines.append(f'| LOCATION:     {order_data["location"].upper():<32} |')
+    lines.append(f'| NOTES:        {(order_data["notes"] or "NONE").upper():<32} |')
+    lines.append(border_mid)
+    lines.append(f'| REWARD:       {order_data["karma_cost"]} KARMA{" " * (32 - len(str(order_data["karma_cost"]) + " KARMA"))} |')
+    if order_data.get("delivered_by"):
+        lines.append(f'| STATUS:       COMPLETED {" " * 22} |')
+        lines.append(f'|               DELIVERED BY {order_data["delivered_by"].upper():<19} |')
+        lines.append("| ---------------------------------------------- |")
+        earned = order_data.get('karma_cost', 1) * int(order_data.get('bonus_multiplier', 1))
+        total = order_data.get('runner_karma', 0)
+        karma_line = f"+{earned} KARMA EARNED — TOTAL: {total} KARMA"
+        total_width = 46
+        karma_line_centered = karma_line.center(total_width)
+        lines.append(f"| {karma_line_centered} |")
+        lines.append("| ---------------------------------------------- |")
+    elif order_data.get("claimed_by"):
+        claimed_name = order_data.get("runner_real_name") or order_data.get("claimed_by", "")
+        lines.append(f'| STATUS:       CLAIMED BY {claimed_name.upper():<21} |')
+        lines.append(f'|               WAITING TO BE DELIVERED          |')
+    else:
+        total_blocks = 20
+        remaining = int(order_data.get("remaining_minutes", 10))
+        filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
+        empty_blocks = total_blocks - filled_blocks
+        progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
+        status_line = f'{order_data.get("remaining_minutes", 10)} MINUTES TO CLAIM'
+        lines.append(f'| STATUS:       {status_line:<32} |')
+        lines.append(f'|               {progress_bar:<32} |')
+    
+    # Only add call-to-action if order is not delivered
+    if not order_data.get("delivered_by"):
+        lines.append("| ---------------------------------------------- |")
+        if order_data.get("claimed_by"):
+            lines.append("|     ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓      |")
+        else:
+            lines.append("|      ↓ CLICK BELOW TO CLAIM THIS ORDER ↓       |")
+        lines.append("| ---------------------------------------------- |")
+    lines.append(border_bot)
+    lines += [
+        "| /ORDER        PLACE AN ORDER                   |",
+        "| /DELIVER      DELIVER ORDERS                   |",
+        "| /KARMA        CHECK YOUR KARMA                 |",
+        "| /LEADERBOARD  TOP KARMA EARNERS                |",
+        border_bot
+    ]
+ 
+    # Define button elements based on order claim status
+    elements = []
+    if order_data.get("delivered_by"):
+        pass  # Do not add any buttons
+    elif order_data.get("claimed_by"):
+        elements.append({
+            "type": "button",
+            "action_id": "mark_delivered",
+            "text": {
+                "type": "plain_text",
+                "text": "MARK AS DELIVERED",
+                "emoji": True
+            },
+            "style": "primary",
+            "value": order_data.get("order_id") or "unknown"
+        })
+    else:
+        elements.append({
+            "type": "button",
+            "action_id": "claim_order",
+            "text": {
+                "type": "plain_text",
+                "text": "CLAIM ORDER",
+                "emoji": True
+            },
+            "value": order_data.get("order_id") or "unknown"
+        })
+        elements.append({
+            "type": "button",
+            "action_id": "cancel_order",
+            "text": {
+                "type": "plain_text",
+                "text": "CANCEL",
+                "emoji": True
+            },
+            "style": "danger",
+            "value": f"{order_data['order_id']}|{order_data.get('requester_id')}"
+        })
+
+    # Insert corrected mini-map logic before constructing blocks
+    if order_data.get("location"):
+        mini_map = build_mini_map(order_data["location"])
+ 
+        # Add header for map panel
+        map_title = "+--------------------------+"
+        padded_map = [f"{line:<26}"[:26] for line in mini_map]
+        map_lines = [map_title, "|         LION MAP         |", map_title]
+        map_lines += [f"|{line}|" for line in padded_map]
+        map_lines.append("+--------------------------+")
+        map_legend = [
+            "| ✗ = DRINK LOCATION       |",
+            "| ☕ = CAFÉ                 |",
+            "| ▯ = ELEVATOR             |",
+            "| ≋ = BATHROOM             |",
+            "+--------------------------+"
+        ]
+        map_lines.extend(map_legend)
+ 
+        # Merge lines side-by-side
+        merged_lines = []
+        max_lines = max(len(lines), len(map_lines))
+        for i in range(max_lines):
+            left = lines[i] if i < len(lines) else " " * 50
+            right = map_lines[i] if i < len(map_lines) else ""
+            merged_lines.append(f"{left}  {right}")
+        lines = merged_lines
+
+    blocks = [
+        {
+            "type": "section",
+            "block_id": "order_text_block",
+            "text": {
+                "type": "mrkdwn",
+                "text": "```" + "\n".join(lines) + "```"
+            }
+        }
+    ]
+
+    if elements:
+        blocks.append({
+            "type": "actions",
+            "block_id": "buttons_block",
+            "elements": elements
+        })
+
+    return blocks
 
 last_selected_location = {}
 
@@ -307,180 +480,6 @@ def build_mini_map(location_name, coord_file="Room_Coordinates_Mapping_Table.jso
                 map_lines[y] = "".join(line)
                 print(f"🆗 map_lines[{y}] updated with '✗'")
     return map_lines
- 
-def format_order_message(order_data):
-    print(f"🚨 format_order_message invoked — order_id: {order_data.get('order_id')}")
-    print(f"🧩 Raw input keys: {list(order_data.keys())}")
-    print(f"🧩 Raw order_id type: {type(order_data.get('order_id'))}, value: {order_data.get('order_id')}")
-    print(f"🧩 Fallback check? missing: {not order_data.get('order_id')}, space: {' ' in str(order_data.get('order_id', ''))}, colon: {':' in str(order_data.get('order_id', ''))}")
-    current_id = str(order_data.get("order_id", "")).strip()
-    if " " in str(current_id) or ":" in str(current_id):
-        raise RuntimeError(f"Invalid order_id format detected during countdown: {current_id}")
-    if not current_id or current_id.strip() == "" or ":" in current_id or " " in current_id:
-        print("⚠️ [format_order_message] Missing or invalid order_id — attempting fallback from known TS")
-        possible_ts = order_data.get("ts") or order_data.get("timestamp")
-        fallback_id = order_extras.get(possible_ts, {}).get("order_id") if possible_ts else None
-        # ⛑️ Only assign fallback if it's clean
-        if fallback_id and ":" not in fallback_id and " " not in fallback_id:
-            order_data["order_id"] = fallback_id
-        elif str(possible_ts).replace('.', '', 1).isdigit():
-            # Use timestamp as string if it's numeric-ish
-            order_data["order_id"] = str(possible_ts)
-        else:
-            order_data["order_id"] = f"fallback-{int(datetime.datetime.now().timestamp())}"
-        print(f"✅ [format_order_message] order_id fallback assigned: {order_data['order_id']}")
-    else:
-        order_data["order_id"] = current_id.strip()
-        print(f"🧷 [format_order_message] Using provided order_id: {current_id.strip()}")
-    print(f"🧪 ENTERING format_order_message with order_id={order_data.get('order_id', '[MISSING]')}")
-    print(f"📨 format_order_message called with order_data: {order_data}")
-    print(f"🧪 format_order_message FROM: {order_data.get('requester_real_name')} TO: {order_data.get('recipient_real_name')}")
-    border_top = "+------------------------------------------------+"
-    border_mid = "+------------------------------------------------+"
-    border_bot = "+------------------------------------------------+"
-    lines = [
-        border_top,
-        *wrap_line("", "☠ DRINK ORDER ☠", width=50),
-    ]
-    lines.append(border_mid)
-    lines.append(f'| DROP ID:      {order_data["order_id"]:<32} |')
-    requester_display = order_data.get("requester_real_name", "")
-    recipient_display = order_data.get("recipient_real_name", "")
-    lines.append(f'| FROM:         {requester_display.upper():<32} |')
-    lines.append(f'| TO:           {recipient_display.upper():<32} |')
-    lines.append(f'| DRINK:        {order_data["drink"].upper():<32} |')
-    lines.append(f'| LOCATION:     {order_data["location"].upper():<32} |')
-    lines.append(f'| NOTES:        {(order_data["notes"] or "NONE").upper():<32} |')
-    lines.append(border_mid)
-    lines.append(f'| REWARD:       {order_data["karma_cost"]} KARMA{" " * (32 - len(str(order_data["karma_cost"]) + " KARMA"))} |')
-    if order_data.get("delivered_by"):
-        lines.append(f'| STATUS:       COMPLETED {" " * 22} |')
-        lines.append(f'|               DELIVERED BY {order_data["delivered_by"].upper():<19} |')
-        lines.append("| ---------------------------------------------- |")
-        earned = order_data.get('karma_cost', 1) * int(order_data.get('bonus_multiplier', 1))
-        total = order_data.get('runner_karma', 0)
-        karma_line = f"+{earned} KARMA EARNED — TOTAL: {total} KARMA"
-        total_width = 46
-        karma_line_centered = karma_line.center(total_width)
-        lines.append(f"| {karma_line_centered} |")
-        lines.append("| ---------------------------------------------- |")
-    elif order_data.get("claimed_by"):
-        claimed_name = order_data.get("runner_real_name") or order_data.get("claimed_by", "")
-        lines.append(f'| STATUS:       CLAIMED BY {claimed_name.upper():<21} |')
-        lines.append(f'|               WAITING TO BE DELIVERED          |')
-    else:
-        total_blocks = 20
-        remaining = int(order_data.get("remaining_minutes", 10))
-        filled_blocks = max(0, min(total_blocks, remaining * 2))  # 2 blocks per minute
-        empty_blocks = total_blocks - filled_blocks
-        progress_bar = "[" + ("█" * filled_blocks) + ("░" * empty_blocks) + "]"
-        status_line = f'{order_data.get("remaining_minutes", 10)} MINUTES TO CLAIM'
-        lines.append(f'| STATUS:       {status_line:<32} |')
-        lines.append(f'|               {progress_bar:<32} |')
-    
-    # Only add call-to-action if order is not delivered
-    if not order_data.get("delivered_by"):
-        lines.append("| ---------------------------------------------- |")
-        if order_data.get("claimed_by"):
-            lines.append("|     ↓ CLICK BELOW ONCE ORDER IS DROPPED ↓      |")
-        else:
-            lines.append("|      ↓ CLICK BELOW TO CLAIM THIS ORDER ↓       |")
-        lines.append("| ---------------------------------------------- |")
-    lines.append(border_bot)
-    lines += [
-        "| /ORDER        PLACE AN ORDER                   |",
-        "| /DELIVER      DELIVER ORDERS                   |",
-        "| /KARMA        CHECK YOUR KARMA                 |",
-        "| /LEADERBOARD  TOP KARMA EARNERS                |",
-        border_bot
-    ]
- 
-    # Define button elements based on order claim status
-    elements = []
-    if order_data.get("delivered_by"):
-        pass  # Do not add any buttons
-    elif order_data.get("claimed_by"):
-        elements.append({
-            "type": "button",
-            "action_id": "mark_delivered",
-            "text": {
-                "type": "plain_text",
-                "text": "MARK AS DELIVERED",
-                "emoji": True
-            },
-            "style": "primary",
-            "value": order_data.get("order_id") or "unknown"
-        })
-    else:
-        elements.append({
-            "type": "button",
-            "action_id": "claim_order",
-            "text": {
-                "type": "plain_text",
-                "text": "CLAIM ORDER",
-                "emoji": True
-            },
-            "value": order_data.get("order_id") or "unknown"
-        })
-        elements.append({
-            "type": "button",
-            "action_id": "cancel_order",
-            "text": {
-                "type": "plain_text",
-                "text": "CANCEL",
-                "emoji": True
-            },
-            "style": "danger",
-            "value": f"{order_data['order_id']}|{order_data.get('requester_id')}"
-        })
-
-    # Insert corrected mini-map logic before constructing blocks
-    if order_data.get("location"):
-        mini_map = build_mini_map(order_data["location"])
- 
-        # Add header for map panel
-        map_title = "+--------------------------+"
-        padded_map = [f"{line:<26}"[:26] for line in mini_map]
-        map_lines = [map_title, "|         LION MAP         |", map_title]
-        map_lines += [f"|{line}|" for line in padded_map]
-        map_lines.append("+--------------------------+")
-        map_legend = [
-            "| ✗ = DRINK LOCATION       |",
-            "| ☕ = CAFÉ                 |",
-            "| ▯ = ELEVATOR             |",
-            "| ≋ = BATHROOM             |",
-            "+--------------------------+"
-        ]
-        map_lines.extend(map_legend)
- 
-        # Merge lines side-by-side
-        merged_lines = []
-        max_lines = max(len(lines), len(map_lines))
-        for i in range(max_lines):
-            left = lines[i] if i < len(lines) else " " * 50
-            right = map_lines[i] if i < len(map_lines) else ""
-            merged_lines.append(f"{left}  {right}")
-        lines = merged_lines
-
-    blocks = [
-        {
-            "type": "section",
-            "block_id": "order_text_block",
-            "text": {
-                "type": "mrkdwn",
-                "text": "```" + "\n".join(lines) + "```"
-            }
-        }
-    ]
-
-    if elements:
-        blocks.append({
-            "type": "actions",
-            "block_id": "buttons_block",
-            "elements": elements
-        })
-
-    return blocks
 
 # Load secrets from .env
 from dotenv import load_dotenv
