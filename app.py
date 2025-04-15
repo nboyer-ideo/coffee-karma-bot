@@ -1385,7 +1385,7 @@ def handle_modal_submission(ack, body, client):
 
             existing_data["drink"] = drink
             existing_data["notes"] = notes
-            existing_data["location"] = meta.get("location", "UNKNOWN")
+            existing_data["location"] = metadata.get("location", "UNKNOWN")
             existing_data["karma_cost"] = karma_cost
 
             # THEN set up order_data
@@ -1448,7 +1448,7 @@ def handle_modal_submission(ack, body, client):
             "recipient_id": user_id,
             "recipient_real_name": resolve_real_name(user_id, client),
             "drink": drink,
-            "location": meta.get("location", "UNKNOWN"),
+            "location": metadata.get("location", "UNKNOWN"),
             "notes": notes,
             "karma_cost": karma_cost,
             "bonus_multiplier": "",
