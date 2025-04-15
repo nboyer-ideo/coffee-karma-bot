@@ -1468,7 +1468,7 @@ def handle_modal_submission(ack, body, client):
     runner_id = metadata.get("runner_id", "")
     mode = metadata.get("mode", "order")
 
-    if runner_id in runner_offer_metadata:
+    if not order_ts and runner_id in runner_offer_metadata:
         order_ts = runner_offer_metadata[runner_id]["ts"]
         order_channel = runner_offer_metadata[runner_id]["channel"]
         print(f"🧠 Using original runner message — order_ts: {order_ts}, order_channel: {order_channel}")
@@ -1597,7 +1597,7 @@ def handle_modal_submission(ack, body, client):
         order_data["order_id"] = str(datetime.datetime.now().timestamp())
     print(f"🧪 [DEBUG] Assigned order_id = {order_data['order_id']}")
     if mode == "order" and runner_id:
-        if runner_id in runner_offer_metadata:
+        if not order_ts and runner_id in runner_offer_metadata:
             order_data["order_id"] = runner_offer_metadata[runner_id]["ts"]
             order_data["channel"] = runner_offer_metadata[runner_id]["channel"]
             print(f"🧪 Fallback restored ts={order_data['order_id']} and channel={order_data['channel']}")
@@ -1865,7 +1865,7 @@ def handle_modal_submission(ack, body, client):
         order_data["recipient_real_name"] = order_data["requester_real_name"]
         order_data["status"] = "ordered"
         order_data["time_ordered"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                
+            
         print(f"🧪 [DEBUG] Committed order_id: {order_id}")
         print(f"🧪 [DEBUG] Should update ts = {order_ts}, channel = {order_channel}")
         print(f"🧪 [DEBUG] Logging order_data: {json.dumps(order_data, indent=2)}")
