@@ -1387,6 +1387,16 @@ def handle_modal_submission(ack, body, client):
 
             print("🧾 [DEBUG] Skipping log_order_to_sheet because update_order_status handled the row")
             return
+    else:
+        # ⬇️ Parse modal values for standard /order flow
+        values = body["view"]["state"]["values"]
+        drink = values["drink_category"]["input"]["selected_option"]["value"]
+        drink_detail = values["drink_detail"]["input"]["value"]
+        notes = values["notes"]["input"]["value"] if "notes" in values and "input" in values["notes"] and isinstance(values["notes"]["input"]["value"], str) else ""
+        gifted_id = values["gift_to"]["input"].get("selected_user") if "gift_to" in values and "input" in values["gift_to"] else None
+
+    karma_cost = 1 if drink == "water" else (2 if drink in ["tea", "drip"] else 3)
+    drink = drink_detail.strip()
 
     print("📥 [DEBUG] In submission handler, view raw payload:")
     print(f"🔁 Entered handle_modal_submission for order from {user_id} at {datetime.datetime.now()}")
