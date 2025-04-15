@@ -1652,6 +1652,7 @@ def handle_modal_submission(ack, body, client):
     except json.JSONDecodeError:
         print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
         metadata = {}
+
     source_order_id = metadata.get("source_order_id", "")
 
     location = metadata.get("location", "")
