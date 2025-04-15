@@ -21,6 +21,7 @@ from sheet import (
     log_order_to_sheet,
     fetch_order_data,
     mark_code_redeemed,
+    format_order_message,
 )
 
 last_selected_location = {}
