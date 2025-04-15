@@ -1343,6 +1343,20 @@ def handle_modal_submission(ack, body, client):
     parent_ts = meta.get("parent_ts", "")
     channel_id = meta.get("channel_id", "")
     order_id = parent_ts if parent_ts else generated_ts
+
+    private_metadata_raw = body["view"].get("private_metadata", "{}")
+    try:
+        metadata = json.loads(private_metadata_raw)
+    except json.JSONDecodeError:
+        print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
+        metadata = {}
+    
+    source_order_id = metadata.get("source_order_id", "")
+    location = metadata.get("location", "")
+    runner_id = metadata.get("runner_id", "")
+    mode = metadata.get("mode", "order")
+    print(f"📦 [DEBUG] Extracted metadata: location={location}, runner_id={runner_id}, mode={mode}")
+
     
     if parent_ts:
         print("🧾 [DEBUG] update_order_status invoked because parent_ts is present")
@@ -1643,18 +1657,6 @@ def handle_modal_submission(ack, body, client):
     order_extras[order_data["order_id"]] = {"active": True, "status": "ordered"}
     print(f"📦 [DEBUG] Initialized order_extras[{order_data['order_id']}] = {order_extras[order_data['order_id']]}")
     order_data["order_id"] = str(order_data["order_id"])  # ensure it's a string for downstream use
-
-    private_metadata_raw = body["view"].get("private_metadata", "{}")
-    try:
-        metadata = json.loads(private_metadata_raw)
-    except json.JSONDecodeError:
-        print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
-        metadata = {}
-
-    location = metadata.get("location", "")
-    runner_id = metadata.get("runner_id", "")
-    mode = metadata.get("mode", "order")
-    print(f"📦 [DEBUG] Extracted metadata: location={location}, runner_id={runner_id}, mode={mode}")
 
     if 'runner_offer_metadata' not in globals():
         print("⚠️ runner_offer_metadata not defined — initializing.")
