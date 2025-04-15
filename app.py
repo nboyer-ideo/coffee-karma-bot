@@ -1075,7 +1075,7 @@ def handle_app_home_opened_events(body, logger):
     # Silently ignore app_home_opened events to suppress 404 log messages
     pass
 
-def build_order_modal(trigger_id, runner_id="", selected_location=""):
+def build_order_modal(trigger_id, runner_id="", selected_location="", source_order_id=""):
     
     print(f"📍 [DEBUG] build_order_modal called with selected_location: {selected_location}")
     if selected_location is None:
@@ -1172,12 +1172,9 @@ def build_order_modal(trigger_id, runner_id="", selected_location=""):
             "close": {"type": "plain_text", "text": "Nevermind"},
             "private_metadata": json.dumps({
                 "mode": "order",
-                "location": selected_location
-                # runner_id is removed entirely for /order
-            } if not runner_id else {
-                "mode": "order",
                 "location": selected_location,
-                "runner_id": runner_id
+                **({"runner_id": runner_id} if runner_id else {}),
+                **({"source_order_id": source_order_id} if source_order_id else {})
             }),
             "blocks": [
                 { 
@@ -1326,9 +1323,13 @@ def handle_open_order_modal_for_runner(ack, body, client):
     user_id = body["user"]["id"]
     trigger_id = body["trigger_id"]
     client.views_open(
-        trigger_id=trigger_id,
-        view=build_order_modal(trigger_id, runner_id=user_id)["view"]
-    )
+    trigger_id=trigger_id,
+    view=build_order_modal(
+        trigger_id,
+        runner_id=user_id,
+        source_order_id=body.get("message", {}).get("ts", "")
+    )["view"]
+)
 
 @app.view("koffee_request_modal")
 def handle_modal_submission(ack, body, client):
@@ -1440,6 +1441,19 @@ def handle_modal_submission(ack, body, client):
         order_extras[order_id] = {}
     order_extras[order_id]["order_id"] = order_id
     private_metadata_raw = body["view"].get("private_metadata", "{}")
+    source_order_id = metadata.get("source_order_id", "")
+    if source_order_id:
+        print(f"🔁 Updating original runner message at ts={source_order_id}")
+        blocks = format_order_message(order_data)
+        safe_chat_update(client, order_channel, source_order_id, "Order update: Claimed", blocks)
+        order_ts = source_order_id  # Ensure it's reused throughout
+    else:
+        response = client.chat_postMessage(
+            channel=order_channel,
+            text="New order posted",
+            blocks=format_order_message(order_data)
+        )
+        order_ts = response["ts"]
     try:
         metadata = json.loads(private_metadata_raw)
     except json.JSONDecodeError:
@@ -1638,6 +1652,7 @@ def handle_modal_submission(ack, body, client):
     except json.JSONDecodeError:
         print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
         metadata = {}
+    source_order_id = metadata.get("source_order_id", "")
 
     location = metadata.get("location", "")
     runner_id = metadata.get("runner_id", "")
@@ -1788,7 +1803,7 @@ def handle_modal_submission(ack, body, client):
             )
             ts = placeholder["ts"]
             channel = placeholder["channel"]
-            order_ts = ts
+            order_ts = source_order_id if source_order_id else str(datetime.datetime.now().timestamp())
             order_channel = channel
             print(f"🧪 [DEBUG] Assigned order_ts = {order_ts}")
             print(f"🧪 [DEBUG] Assigned order_channel = {order_channel}")
