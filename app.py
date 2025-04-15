@@ -1440,7 +1440,16 @@ def handle_modal_submission(ack, body, client):
     if order_id not in order_extras:
         order_extras[order_id] = {}
     order_extras[order_id]["order_id"] = order_id
+
+    # 🧱 Decode metadata BEFORE using it
     private_metadata_raw = body["view"].get("private_metadata", "{}")
+    try:
+        metadata = json.loads(private_metadata_raw)
+    except json.JSONDecodeError:
+        print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
+        metadata = {}
+
+    # ✅ Now it's safe to use metadata
     source_order_id = metadata.get("source_order_id", "")
     if source_order_id:
         print(f"🔁 Updating original runner message at ts={source_order_id}")
@@ -1454,14 +1463,11 @@ def handle_modal_submission(ack, body, client):
             blocks=format_order_message(order_data)
         )
         order_ts = response["ts"]
-    try:
-        metadata = json.loads(private_metadata_raw)
-    except json.JSONDecodeError:
-        print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
-        metadata = {}
+
     location = metadata.get("location", "")
     runner_id = metadata.get("runner_id", "")
     mode = metadata.get("mode", "order")
+
     if runner_id in runner_offer_metadata:
         order_ts = runner_offer_metadata[runner_id]["ts"]
         order_channel = runner_offer_metadata[runner_id]["channel"]
