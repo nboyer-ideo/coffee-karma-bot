@@ -1401,13 +1401,26 @@ def handle_modal_submission(ack, body, client):
 
     print("📥 [DEBUG] In submission handler, view raw payload:")
     print(f"🔁 Entered handle_modal_submission for order from {user_id} at {datetime.datetime.now()}")
-    order_extras[order_id] = {
-        'active': True,
-        'status': 'ordered',
-        'order_id': order_id,
-        'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        'ts': body.get("container", {}).get("message_ts", "")
-    }
+
+    if "order_data" not in locals():
+        order_data = {
+            "order_id": order_id,
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "status": "claimed",
+            "time_claimed": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "requester_id": user_id,
+            "requester_real_name": resolve_real_name(user_id, client),
+            "recipient_id": user_id,
+            "recipient_real_name": resolve_real_name(user_id, client),
+            "drink": drink,
+            "location": meta.get("location", "UNKNOWN"),
+            "notes": notes,
+            "karma_cost": karma_cost,
+            "bonus_multiplier": "",
+            "time_ordered": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "time_delivered": ""
+        }
+
     order_data["order_id"] = order_id
     if order_id not in order_extras:
         order_extras[order_id] = {}
