@@ -1321,19 +1321,17 @@ def handle_open_order_modal_for_runner(ack, body, client):
     ack()
     user_id = body["user"]["id"]
     trigger_id = body["trigger_id"]
+    selected_location = last_selected_location.get(user_id, "")  # ✅ Now defined first
     print(f"📍 [DEBUG] open_order_modal_for_runner — user_id: {user_id}")
     print(f"📍 [DEBUG] open_order_modal_for_runner — selected_location: {selected_location}")
-    print(f"📍 [DEBUG] open_order_modal_for_runner — source_order_id: {body.get('message', {}).get('ts', '')}")
-    selected_location = last_selected_location.get(user_id, "")
-    client.views_open(
+    
+    modal = build_order_modal(
         trigger_id=trigger_id,
-        view=build_order_modal(
-            trigger_id,
-            runner_id=user_id,
-            source_order_id=body.get("message", {}).get("ts", ""),
-            selected_location=selected_location
-        )["view"]
+        runner_id=user_id,
+        source_order_id=body.get("message", {}).get("ts", ""),
+        selected_location=selected_location
     )
+    client.views_open(trigger_id=trigger_id, view=modal["view"])
 
 @app.view("koffee_request_modal")
 def handle_modal_submission(ack, body, client):
@@ -2663,7 +2661,7 @@ def handle_runner_settings_modal(ack, body, client):
                         "text": "ORDER NOW",
                         "emoji": True
                     },
-                    "value": json.dumps({"runner_id": user_id})
+                    "value": json.dumps({"runner_id": user_id, "source_order_id": order_ts})
                 },
                 {
                     "type": "button",
