@@ -1338,24 +1338,19 @@ def handle_open_order_modal_for_runner(ack, body, client):
 def handle_modal_submission(ack, body, client):
     global runner_offer_metadata
     ack()
-
+    import json
     import datetime
     user_id = body["user"]["id"]
-    # meta = json.loads(body["view"]["private_metadata"])
-    
+    private_metadata_raw = body["view"].get("private_metadata", "{}")
+    try:
+        meta = json.loads(private_metadata_raw)
+    except json.JSONDecodeError:
+        print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
+        meta = {}
     generated_ts = str(datetime.datetime.now().timestamp())
     parent_ts = meta.get("parent_ts", "")
     channel_id = meta.get("channel_id", "")
     order_id = parent_ts if parent_ts else generated_ts
-
-    private_metadata_raw = body["view"].get("private_metadata", "{}")
-    try:
-        metadata = json.loads(private_metadata_raw)
-    except json.JSONDecodeError:
-        print("⚠️ Failed to parse private_metadata:", private_metadata_raw)
-        metadata = {}
-    print(f"📦 [DEBUG] Extracted metadata: {metadata}")
-    meta = metadata
     
     source_order_id = metadata.get("source_order_id", "")
     location = metadata.get("location", "")
